@@ -22,10 +22,10 @@ typedef struct {
 /*
  *  Local data
  */
-static int MimeMinItemsSize = 0, MimeMinItemsMax = 8;
+static int MimeMinItemsSize = 0, MimeMinItemsMax = 10;
 static MimeItem_t *MimeMinItems = NULL;
 
-static int MimeMajItemsSize = 0, MimeMajItemsMax = 8;
+static int MimeMajItemsSize = 0, MimeMajItemsMax = 10;
 static MimeItem_t *MimeMajItems = NULL;
 
 
@@ -109,6 +109,9 @@ void a_Mime_init()
 #endif
    Mime_add_minor_type("text/html", a_Html_text);
    Mime_add_minor_type("application/xhtml+xml", a_Html_text);
+
+   Mime_add_minor_type("text/gemini", a_Html_text);
+   Mime_add_minor_type("text/markdown", a_Html_text);
 
    /* Add a major type to handle all the text stuff */
    Mime_add_major_type("text", a_Plain_text);

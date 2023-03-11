@@ -12,6 +12,10 @@ a:hover {
   color: #6d4100;
 }
 
+blockquote {
+  font-style: italic;
+}
+
 body {
   font-family: 'Garamond', 'Georgia', serif;
   font-size: 17px;

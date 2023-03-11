@@ -110,6 +110,7 @@ static const ContentType_t MimeTypes[] = {
    { "image/gif", 9 },
    { "image/png", 9 },
    { "image/jpeg", 10 },
+   { "text/gemini", 11 },
    { NULL, 0 }
 };
 
@@ -121,6 +122,7 @@ typedef enum {
    DT_IMAGE_GIF,
    DT_IMAGE_PNG,
    DT_IMAGE_JPG,
+   DT_TEXT_GEMINI,
 } DetectedContentType;
 
 /*

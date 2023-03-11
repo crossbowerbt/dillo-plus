@@ -455,7 +455,7 @@ static void yes_ssl_support(void)
 	   /*Send HTTP OK header*/
 	   snprintf(buf2, sizeof(buf2),
 		    "HTTP/1.1 200 OK\r\n"
-		    "Content-Type: text/html; charset=UTF-8\r\n\r\n");
+		    "Content-Type: text/gemini; charset=UTF-8\r\n\r\n");
 
 	   fprintf(stderr, "TRANS = %s", buf2);
 
@@ -463,108 +463,9 @@ static void yes_ssl_support(void)
 
 	   /*Send remaining data*/
 
-	   int in_preformatted = 0;
-      
 	   while ((ret = SSL_read_line(ssl_connection, buf, 4096)) > 0 ){
-     
-	     for(tmp=buf; *tmp; tmp++) { // clear newline
-	       if(*tmp=='\r' || *tmp=='\n')
-		 *tmp='\0';
-	     }
 
-	     if(!in_preformatted && buf[0] == '#') { // heading
-	       
-	       int c;
-	       for(c=0; buf[c]=='#'; c++) {}
-
-	       snprintf(buf2, sizeof(buf2),
-			"<h%d>%s</h%d>\n", c, buf, c);
-
-	       a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	       
-	     }
-
-	     else if(buf[0] == '`' && buf[1] == '`' && buf[2] == '`') { // preformatted
-
-	       if(in_preformatted) {
-		 in_preformatted = 0;
-		 
-		 snprintf(buf2, sizeof(buf2),
-			  "%s</pre>\n", buf);
-
-		 a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-
-	       } else {
-		 in_preformatted = 1;
-		 
-		 snprintf(buf2, sizeof(buf2),
-			  "<pre>%s\n", buf);
-
-		 a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	       }
-	       
-	     }
-
-	     else if(!in_preformatted && buf[0] == '*') { // list item
-	       
-	       snprintf(buf2, sizeof(buf2),
-			"<p><i>%s</i></p>\n", buf);
-
-	       a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	       
-	     }
-
-	     else if(!in_preformatted && buf[0] == '>') { // quote line
-	       
-	       snprintf(buf2, sizeof(buf2),
-			"<p><i>%s</i></p>\n", buf);
-
-	       a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	       
-	     }
-
-	     else if(!in_preformatted && buf[0] == '=' && buf[1] == '>') { // link
-	       
-	       char *link_start, *link_end;
-	       
-	       for(link_start=buf+2;
-		   *link_start && (*link_start==' ' || *link_start=='\t');
-		   link_start++) {}
-	       
-	       for(link_end=link_start;
-		   *link_end && (*link_end!=' ' && *link_end!='\t');
-		   link_end++) {}
-
-	       if(*link_end) {
-		  *link_end='\0';
-
-		  snprintf(buf2, sizeof(buf2),
-			   "<p>=> <a href=\"%s\">%s</a> %s</p>\n",
-			   link_start, link_start, link_end+1);
-	       } else {
-		  snprintf(buf2, sizeof(buf2),
-			   "<p>=> <a href=\"%s\">%s</a></p>\n",
-			   link_start, link_start);
-	       }
-
-	       a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	       
-	     }
-
-	     else { // plain paragraph
-
-	       if(in_preformatted) {
-		 snprintf(buf2, sizeof(buf2),
-			  "%s\n", buf);
-	       } else if(buf[0]) {
-		 snprintf(buf2, sizeof(buf2),
-			  "<p>%s</p>\n", buf);
-	       } else {
-		 snprintf(buf2, sizeof(buf2), "\n");
-	       }
-	       
-	       a_Dpip_dsh_write(sh, 1, buf2, (size_t)strlen(buf2));
-	     }
+	     a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
 
 	   }
 

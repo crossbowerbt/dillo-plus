@@ -17,6 +17,8 @@ all: config.h
 	@(cd dpip; make all)
 	@echo Making all in dpi
 	@(cd dpi; make all)
+	@echo Making all in dls
+	@(cd dls; make all)
 	@echo Making all in test
 	@(cd test; make all)
 
@@ -37,6 +39,8 @@ clean:
 	@(cd dpip; make clean)
 	@echo Cleaning in dpi
 	@(cd dpi; make clean)
+	@echo Cleaning in dls
+	@(cd dls; make clean)
 	@echo Cleaning in test
 	@(cd test; make clean)
 
@@ -57,6 +61,8 @@ install: all
 	@(cd dpip; make install)
 	@echo Making install in dpi
 	@(cd dpi; make install)
+	@echo Making install in dls
+	@(cd dls; make install)
 	@echo Making install in test
 	@(cd test; make install)
 	./install-sh -c -d "$(DILLO_BINDIR)"
@@ -83,6 +89,8 @@ uninstall:
 	@(cd dpip; make uninstall)
 	@echo Making uninstall in dpi
 	@(cd dpi; make uninstall)
+	@echo Making uninstall in dls
+	@(cd dls; make uninstall)
 	@echo Making uninstall in test
 	@(cd test; make uninstall)
 	rm -f "$(DILLO_BINDIR)/dillo-install-hyphenation"

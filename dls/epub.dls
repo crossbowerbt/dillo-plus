@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import sys
+import zipfile
+import traceback
+import urllib.parse
+
+from xml.dom import minidom
+
+import imp
+zip = imp.load_source('zip', os.path.join(os.path.dirname(sys.argv[0]), 'zip.dls'))
+
+TOC_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>Table of Content</TITLE>
+</HEAD>
+<BODY>
+<H1>Table of Content</H1>
+<ul>
+{rows}
+</ul>
+</BODY></HTML>
+"""
+
+TOC_ITEM = """
+<li><a href="{href}">{name}</a>
+"""
+
+class EpubDls(zip.ZipDls):
+
+	def output_main_page(self):
+		"""Outputs the main page of the DLS"""
+
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+		print(zip.MAIN_PAGE_TEMPLATE.replace("ZIP", "EPUB"), end="")
+
+	def output_subfile_content(self):
+		"""Outputs the content of an EPUB subfile"""
+
+		subpath = re.sub('#[^#]*$', '', self.params['subpath'])
+
+		type = zip.get_mime_type(subpath)
+		buffer = self.extract_file_data(subpath)
+
+		if type == 'text/html':
+
+			buffer = buffer.decode('utf8')
+
+			# replace hrefs and srcs
+
+			for rex in ['(<img [^>]*src="[^"]+)"',
+				    '(<a [^>]*href="[^"]+)"',
+				    '(<link [^>]*href="[^"]+)"']:
+
+				tags = re.findall(rex, buffer)
+
+				for tag in tags:
+					tag_prefix, tag_url = tag.rsplit('"', 1)
+					tag_url = self.make_url(
+						self.params['path'],
+						tag_url,
+						curr_subpath=subpath
+					)
+					buffer = re.sub(tag, tag_prefix + '"' + tag_url, buffer)
+
+			buffer = buffer.encode('utf8')
+
+		print(("HTTP/1.1 200 OK\r\nContent-Type: {}\r\n" +
+		       "Content-Length: {}\r\n\r\n").format(type, len(buffer)),
+		      end="")
+
+		sys.stdout.flush()
+		sys.stdout.buffer.write(buffer)
+	
+	def output_archive_listing(self):
+		"""List the table of content of the EPUB"""
+
+		content_opf_fullpath = "content.opf"
+		rows = []
+
+                # get location of content.opf from metadata
+		parser = minidom.parseString(self.extract_file_data('META-INF/container.xml').decode('utf8'))
+                
+		rootfiles = parser.getElementsByTagName('rootfile')
+		for rootfile in rootfiles:
+			if rootfile.getAttribute('full-path').endswith('content.opf'):
+				content_opf_fullpath = rootfile.getAttribute('full-path')
+
+                # read table of content from content.opf
+		parser = minidom.parseString(self.extract_file_data(content_opf_fullpath).decode('utf8'))
+
+		manifest = parser.getElementsByTagName('manifest')[0]
+		items = { item.getAttribute('id'): item.getAttribute('href')
+			  for item in manifest.getElementsByTagName('item') }
+		
+		spine = parser.getElementsByTagName('spine')[0]
+		idrefs = [ itemref.getAttribute('idref')
+			   for itemref in spine.getElementsByTagName('itemref') ]
+
+		for idref in idrefs:
+			rows.append(TOC_ITEM.format(
+				href=self.make_url(self.params['path'], items[idref],
+                                                   curr_subpath=content_opf_fullpath),
+				name=items[idref]
+			))
+
+                # display table of content
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+		print(TOC_TEMPLATE.format(url=self.params['path'],
+					   rows='\n'.join(rows)), end="")
+
+def main():
+	try:
+		url = "dls:epub"
+		params = ""
+
+		if len(sys.argv) > 1:
+			params = sys.argv[1]
+
+		epub_dls = EpubDls(url, params)
+		epub_dls.get_file_info()
+		
+	except Exception as e:
+		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
+		print("<b>Execution error:</b> ", end="")
+		print(e)
+		print("<br/><pre>")
+		traceback.print_exc(file=sys.stdout)
+		print("</pre>")
+
+if __name__ == "__main__":
+	main()

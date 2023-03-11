@@ -99,6 +99,8 @@ void *a_Html_text(const char *type, void *P, CA_Callback_t *Call,void **Data);
  * Forward declarations
  *---------------------------------------------------------------------------*/
 static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
+static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
+static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static bool Html_load_image(BrowserWindow *bw, DilloUrl *url,
                             const DilloUrl *requester, DilloImage *image);
 static void Html_callback(int Op, CacheClient_t *Client);
@@ -175,7 +177,8 @@ DilloUrl *a_Html_url_new(DilloHtml *html,
 }
 
 /*
- * Set callback function and callback data for the "html/text" MIME type.
+ * Set callback function and callback data for the
+ * "text/html", "text/gemini" or "text/markdown" MIME type.
  */
 void *a_Html_text(const char *Type, void *P, CA_Callback_t *Call, void **Data)
 {
@@ -535,7 +538,13 @@ void DilloHtml::write(char *Buf, int BufSize, int Eof)
    dReturn_if (dw == NULL);
    dReturn_if (stop_parser == true);
 
-   token_start = Html_write_raw(this, buf, bufsize, Eof);
+   if(!strncmp(this->content_type, "text/gemini", 11)) {
+      token_start = Gemini_write_raw(this, buf, bufsize, Eof);
+   } else if(!strncmp(this->content_type, "text/markdown", 13)) {
+      token_start = Markdown_write_raw(this, buf, bufsize, Eof);
+   } else {
+      token_start = Html_write_raw(this, buf, bufsize, Eof);
+   }
    Start_Ofs += token_start;
 }
 
@@ -3764,7 +3773,9 @@ static void Html_test_section(DilloHtml *html, int new_idx, int IsCloseTag)
    const char *tag;
    int tag_idx;
 
-   if (!(html->InFlags & IN_HTML) && html->DocType == DT_NONE)
+   if (!(html->InFlags & IN_HTML) && html->DocType == DT_NONE &&
+       strncmp(html->content_type, "text/gemini", 11) &&
+       strncmp(html->content_type, "text/markdown", 13))
       BUG_MSG("The required DOCTYPE declaration is missing. "
               "Handling as HTML4.");
 
@@ -4353,4 +4364,448 @@ static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    return token_start;
 }
 
+/*
+ * Here's where we parse the gemini code and put it into the Textblock structure.
+ * Return value: number of bytes parsed
+ */
+static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
+{
+   char ch = 0;
+   int token_start, buf_index;
 
+   char par_open[] = "<p>", par_close[] = "</p>";
+   char heading_open[] = "<hX>", heading_close[] = "</hX>";
+   char pre_open[] = "<pre>", pre_close[] = "</pre>";
+   char quote_open[] = "<blockquote>", quote_close[] = "</blockquote>";
+   char link_open[2048] = "", link_close[] = "</a>";
+   char list_open[] = "<ul>", list_close[] = "</ul>";
+   char list_elem_open[] = "<li>", list_elem_close[] = "</li>";
+   char br_tag[] = "<br/>";
+
+   bool in_par, in_heading, in_pre, in_quote, in_link, in_list, in_list_elem, in_middle_line;
+   in_par = in_heading = in_pre = in_quote = in_link = in_list = in_list_elem = in_middle_line = false;
+
+   /* Restore flags */
+   in_pre = S_TOP(html)->parse_mode == DILLO_HTML_PARSE_MODE_PRE;
+
+   /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
+    * boundary. Iterate through tokens until end of buffer is reached. */
+   buf_index = 0;
+   token_start = buf_index;
+   while ((buf_index < bufsize) && !html->stop_parser) {
+      /* invariant: buf_index == bufsize || token_start == buf_index */
+
+      if (!in_middle_line && in_list && buf[buf_index] != '*') {
+         /* close multiline list */
+         Html_process_tag(html, list_close, strlen(list_close));
+         in_list = false;
+      }
+
+      if (!in_middle_line && buf[buf_index] == '#') {
+         /* open heading: determine the heading level (max level = 9) */
+         while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
+         in_heading = true;
+         in_middle_line = true;
+         if(in_par) { /* close par if needed */
+            in_par = false;
+            Html_process_tag(html, par_close, strlen(par_close));
+         }
+         snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
+         snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
+         Html_process_tag(html, heading_open, strlen(heading_open));
+         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+         token_start = buf_index;
+      }
+
+      else if (!in_middle_line && buf[buf_index] == '`' &&
+               (buf_index+2) < bufsize && buf[buf_index+1] == '`' && buf[buf_index+2] == '`') {
+         /* open/close pre */
+         buf_index += 3;
+         if(in_pre) {
+            in_pre = false;
+            Html_process_tag(html, pre_close, strlen(pre_close));
+         } else {
+            in_pre = true;
+            Html_process_tag(html, pre_open, strlen(pre_open));
+         }
+         while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
+            buf_index++; /* skip to next line */
+         if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
+         token_start = buf_index;
+      }
+        
+      else if (!in_middle_line && buf[buf_index] == '>') {
+         /* open quoted par */
+         buf_index++;
+         Html_process_tag(html, quote_open, strlen(quote_open));
+         in_quote = true;
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+      
+      else if (!in_middle_line && buf[buf_index] == '*') {
+         /* open list or list element */
+         buf_index ++;
+         if(!in_list) { /* beginning of multiline list */
+            in_list = true;
+            Html_process_tag(html, list_open, strlen(list_open));
+         }
+         in_middle_line = true;
+         in_list_elem = true;
+         Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
+         token_start = buf_index;
+      }
+      
+      else if (!in_middle_line && buf[buf_index] == '=' &&
+               (buf_index+1) < bufsize && buf[buf_index+1] == '>') {
+         /* open link: determine href and text */
+         buf_index += 2;
+         in_link = true;
+         in_middle_line = true;
+         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+         token_start = buf_index;
+         while (buf_index < bufsize && !isspace(buf[buf_index]) && buf[buf_index] != '\n')
+            buf_index++; /* read href */
+         ch = buf[buf_index]; buf[buf_index] = '\0'; /* null-terminate temporarily the href */
+         strcpy(link_open, "<a href=\"");
+         strncat(link_open, buf + token_start, sizeof(link_open) - 12);
+         strcat(link_open, "\">");
+         buf[buf_index] = ch; /* restore the correct char */
+         Html_process_tag(html, par_open, strlen(par_open));
+         Html_process_tag(html, link_open, strlen(link_open));
+         token_start = buf_index;
+      }
+
+      else if (in_middle_line && (buf[buf_index] == '\n' || buf[buf_index] == '\0')) {
+         /* close line (and maybe section) */
+         if (in_par) {
+            Html_process_tag(html, par_close, strlen(par_close));
+            in_par = false;
+         } else if (in_heading) {
+            Html_process_tag(html, heading_close, strlen(heading_close));
+            in_heading = false;
+         } else if (in_pre) {
+            Html_process_word(html, "\n", 1);
+         } else if (in_quote) {
+            Html_process_tag(html, quote_close, strlen(quote_close));
+            in_quote = false;
+         } else if (in_link) {
+            Html_process_tag(html, link_close, strlen(link_close));
+            Html_process_tag(html, par_close, strlen(par_close));
+            in_link = false;
+         } else if (in_list_elem) {
+            Html_process_tag(html, list_elem_close, strlen(list_elem_close));
+            in_list_elem = false;
+         } else if (in_par) {
+            Html_process_space(html, " ", 1);
+         } else {
+           BUG_MSG("End of line but not in gemini section.\n");
+         }
+         in_middle_line = false;
+         if (buf[buf_index] == '\n') buf_index++;
+         token_start = buf_index;
+      }
+
+      else if (!in_middle_line && buf[buf_index] == '\n') {
+         /* empty line */
+         buf_index++;
+         Html_process_tag(html, br_tag, strlen(br_tag));
+         token_start = buf_index;
+      }
+
+      else if (isspace(buf[buf_index])) {
+         /* whitespace: group all available whitespace */
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         }
+         while (++buf_index < bufsize && isspace(buf[buf_index])) ;
+         Html_process_space(html, buf + token_start, buf_index - token_start);
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+
+      else {
+         /* a word: add to section */
+
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            in_middle_line = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         } else if (!in_middle_line && in_pre) {
+            in_middle_line = true;
+         } else if (!in_middle_line) {
+            in_middle_line = true;
+            BUG_MSG("Word outside a gemini section");
+         }
+        
+         buf_index += strcspn(buf + buf_index, " \n");
+
+         if (buf_index < bufsize || Eof) {
+            /* successfully found end of word */
+            ch = buf[buf_index];
+            buf[buf_index] = 0;
+            Html_process_word(html, buf + token_start,
+                              buf_index - token_start);
+            buf[buf_index] = ch;
+            token_start = buf_index;
+         }
+      }
+
+      html->CurrOfs = html->Start_Ofs + token_start;
+   }/*while*/
+
+   HT2TB(html)->flush ();
+
+   return token_start;
+}
+
+/*
+ * Here's where we parse the markdown code and put it into the Textblock structure.
+ * Return value: number of bytes parsed
+ */
+static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
+{
+   char ch = 0;
+   int token_start, buf_index, tmp;
+
+   char par_open[] = "<p>", par_close[] = "</p>";
+   char heading_open[] = "<hX>", heading_close[] = "</hX>";
+   char pre_open[] = "<pre>", pre_close[] = "</pre>";
+   char quote_open[] = "<blockquote>", quote_close[] = "</blockquote>";
+   char link_open[2048] = "", link_close[] = "</a>";
+   char list_open[] = "<ul>", list_close[] = "</ul>";
+   char list_elem_open[] = "<li>", list_elem_close[] = "</li>";
+   char bold_open[] = "<b>", bold_close[] = "</b>";
+   char em_open[] = "<em>", em_close[] = "</em>";
+
+   bool in_par, in_heading, in_pre, in_quote, in_list, in_list_elem, in_middle_line, in_bold, in_em;
+   in_par = in_heading = in_pre = in_quote = in_list = in_list_elem = in_middle_line = in_bold = in_em = false;
+
+   /* Restore flags */
+   in_pre = S_TOP(html)->parse_mode == DILLO_HTML_PARSE_MODE_PRE;
+
+   /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
+    * boundary. Iterate through tokens until end of buffer is reached. */
+   buf_index = 0;
+   token_start = buf_index;
+   while ((buf_index < bufsize) && !html->stop_parser) {
+      /* invariant: buf_index == bufsize || token_start == buf_index */
+
+      if (!in_middle_line && in_list && buf[buf_index] != '-') {
+         /* close multiline list */
+         Html_process_tag(html, list_close, strlen(list_close));
+         in_list = false;
+      }
+
+      if (!in_middle_line && buf[buf_index] == '#') {
+         /* open heading: determine the heading level (max level = 9) */
+         while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
+         in_heading = true;
+         in_middle_line = true;
+         if(in_par) { /* close par if needed */
+            in_par = false;
+            Html_process_tag(html, par_close, strlen(par_close));
+         }
+         snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
+         snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
+         Html_process_tag(html, heading_open, strlen(heading_open));
+         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+         token_start = buf_index;
+      }
+
+      else if (!in_middle_line && buf[buf_index] == '`' &&
+               (buf_index+2) < bufsize && buf[buf_index+1] == '`' && buf[buf_index+2] == '`') {
+         /* open/close pre */
+         buf_index += 3;
+         if(in_pre) {
+            in_pre = false;
+            Html_process_tag(html, pre_close, strlen(pre_close));
+         } else {
+            in_pre = true;
+            Html_process_tag(html, pre_open, strlen(pre_open));
+         }
+         while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
+            buf_index++; /* skip to next line */
+         if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
+         token_start = buf_index;
+      }
+        
+      else if (!in_middle_line && buf[buf_index] == '>') {
+         /* open quoted par */
+         buf_index++;
+         Html_process_tag(html, quote_open, strlen(quote_open));
+         in_quote = true;
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+      
+      else if (!in_middle_line && buf[buf_index] == '-') {
+         /* open list or list element */
+         buf_index ++;
+         if(!in_list) { /* beginning of multiline list */
+            in_list = true;
+            Html_process_tag(html, list_open, strlen(list_open));
+         }
+         in_middle_line = true;
+         in_list_elem = true;
+         Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
+         token_start = buf_index;
+      }
+      
+      else if (in_middle_line && (buf[buf_index] == '\n' || buf[buf_index] == '\0')) {
+         /* close line (and maybe section) */
+         if (in_par) {
+            Html_process_tag(html, par_close, strlen(par_close));
+            in_par = false;
+         } else if (in_heading) {
+            Html_process_tag(html, heading_close, strlen(heading_close));
+            in_heading = false;
+         } else if (in_pre) {
+            Html_process_word(html, "\n", 1);
+         } else if (in_quote) {
+            Html_process_tag(html, quote_close, strlen(quote_close));
+            in_quote = false;
+         } else if (in_list_elem) {
+            Html_process_tag(html, list_elem_close, strlen(list_elem_close));
+            in_list_elem = false;
+         } else if (in_par) {
+            Html_process_space(html, " ", 1);
+         } else {
+           BUG_MSG("End of line but not in markdown section.\n");
+         }
+         in_middle_line = false;
+         if (buf[buf_index] == '\n') buf_index++;
+         token_start = buf_index;
+      }
+
+      else if (!in_middle_line && buf[buf_index] == '\n') {
+         /* empty line: skip it */
+         buf_index++;
+         token_start = buf_index;
+      }
+
+      else if (isspace(buf[buf_index])) {
+         /* whitespace: group all available whitespace */
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         }
+         while (++buf_index < bufsize && isspace(buf[buf_index])) ;
+         Html_process_space(html, buf + token_start, buf_index - token_start);
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+
+      else if (!in_pre && buf[buf_index] == '*' && buf_index + 1 < bufsize && buf[buf_index+1] == '*') {
+         /* bold text */
+         buf_index += 2;
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         }
+         if(in_bold) {
+           in_bold = false;
+           Html_process_tag(html, bold_close, strlen(bold_close));
+         } else {
+           in_bold = true;
+           Html_process_tag(html, bold_open, strlen(bold_open));
+         }
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+
+      else if (!in_pre && buf[buf_index] == '*') {
+         /* italic text */
+         buf_index++;
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         }
+         if(in_em) {
+           in_em = false;
+           Html_process_tag(html, em_close, strlen(em_close));
+         } else {
+           in_em = true;
+           Html_process_tag(html, em_open, strlen(em_open));
+         }
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+
+      else if (!in_pre && buf[buf_index] == '[') {
+         /* link: determine href and text */
+         buf_index++;
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         }
+         while (buf_index < bufsize && buf[buf_index] != ']') buf_index++; /* find end of text */
+         if(!(buf_index+1 < bufsize) || buf[++buf_index] != '(') {
+            /* malformed link */
+            Html_process_word(html, buf + token_start,
+                              buf_index - token_start);
+            BUG_MSG("Malformed markdown link");
+         } else {
+           tmp = buf_index++;
+           while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of href */
+           buf[buf_index] = '\0';
+           strcpy(link_open, "<a href=\"");
+           strncat(link_open, buf + tmp + 1, sizeof(link_open) - 12);
+           strcat(link_open, "\">");
+           buf[buf_index] = ')';
+           Html_process_tag(html, link_open, strlen(link_open)); /* send open link tag */
+           buf_index++;
+           buf[tmp-1] = '\0';
+           Html_process_word(html, buf + token_start + 1, tmp - token_start - 1); /* send link text */
+           buf[tmp-1] = ']';
+           Html_process_tag(html, link_close, strlen(link_close)); /* send link close tag */
+         }
+         in_middle_line = true;
+         token_start = buf_index;
+      }
+
+      else {
+         /* a word: add to section */
+
+         if (!in_middle_line && !in_par && !in_pre) {
+            /* start new paragraph */
+            in_par = true;
+            in_middle_line = true;
+            Html_process_tag(html, par_open, strlen(par_open));
+         } else if (!in_middle_line && in_pre) {
+            in_middle_line = true;
+         } else if (!in_middle_line) {
+            in_middle_line = true;
+            BUG_MSG("Word outside a markdown section");
+         }
+
+         if(!in_pre)
+           buf_index += strcspn(buf + buf_index, " *[\n");
+         else
+           buf_index += strcspn(buf + buf_index, " \n");
+
+         if (buf_index < bufsize || Eof) {
+            /* successfully found end of word */
+            ch = buf[buf_index];
+            buf[buf_index] = 0;
+            Html_process_word(html, buf + token_start,
+                              buf_index - token_start);
+            buf[buf_index] = ch;
+            token_start = buf_index;
+         }
+      }
+
+      html->CurrOfs = html->Start_Ofs + token_start;
+   }/*while*/
+
+   HT2TB(html)->flush ();
+
+   return token_start;
+}

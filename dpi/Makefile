@@ -1,6 +1,6 @@
 include ../Makefile.options
 
-CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"'
+CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"' -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"'
 
 all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi dls.filter.dpi gemini.filter.dpi hello.filter.dpi https.filter.dpi vsource.filter.dpi
 
@@ -56,7 +56,7 @@ https.filter.dpi: https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o https.filter.dpi https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 dls.o: dls.c
-	$(COMPILE) -c dls.c
+	$(COMPILE) $(CXXFLAGS_EXTRA) -c dls.c
 
 dls.filter.dpi: dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o dls.filter.dpi dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a

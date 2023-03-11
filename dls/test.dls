@@ -4,6 +4,12 @@ cat << EOD
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=UTF-8
 
+<head>
+<title>SYSTEM INFO</title>
+</head>
+
+<body>
+
 <h1>SYSTEM INFO</h1>
 <em>Time: `date`</em>
 
@@ -20,4 +26,6 @@ DLS args: $0 $1
 
 `top -b`
 </pre>
+
+</body>
 EOD

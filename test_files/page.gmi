@@ -1,0 +1,15 @@
+# Title of the page
+A paragraph of text, with a normal length line...
+Some empty lines to preserve:
+
+
+Another paragraph with a very log line (should be wrapped): I originally designed this foundry with the intent of building a Gingery-style lathe. Over time, I became less interested in the idea, although it still occasionally crosses my mind. Regardless, the ability to melt and cast scrap aluminum has been an indispensible part of my workshop ever since. In essence, the foundry is just a hole in the ground filled with charcoal, with two accessories. First, bricks to line the walls of the hole. These stop the dirt, which dries when heated, from collapsing inward. Second, a steel tube through which air can be blown, to increase the temperature of the fire.
+> The same line as a quote string: I originally designed this foundry with the intent of building a Gingery-style lathe. Over time, I became less interested in the idea, although it still occasionally crosses my mind. Regardless, the ability to melt and cast scrap aluminum has been an indispensible part of my workshop ever since. In essence, the foundry is just a hole in the ground filled with charcoal, with two accessories. First, bricks to line the walls of the hole. These stop the dirt, which dries when heated, from collapsing inward. Second, a steel tube through which air can be blown, to increase the temperature of the fire.
+=> /link.gmi Just a link
+* a list
+* with
+* multiple elems
+```skipped...
+a preformatted
+test    -      text
+```

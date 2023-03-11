@@ -2,6 +2,7 @@
 
 import sys
 import zipfile
+import traceback
 import urllib.parse
 
 MAIN_PAGE_TEMPLATE = """
@@ -11,10 +12,10 @@ MAIN_PAGE_TEMPLATE = """
  <TITLE>DLS ZIP</TITLE>
 </HEAD>
 <BODY><H1>DLS ZIP Main Page</H1>
-<em>This DLS is a viewer for ZIP files (and EPUB too...)</em>
+<em>This DLS is a viewer for ZIP files</em>
 <p>Choose a file to start:</p>
 <form>
-<input name="path" placeholder="zip file path" />
+<input name="path" placeholder="ZIP file path" />
 <input type=submit />
 </form>
 </table>
@@ -25,7 +26,6 @@ DIRECTORY_LISTING_TEMPLATE = """
 <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
 <HTML>
 <HEAD>
- <BASE href='{url}'>
  <TITLE>{url}</TITLE>
 </HEAD>
 <BODY><H1>Directory listing of {url}</H1>
@@ -38,7 +38,7 @@ DIRECTORY_LISTING_TEMPLATE = """
 """
 
 ROW_TEMPLATE = """
-<tr align=center bgcolor={bgcolor}><td>{dirsym}<td align=left><a href='{href}'>{name}</a><td>{type}<td>{size}&nbsp;bytes<td>{date}
+<tr align=center bgcolor={bgcolor}><td>{dirsym}<td align=left><a href="{href}">{name}</a><td>{type}<td>{size}&nbsp;bytes<td>{date}
 """
 
 ROW_COLORS = [ "#dcdcdc", "" ]
@@ -69,89 +69,151 @@ def get_mime_type(filename):
 
 	return 'application/octet-stream'
 
-def get_file_info():
-	"""Get zip file info"""
+def parse_url_params(str_params):
+	"""Parse URL's parameters into a dictionary"""
 
-	rows = []
-	i = 0
+	if len(str_params) == 0:
+		return {}
 
-	base_url = "dls://" + sys.argv[0]
-	path = ""
-	subpath = ""
+	return { name: urllib.parse.unquote_plus(value)
+		 for name, value
+		 in [
+			 tuple(par.split('='))
+			 for par in str_params.split('&')
+		 ]}
 
-	if len(sys.argv) > 1:
+class ZipDls(object):
 
-		if "&" in sys.argv[1]:
-			path, subpath = sys.argv[1].split("&")
-		else:
-			path = sys.argv[1]
+	def __init__(self, url, str_params=""):
+		self.url = url
+		self.params = parse_url_params(str_params)
+		print("DLS INIT: ", self.url, self.params, file=sys.stderr)
 
-		path = path.replace('path=', '')
-		path = urllib.parse.unquote(path)
-		path = path.replace('+',' ')
+	def make_url(self, path, subpath, curr_subpath=''):
+		"""Makes a relative URL for the DLS"""
 
-		subpath = subpath.replace('subpath=', '')
-		subpath = urllib.parse.unquote(subpath)
-		subpath = subpath.replace('+',' ')
+		def solve_path(path):
+			pieces = []
 
-	if len(path) == 0:
+			for piece in path.split('/'):
+				if len(piece) == 0 or piece == '.':
+					continue
+				elif piece == '..':
+					try:
+						pieces.pop()
+					except:
+						pass
+				else:
+					pieces.append(piece)
+
+			return '/'.join(pieces)
+		
+		return (
+			self.url +
+			"?path=" + urllib.parse.quote_plus(path) +
+			"&subpath=" + urllib.parse.quote_plus(
+				solve_path(curr_subpath + '/../' + subpath)
+			)
+		)
+		
+	def extract_file_data(self, subpath):
+		"""Returns the data of a file contained in the ZIP archive"""
+
+		with self.zip_file.open(subpath) as subfile:
+			return subfile.read()
+
+	def output_main_page(self):
+		"""Outputs the main page of the DLS"""
+
 		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
 		print(MAIN_PAGE_TEMPLATE, end="")
-		return
 
-	with zipfile.ZipFile(path) as file:
+	def output_subfile_content(self):
+		"""Outputs the content of a file of the ZIP archive"""
 
-		if len(subpath) > 0:
-			# extract archive file
+		type = get_mime_type(self.params['subpath'])
+		buffer = self.extract_file_data(self.params['subpath'])
+		
+		print(("HTTP/1.1 200 OK\r\nContent-Type: {}\r\n" +
+		       "Content-Length: {}\r\n\r\n").format(type, len(buffer)),
+		      end="")
 
-			type = get_mime_type(subpath)
+		sys.stdout.flush()
+		sys.stdout.buffer.write(buffer)
 
-			with file.open(subpath) as subfile:
-				buffer = subfile.read()
-				print("HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n".format(type, len(buffer)), end="")
-				sys.stdout.flush()
-				sys.stdout.buffer.write(buffer)
+	def output_archive_listing(self):
+		"""Outputs directory listing of the archive"""
+
+		inner_files = self.zip_file.infolist()
+		rows = []
+		i = 0
+
+		for inner_file in inner_files:
+
+			dirsym = ""
+			type = get_mime_type(inner_file.filename)
+
+			if inner_file.is_dir():
+				dirsym = ">"
+				type = "Directory"
+
+			rows.append(ROW_TEMPLATE.format(
+				bgcolor=ROW_COLORS[i],
+				dirsym=dirsym,
+				href=self.make_url(self.params['path'], inner_file.filename),
+				name=inner_file.filename,
+				type=type,
+				size=inner_file.file_size,
+				date="{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+					inner_file.date_time[0], inner_file.date_time[1],
+					inner_file.date_time[2], inner_file.date_time[3],
+					inner_file.date_time[4], inner_file.date_time[5]
+				)
+			))
+
+			i = (i + 1) % len(ROW_COLORS)
+
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+		print(DIRECTORY_LISTING_TEMPLATE.format(url=self.params['path'],
+							rows='\n'.join(rows)), end="")
+		
+	def get_file_info(self):
+		"""Get zip file info"""
+
+		if len(self.params.get('path','')) == 0:
+			self.output_main_page()
 
 		else:
-			# list archive content
+			self.zip_file = zipfile.ZipFile(self.params['path'])
+			print("DLS OPENED ZIP: ", self.zip_file, file=sys.stderr)
 
-			archive = file.infolist()
+			if len(self.params.get('subpath','')) > 0:
+				self.output_subfile_content()
 
-			for inner_file in archive:
+			else:
+				self.output_archive_listing()
 
-				dirsym = ""
-				type = get_mime_type(inner_file.filename)
-
-				if inner_file.is_dir():
-					dirsym = ">"
-					type = "Directory"
-
-				rows.append(ROW_TEMPLATE.format(
-					bgcolor=ROW_COLORS[i],
-					dirsym=dirsym,
-					href=base_url + "?" + path + "&" + inner_file.filename,
-					name=inner_file.filename,
-					type=type,
-					size=inner_file.file_size,
-					date="{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
-						inner_file.date_time[0], inner_file.date_time[1],
-						inner_file.date_time[2], inner_file.date_time[3],
-						inner_file.date_time[4], inner_file.date_time[5]
-					)
-				))
-
-				i = (i + 1) % len(ROW_COLORS)
-
-			print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
-			print(DIRECTORY_LISTING_TEMPLATE.format(url=path, rows='\n'.join(rows)), end="")
 
 def main():
+	
 	try:
-		get_file_info()
+
+		url = "dls:zip"
+		params = ""
+
+		if len(sys.argv) > 1:
+			params = sys.argv[1]
+
+		zip_dls = ZipDls(url, params)
+		zip_dls.get_file_info()
+
 	except Exception as e:
 		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
 		print("<b>Execution error:</b> ", end="")
-		print(e, end="")
+		print(e)
+		print("<br/><pre>")
+		traceback.print_exc(file=sys.stdout)
+		print("</pre>")
 
 if __name__ == "__main__":
 	main()

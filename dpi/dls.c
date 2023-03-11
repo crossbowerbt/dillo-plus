@@ -125,6 +125,13 @@ pid_t my_popen(const char* cmd, const char* arg, int *pipe_2) {
       // launch cmd
       const char* argp[] = {cmd, arg, NULL};
       execv(cmd, (char**) argp);
+
+      // if the function returns an error has occurred
+      printf("HTTP/1.1 500 Execution Error\r\n"
+	     "Content-Type: text/html\r\n\r\n"
+	     "<pre>Error during execv(): %s</pre>",
+	     strerror(errno));
+      
       exit(127);
    }
 
@@ -205,6 +212,8 @@ static void handle_local_script(void)
    char *dpip_tag = NULL, *cmd = NULL, *url = NULL,
      *dls_path = NULL, *dls_arg = NULL, *result = NULL;
 
+   char dls_path_real[2048] = DILLO_LIBDIR "dls/";
+
    int result_size = 0;
    
    struct stat sb;
@@ -227,13 +236,13 @@ static void handle_local_script(void)
      exit_error = 1;
    }
 
-   if (strncmp(url, "dls://", sizeof("dls://") - 1)) {
+   if (strncmp(url, "dls:", sizeof("dls:") - 1)) {
      MSG("***Invalid URL scheme"
 	 " - cannot continue\n");
      exit_error = 1;
    }
 
-   dls_path = url + sizeof("dls://") - 1; // get DLS file path
+   dls_path = url + sizeof("dls:") - 1; // get DLS file path
 
    dls_arg = strchr(dls_path, '?'); // get DLS cmd arg
 
@@ -242,12 +251,28 @@ static void handle_local_script(void)
       dls_arg++;
    }
 
-   fprintf(stderr, "DLS Script = %s\n", dls_path);
+   /* if not path is provided fallback to default DLS */
+
+   if(!strlen(dls_path))
+     dls_path = "default";
 
    /* check file name, path and permissions */
 
    if(exit_error == 0) {
-      if(!ends_with(dls_path, ".dls")) {
+     if(strlen(dls_path) > (sizeof(dls_path_real)/2)) {
+         MSG("DLS name too long\n");
+         strncpy(error_msg, "DLS name too long", sizeof(error_msg)-1);
+         exit_error = 1;
+      }
+   }
+
+   strncat(dls_path_real, dls_path, sizeof(dls_path_real));
+   strncat(dls_path_real, ".dls", sizeof(dls_path_real));
+
+   fprintf(stderr, "DLS Script = %s\n", dls_path_real);
+   
+   if(exit_error == 0) {
+      if(!ends_with(dls_path_real, ".dls")) {
          MSG("DLS file do not end with .dls\n");
          strncpy(error_msg, "DLS file do not end with .dls", sizeof(error_msg)-1);
          exit_error = 1;
@@ -255,7 +280,7 @@ static void handle_local_script(void)
    }
 
    if(exit_error == 0) {
-      if(stat(dls_path, &sb) != 0) {
+      if(stat(dls_path_real, &sb) != 0) {
          MSG("DLS file not found\n");
          strncpy(error_msg, "DLS file not found", sizeof(error_msg)-1);
          exit_error = 1;
@@ -273,7 +298,7 @@ static void handle_local_script(void)
    /* execute dls */
 
    if(exit_error == 0) {
-     result = pipe_exec(dls_path, dls_arg, &result_size);
+     result = pipe_exec(dls_path_real, dls_arg, &result_size);
 
       if(!result) {
          MSG("DLS execution error\n");
