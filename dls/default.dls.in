@@ -1,7 +1,7 @@
 #!/bin/sh
 
 dls_dir="@libdir@/dillo/dls"
-dls_available=`ls $dls_dir | sed 's/\.dls$//g' | awk '{ print "dpi:" $1 "<br/>" }'`
+dls_available=`ls $dls_dir | sed 's/\.dls$//g' | awk '{ print "dls:" $1 "<br/>" }'`
 
 cat << EOD
 HTTP/1.1 200 OK

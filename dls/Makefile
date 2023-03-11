@@ -15,6 +15,7 @@ install: all
 	chmod -x "$(DILLO_LIBDIR)/dls/not_executable.dls"
 	$(INSTALL) -c zip.dls "$(DILLO_LIBDIR)/dls/"
 	$(INSTALL) -c epub.dls "$(DILLO_LIBDIR)/dls/"
+	$(INSTALL) -c rss.dls "$(DILLO_LIBDIR)/dls/"
 
 uninstall:
 	rm -f "$(DILLO_LIBDIR)/dls/default.dls"
@@ -22,3 +23,4 @@ uninstall:
 	rm -f "$(DILLO_LIBDIR)/dls/not_executable.dls"
 	rm -f "$(DILLO_LIBDIR)/dls/zip.dls"
 	rm -f "$(DILLO_LIBDIR)/dls/epub.dls"
+	rm -f "$(DILLO_LIBDIR)/dls/rss.dls"

@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+
+import sys
+import traceback
+import feedparser
+import urllib.parse
+
+MAIN_PAGE_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>DLS RSS</TITLE>
+</HEAD>
+<BODY><H1>DLS RSS Main Page</H1>
+<em>This DLS is a viewer for RSS feeds</em>
+<p>Insert an RSS feed URL:</p>
+<form>
+<input name="feed" placeholder="RSS feed URL" />
+<input type=submit />
+</form>
+</table>
+</BODY></HTML>
+"""
+
+FEED_PAGE_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>{title}</TITLE>
+</HEAD>
+<BODY>
+<h1>{title}</h1>
+{posts}
+</BODY></HTML>
+"""
+
+FEED_POST_TEMPLATE = """
+<h2>{title}</h2>
+<p><em>{date}</em></p>
+<p><a href="{link}">Link</a></p>
+<p>
+{content}
+</p>
+"""
+
+def parse_url_params(str_params):
+	"""Parse URL's parameters into a dictionary"""
+
+	if len(str_params) == 0:
+		return {}
+
+	return { name: urllib.parse.unquote_plus(value)
+		 for name, value
+		 in [
+			 tuple(par.split('='))
+			 for par in str_params.split('&')
+		 ]}
+
+class RssDls(object):
+
+	def __init__(self, url, str_params=""):
+		self.url = url
+		self.params = parse_url_params(str_params)
+		print("DLS INIT: ", self.url, self.params, file=sys.stderr)
+
+	def output_main_page(self):
+		"""Outputs the main page of the DLS"""
+
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+		print(MAIN_PAGE_TEMPLATE, end="")
+
+	def output_feed(self):
+		"""Outputs the content of the feed"""
+
+		feed = feedparser.parse(self.params['feed'])
+
+		posts = []
+
+		for post in feed.entries:
+			content = post.summary
+
+			if (post.get('content')):
+				content=post.content[0].value
+
+			posts.append(FEED_POST_TEMPLATE.format(
+				title=post.title,
+				date=post.published.split('+')[0].replace('T', ' '),
+				link=post.link,
+				content=content
+			))
+			
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
+		      end="")
+
+		sys.stdout.flush()
+		print(FEED_PAGE_TEMPLATE.format(title=feed.channel.title, posts='\n<hr/>\n'.join(posts)))
+
+	def get_feed(self):
+		"""Main feed reader method"""
+
+		if len(self.params.get('feed','')) == 0:
+			self.output_main_page()
+
+		else:
+                        self.output_feed()
+
+def main():
+	
+	try:
+
+		url = "dls:rss"
+		params = ""
+
+		if len(sys.argv) > 1:
+			params = sys.argv[1]
+
+		rss_dls = RssDls(url, params)
+		rss_dls.get_feed()
+
+	except Exception as e:
+		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
+		print("<b>Execution error:</b> ", end="")
+		print(e)
+		print("<br/><pre>")
+		traceback.print_exc(file=sys.stdout)
+		print("</pre>")
+
+if __name__ == "__main__":
+	main()

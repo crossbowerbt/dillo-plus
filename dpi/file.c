@@ -513,6 +513,10 @@ static const char *File_ext(const char *filename)
               !dStrAsciiCasecmp(e, "htm") ||
               !dStrAsciiCasecmp(e, "shtml")) {
       return "text/html";
+   } else if (!dStrAsciiCasecmp(e, "xml")) {
+      return "text/xml";
+   } else if (!dStrAsciiCasecmp(e, "rss")) {
+      return "application/rss+xml";
    } else if (!dStrAsciiCasecmp(e, "gmi")) {
       return "text/gemini";
    } else if (!dStrAsciiCasecmp(e, "md")) {
