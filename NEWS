@@ -1,0 +1,57 @@
+----
+NEWS
+----
+
+Nov 2000:
+
+  Introduced a new design layer between the IO and the Dw.
+
+March 2001:
+
+  Finally the new dillo widget is ready! (dillo >= 0.4.0).
+  0.4.0 is able to cope with low resolution depths.
+
+Apr 2002:
+
+  We moved to:  http://dillo.cipsga.org.br/
+
+Dec 2002
+
+  We moved to:  http://dillo.auriga.wearlab.de/
+
+Jun 2003
+
+  http://www.dillo.org/     (hosted at the wearlab!)
+
+Sep 2007
+
+  The new FLTK2-based dillo code is released! (under GPL3)
+
+Jul 2011
+
+  Dillo switches to fltk-1.3.0.
+  dillo-2.2.1, the last of the 2.x series is released.
+
+Sep 2011
+
+  dillo-3.0, the first of the 3.x series is released.
+
+  dillo-3.0.1, a bugfix release for the new 3.x series is out.
+
+Mar 2013
+
+  dillo-3.0.3, a new release for the new 3.x series is out.
+
+Apr 2014
+
+  dillo-3.0.4, a new release for the new 3.x series is out.
+
+Dec 2014
+
+  dillo-3.0.4.1, a new release for the new 3.x series is out.
+
+
+  Jorge.-
+  jcid@dillo.org
+  Project maintainer, core developer, patcher, you name it! :-)
+

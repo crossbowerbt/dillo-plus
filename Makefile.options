@@ -1,0 +1,48 @@
+# == SYSTEM BINARIES ==
+
+AR = ar
+ARFLAGS = cru
+RANLIB = ranlib
+
+CC = gcc
+CXX = g++
+
+INSTALL = /usr/bin/install
+INSTALL_SH = ../install-sh
+
+# == COMPILATION FLAGS ==
+
+COMPILE = $(CC) $(INCLUDES) $(CFLAGS)
+LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
+
+CFLAGS = -g -O2 -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return
+INCLUDES = -I. -I.. -I/usr/local/include
+LDFLAGS = -L/usr/local/lib
+
+CXXCOMPILE = $(CXX) $(INCLUDES) $(CXXFLAGS)
+CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
+
+LIBFLTK_CFLAGS = -I/usr/X11R6/include/freetype2 -pipe -I/usr/X11R6/include -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_THREAD_SAFE -D_REENTRANT
+LIBFLTK_CXXFLAGS = $(LIBFLTK_CFLAGS) -fvisibility-inlines-hidden
+LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau
+
+HTTPS_LDFLAGS = -lcrypto -lssl
+
+LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
+
+DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -L/usr/local/lib -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
+
+# == INSTALL PATHS ==
+
+PREFIX = /usr/local
+LIBDIR = $(PREFIX)/lib/
+
+DILLO_BINDIR = $(PREFIX)/bin/
+DILLO_LIBDIR = $(PREFIX)/lib/dillo/
+DILLO_ETCDIR = $(PREFIX)/etc/dillo/
+
+DPIDRC_SYS = $(DILLO_ETCDIR)/dpidrc
+
+DOC_PATH = $(PREFIX)/share/doc/dillo
+MAN_PATH = $(PREFIX)/share/man/man1
+
