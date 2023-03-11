@@ -27,16 +27,37 @@ namespace dw {
 
 Bullet::Bullet ()
 {
+   DBG_OBJ_CREATE ("dw::Bullet");
 }
 
-void Bullet::sizeRequestImpl (core::Requisition *requisition)
+Bullet::~Bullet ()
+{
+   DBG_OBJ_DELETE ();
+}
+
+void Bullet::sizeRequestSimpl (core::Requisition *requisition)
 {
    requisition->width = lout::misc::max (getStyle()->font->xHeight * 4 / 5, 1);
    requisition->ascent = lout::misc::max (getStyle()->font->xHeight, 1);
    requisition->descent = 0;
 }
 
-void Bullet::draw (core::View *view, core::Rectangle *area)
+void Bullet::getExtremesSimpl (core::Extremes *extremes)
+{
+   extremes->minWidth = extremes->maxWidth = extremes->adjustmentWidth =
+      extremes->minWidthIntrinsic = extremes->maxWidthIntrinsic =
+      lout::misc::max (getStyle()->font->xHeight * 4 / 5, 1);
+}
+
+void Bullet::containerSizeChangedForChildren ()
+{
+   DBG_OBJ_ENTER0 ("resize", 0, "containerSizeChangedForChildren");
+   // Nothing to do.
+   DBG_OBJ_LEAVE ();
+}
+
+void Bullet::draw (core::View *view, core::Rectangle *area,
+                   core::DrawingContext *context)
 {
    int x, y, l;
    bool filled = true;

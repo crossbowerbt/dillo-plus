@@ -180,6 +180,18 @@ struct Extremes
 {
    int minWidth;
    int maxWidth;
+   int minWidthIntrinsic;
+   int maxWidthIntrinsic;
+   int adjustmentWidth;
+};
+
+class WidgetReference: public lout::object::Object
+{
+public:
+   Widget *widget;
+   int parentRef;
+
+   WidgetReference (Widget *widget) { parentRef = -1; this->widget = widget; }
 };
 
 struct Content
@@ -188,11 +200,31 @@ struct Content
       START             = 1 << 0,
       END               = 1 << 1,
       TEXT              = 1 << 2,
-      WIDGET            = 1 << 3,
-      BREAK             = 1 << 4,
+
+      /** \brief widget in normal flow, so that _this_ widget
+          (containing this content) is both container (parent) and
+          generator */
+      WIDGET_IN_FLOW    = 1 << 3,
+
+      /** \brief widget out of flow (OOF); _this_ widget (containing
+          this content) is only the container (parent), but _not_
+          generator */
+      WIDGET_OOF_CONT    = 1 << 4,
+
+      /** \brief reference to a widget out of flow (OOF); _this_
+          widget (containing this content) is only the generator
+          (parent), but _not_ container */
+      WIDGET_OOF_REF    = 1 << 5,
+      BREAK             = 1 << 6,
+
+      /** \brief can be used internally, but should never be exposed,
+          e. g. by iterators */
+      INVALID            = 1 << 7,
+
       ALL               = 0xff,
       REAL_CONTENT      = 0xff ^ (START | END),
-      SELECTION_CONTENT = TEXT | WIDGET | BREAK
+      SELECTION_CONTENT = TEXT | BREAK, // WIDGET_* must be set additionally
+      ANY_WIDGET        = WIDGET_IN_FLOW | WIDGET_OOF_CONT | WIDGET_OOF_REF,
    };
 
    /* Content is embedded in struct Word therefore we
@@ -203,8 +235,82 @@ struct Content
    union {
       const char *text;
       Widget *widget;
+      WidgetReference *widgetReference;
       int breakSpace;
    };
+
+   static Content::Type maskForSelection (bool followReferences);
+
+   static void intoStringBuffer(Content *content, lout::misc::StringBuffer *sb);
+   static void maskIntoStringBuffer(Type mask, lout::misc::StringBuffer *sb);
+   static void print (Content *content);
+   static void printMask (Type mask);
+
+   inline Widget *getWidget () {
+      assert (type & ANY_WIDGET);
+      return type == WIDGET_OOF_REF ? widgetReference->widget : widget;
+   }
+};
+
+/**
+ * \brief Base class for dw::core::DrawingContext and
+ *    dw::core::GettingWidgetAtPointContext.
+ *
+ * Not to be confused with the *stacking context* as defined by CSS.
+ */
+class StackingProcessingContext
+{
+private:
+   lout::container::typed::HashSet<lout::object::TypedPointer<Widget> >
+      *widgetsProcessedAsInterruption;
+
+public:
+   inline StackingProcessingContext () {
+      widgetsProcessedAsInterruption =
+         new lout::container::typed::HashSet<lout::object::
+                                             TypedPointer<Widget> > (true);
+   }
+   
+   inline ~StackingProcessingContext ()
+   { delete widgetsProcessedAsInterruption; }
+
+   inline bool hasWidgetBeenProcessedAsInterruption (Widget *widget) {
+      lout::object::TypedPointer<Widget> key (widget);
+      return widgetsProcessedAsInterruption->contains (&key);
+   }
+
+   inline void addWidgetProcessedAsInterruption (Widget *widget) {
+      lout::object::TypedPointer<Widget> *key =
+         new lout::object::TypedPointer<Widget> (widget);
+      return widgetsProcessedAsInterruption->put (key);
+   }
+};
+
+/**
+ * \brief Set at the top when drawing.
+ *
+ * See \ref dw-interrupted-drawing for details.
+ */
+class DrawingContext: public StackingProcessingContext
+{
+private:
+   Rectangle toplevelArea;
+
+public:
+   inline DrawingContext (Rectangle *toplevelArea) {
+      this->toplevelArea = *toplevelArea;
+   }
+   
+   inline Rectangle *getToplevelArea () { return &toplevelArea; }
+};
+
+/**
+ * \brief Set at the top when getting the widget at the point.
+ *
+ * Similar to dw::core::DrawingContext.
+ */
+class GettingWidgetAtPointContext: public StackingProcessingContext
+{
 };
 
 } // namespace core

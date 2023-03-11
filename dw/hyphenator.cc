@@ -224,17 +224,6 @@ bool Hyphenator::isHyphenationCandidate (const char *word)
  */
 bool Hyphenator::isCharPartOfActualWord (char *s)
 {
-#if 0
-   // Return true when "s" points to a letter.
-   return (s[0] >= 'a' && s[0] <= 'z') ||
-      // UTF-8: starts with 0xc3
-      ((unsigned char)s[0] == 0xc3 &&
-       ((unsigned char)s[1] == 0xa4 /* ä */ ||
-        (unsigned char)s[1] == 0xb6 /* ö */ ||
-        (unsigned char)s[1] == 0xbc /* ü */ ||
-        (unsigned char)s[1] == 0x9f /* ß */ ));
-#endif
-
    return isAlpha (decodeUtf8 (s));
 }
 
@@ -244,7 +233,7 @@ bool Hyphenator::isCharPartOfActualWord (char *s)
 int *Hyphenator::hyphenateWord(core::Platform *platform,
                                const char *word, int *numBreaks)
 {
-   if ((trie == NULL && exceptions ==NULL) || !isHyphenationCandidate (word)) {
+   if ((trie == NULL && exceptions == NULL) || !isHyphenationCandidate (word)) {
       *numBreaks = 0;
       return NULL;
    }
@@ -578,7 +567,7 @@ int Trie::load (FILE *file)
          continue;
 
       char data[LEN + 1];
-      int n = sscanf (s, "%u, %u, %s", &c, &next, data);
+      int n = sscanf (s, "%d, %d, %s", &c, &next, data);
 
       if (n >= 2 && c >= 0 && c < 256 && next >= 0) {
          tree.increase ();

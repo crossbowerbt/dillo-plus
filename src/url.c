@@ -46,6 +46,7 @@
 #include <ctype.h>
 
 #include "url.h"
+#include "hsts.h"
 #include "msg.h"
 
 static const char *HEX = "0123456789ABCDEF";
@@ -66,6 +67,8 @@ char *a_Url_str(const DilloUrl *u)
    DilloUrl *url = (DilloUrl *) u;
 
    dReturn_val_if_fail (url != NULL, NULL);
+
+   url->path = (! url->path)      ? "/" : url->path;	// Make sure that the path is at least "/"
 
    if (!url->url_string) {
       url->url_string = dStr_sized_new(60);
@@ -118,6 +121,12 @@ const char *a_Url_hostname(const DilloUrl *u)
       }
    }
 
+   if (!url->port) {
+      if (!dStrAsciiCasecmp(url->scheme, "http"))
+         url->port = URL_HTTP_PORT;
+      else if (!dStrAsciiCasecmp(url->scheme, "https"))
+         url->port = URL_HTTPS_PORT;
+   }
    return url->hostname;
 }
 
@@ -134,10 +143,17 @@ static DilloUrl *Url_object_new(const char *uri_str)
 
    url = dNew0(DilloUrl, 1);
 
-   /* remove leading & trailing space from buffer */
-   url->buffer = dStrstrip(dStrdup(uri_str));
+   /* url->buffer is given a little extra room in case HSTS needs to transform
+    * a URL string ending in ":80" to ":443".
+    */
+   int len = strlen(uri_str)+2;
+   s = dNew(char, len);
+   memcpy(s, uri_str, len-1);
+   s = dStrstrip(s);
 
-   s = (char *) url->buffer;
+   /* remove leading & trailing space from buffer */
+   url->buffer = s;
+
    p = strpbrk(s, ":/?#");
    if (p && p[0] == ':' && p > s) {                /* scheme */
       *p = 0;
@@ -198,7 +214,6 @@ void a_Url_free(DilloUrl *url)
          dFree((char *)url->hostname);
       dFree((char *)url->buffer);
       dStr_free(url->data, 1);
-      dFree((char *)url->alt);
       dFree(url);
    }
 }
@@ -207,7 +222,6 @@ void a_Url_free(DilloUrl *url)
  * Resolve the URL as RFC3986 suggests.
  */
 static Dstr *Url_resolve_relative(const char *RelStr,
-                                  DilloUrl *BaseUrlPar,
                                   const char *BaseStr)
 {
    char *p, *s, *e;
@@ -218,9 +232,7 @@ static Dstr *Url_resolve_relative(const char *RelStr,
    /* parse relative URL */
    RelUrl = Url_object_new(RelStr);
 
-   if (BaseUrlPar) {
-      BaseUrl = BaseUrlPar;
-   } else if (RelUrl->scheme == NULL) {
+   if (RelUrl->scheme == NULL) {
       /* only required when there's no <scheme> in RelStr */
       BaseUrl = Url_object_new(BaseStr);
    }
@@ -330,8 +342,7 @@ static Dstr *Url_resolve_relative(const char *RelStr,
 done:
    dStr_free(Path, TRUE);
    a_Url_free(RelUrl);
-   if (BaseUrl != BaseUrlPar)
-      a_Url_free(BaseUrl);
+   a_Url_free(BaseUrl);
    return SolvedUrl;
 }
 
@@ -350,7 +361,6 @@ done:
  *     port               = 8080
  *     flags              = URL_Get
  *     data               = Dstr * ("")
- *     alt                = NULL
  *     ismap_url_len      = 0
  *  }
  *
@@ -379,10 +389,10 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
       for (i = 0; url_str[i]; ++i)
          if (url_str[i] > 0x1F && url_str[i] < 0x7F && url_str[i] != ' ')
             *p++ = url_str[i];
-         else  {
-           *p++ = '%';
-           *p++ = HEX[(url_str[i] >> 4) & 15];
-           *p++ = HEX[url_str[i] & 15];
+         else {
+            *p++ = '%';
+            *p++ = HEX[(url_str[i] >> 4) & 15];
+            *p++ = HEX[url_str[i] & 15];
          }
       *p = 0;
       urlstr = str1;
@@ -400,7 +410,7 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
    }
 
    /* Resolve the URL */
-   SolvedUrl = Url_resolve_relative(urlstr, NULL, base_url);
+   SolvedUrl = Url_resolve_relative(urlstr, base_url);
    _MSG("SolvedUrl = %s\n", SolvedUrl->str);
 
    /* Fill url data */
@@ -412,6 +422,33 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
 
    dFree(str1);
    dFree(str2);
+
+   /*
+    * A site's HTTP Strict Transport Security policy may direct us to transform
+    * URLs like "http://en.wikipedia.org:80" to "https://en.wikipedia.org:443".
+    */
+   if (prefs.http_strict_transport_security &&
+       url->scheme && !dStrAsciiCasecmp(url->scheme, "http") &&
+       a_Hsts_require_https(a_Url_hostname(url))) {
+      const char *const scheme = "https";
+
+      _MSG("url: HSTS transformation for %s.\n", url->url_string->str);
+      url->scheme = scheme;
+      if (url->port == URL_HTTP_PORT)
+         url->port = URL_HTTPS_PORT;
+
+      if (url->authority) {
+         int len = strlen(url->authority);
+
+         if (len >= 3 && !strcmp(url->authority + len-3, ":80")) {
+            strcpy((char *)url->authority + len-2, "443");
+         }
+      }
+
+      dStr_free(url->url_string, TRUE);
+      url->url_string = NULL;
+   }
+
    return url;
 }
 
@@ -429,7 +466,6 @@ DilloUrl* a_Url_dup(const DilloUrl *ori)
    url->url_string           = dStr_new(URL_STR(ori));
    url->port                 = ori->port;
    url->flags                = ori->flags;
-   url->alt                  = dStrdup(ori->alt);
    url->ismap_url_len        = ori->ismap_url_len;
    url->illegal_chars        = ori->illegal_chars;
    url->illegal_chars_spc    = ori->illegal_chars_spc;
@@ -489,17 +525,6 @@ void a_Url_set_data(DilloUrl *u, Dstr **data)
 }
 
 /*
- * Set DilloUrl alt (alternate text to the URL. Used by image maps)
- */
-void a_Url_set_alt(DilloUrl *u, const char *alt)
-{
-   if (u) {
-      dFree((char *)u->alt);
-      u->alt = dStrdup(alt);
-   }
-}
-
-/*
  * Set DilloUrl ismap coordinates
  * (this is optimized for not hogging the CPU)
  */
@@ -509,8 +534,7 @@ void a_Url_set_ismap_coords(DilloUrl *u, char *coord_str)
 
    if (!u->ismap_url_len) {
       /* Save base-url length (without coords) */
-      u->ismap_url_len  = URL_STR_(u) ? u->url_string->len : 0;
-      a_Url_set_flags(u, URL_FLAGS(u) | URL_Ismap);
+      u->ismap_url_len = URL_STR_(u) ? u->url_string->len : 0;
    }
    if (u->url_string) {
       dStr_truncate(u->url_string, u->ismap_url_len);
@@ -636,28 +660,26 @@ char *a_Url_string_strip_delimiters(const char *str)
 }
 
 /*
- * Is the provided hostname an IP address?
+ * What type of host is this?
  */
-static bool_t Url_host_is_ip(const char *host)
+int a_Url_host_type(const char *host)
 {
    uint_t len;
 
    if (!host || !*host)
-      return FALSE;
+      return URL_HOST_ERROR;
 
    len = strlen(host);
 
    if (len == strspn(host, "0123456789.")) {
-      _MSG("an IPv4 address\n");
-      return TRUE;
+      return URL_HOST_IPV4;
    }
    if (strchr(host, ':') &&
        (len == strspn(host, "0123456789abcdefABCDEF:."))) {
       /* The precise format is shown in section 3.2.2 of rfc 3986 */
-      MSG("an IPv6 address\n");
-      return TRUE;
+      return URL_HOST_IPV6;
    }
-   return FALSE;
+   return URL_HOST_NAME;
 }
 
 /*
@@ -688,7 +710,7 @@ static uint_t Url_host_public_internal_dots(const char *host)
 
       if (tld_len > 0) {
          /* These TLDs were chosen by examining the current publicsuffix list
-          * in October 2014 and picking out those where it was simplest for
+          * in July 2016 and picking out those where it was simplest for
           * them to describe the situation by beginning with a "*.[tld]" rule
           * or every rule was "[something].[tld]".
           *
@@ -697,8 +719,8 @@ static uint_t Url_host_public_internal_dots(const char *host)
           * poorer approximation of administrative boundaries.
           */
          const char *const tlds[] = {"bd","bn","ck","cy","er","fj","fk",
-                                     "gu","il","jm","ke","kh","kw","mm","mz",
-                                     "ni","np","pg","ye","za","zm","zw"};
+                                     "gu","jm","ke","kh","kw","mm","mz",
+                                     "ni","np","pg","ye","za","zw"};
          uint_t i, tld_num = sizeof(tlds) / sizeof(tlds[0]);
 
          for (i = 0; i < tld_num; i++) {
@@ -724,7 +746,7 @@ static const char *Url_host_find_public_suffix(const char *host)
    const char *s;
    uint_t dots;
 
-   if (!host || !*host || Url_host_is_ip(host))
+   if (a_Url_host_type(host) != URL_HOST_NAME)
       return host;
 
    s = host;

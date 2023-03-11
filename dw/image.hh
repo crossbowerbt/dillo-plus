@@ -121,6 +121,7 @@ class Image: public core::Widget, public core::ImgRenderer
 private:
    char *altText;
    core::Imgbuf *buffer;
+   int bufWidth, bufHeight;
    int altTextWidth;
    bool clicking;
    int currLink;
@@ -129,10 +130,13 @@ private:
    bool isMap;
 
 protected:
-   void sizeRequestImpl (core::Requisition *requisition);
+   void sizeRequestSimpl (core::Requisition *requisition);
+   void getExtremesSimpl (core::Extremes *extremes);
    void sizeAllocateImpl (core::Allocation *allocation);
-
-   void draw (core::View *view, core::Rectangle *area);
+   void containerSizeChangedForChildren ();
+   
+   void draw (core::View *view, core::Rectangle *area,
+              core::DrawingContext *context);
 
    bool buttonPressImpl (core::EventButton *event);
    bool buttonReleaseImpl (core::EventButton *event);
@@ -147,8 +151,14 @@ protected:
 public:
    static int CLASS_ID;
 
+   static int lastallocationx;
+
    Image(const char *altText);
    ~Image();
+
+   // For images, the minimal width is not well defined, and
+   // correction of the size makes not much sense.
+   virtual bool getAdjustMinWidth () { return false; }
 
    core::Iterator *iterator (core::Content::Type mask, bool atEnd);
 

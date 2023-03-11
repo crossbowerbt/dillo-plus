@@ -535,7 +535,7 @@ void CssContext::addRule (CssSelector *sel, CssPropertyList *props,
       if ((order == CSS_PRIMARY_AUTHOR ||
            order == CSS_PRIMARY_AUTHOR_IMPORTANT) &&
            !rule->isSafe ()) {
-         MSG_WARN ("Ignoring unsafe author style that might reveal browsing history\n");
+         _MSG_WARN ("Ignoring unsafe author style that might reveal browsing history\n");
          delete rule;
       } else {
          rule->selector->setMatchCacheOffset(matchCache.size ());
@@ -544,7 +544,7 @@ void CssContext::addRule (CssSelector *sel, CssPropertyList *props,
 
          if (order == CSS_PRIMARY_USER_AGENT) {
             userAgentSheet.addRule (rule);
-         } else { 
+         } else {
             sheet[order].addRule (rule);
          }
       }

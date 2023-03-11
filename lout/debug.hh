@@ -17,6 +17,8 @@
 #define D_STMT_START      do
 #define D_STMT_END        while (0)
 
+#define D_STMT_NOP        D_STMT_START { } D_STMT_END
+
 # ifdef DEBUG_LEVEL
 #    define DEBUG_MSG(level, ...)                     \
         D_STMT_START {                                \
@@ -27,164 +29,55 @@
 #    define DEBUG_MSG(level, ...)
 # endif /* DEBUG_LEVEL */
 
+#include "debug_rtfl.hh"
 
-
-/*
- * See <http://www.dillo.org/~sgeerken/rtfl/>.
- */
+/* Some extensions for RTFL dealing with static stuff. */
 
 #ifdef DBG_RTFL
 
-#include <unistd.h>
-#include <stdio.h>
+#define DBG_OBJ_MSG_S(aspect, prio, msg)         \
+   RTFL_OBJ_PRINT ("msg", "s:s:d:s", "<static>", aspect, prio, msg)
 
-// "\n" at the beginning just in case that the previous line is not finished
-// yet.
-#define RTFL_PREFIX_FMT  "\n[rtfl]%s:%d:%d:"
-#define RTFL_PREFIX_ARGS __FILE__, __LINE__, getpid()
+#define DBG_OBJ_MSGF_S(aspect, prio, fmt, ...) \
+   STMT_START { \
+      char msg[256]; \
+      snprintf (msg, sizeof (msg), fmt, __VA_ARGS__); \
+      RTFL_OBJ_PRINT ("msg", "s:s:d:s", "<static>", aspect, prio, msg) \
+   } STMT_END
 
-#define DBG_OBJ_MSG(aspect, prio, msg) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-msg:%p:%s:%d:%s\n", \
-              RTFL_PREFIX_ARGS, this, aspect, prio, msg); \
-      fflush (stdout); \
-   } D_STMT_END
+#define DBG_OBJ_ENTER0_S(aspect, prio, funname) \
+   RTFL_OBJ_PRINT ("enter", "s:s:d:s:", "<static>", aspect, prio, funname);
 
-#define DBG_OBJ_MSGF(aspect, prio, fmt, ...) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-msg:%p:%s:%d:" fmt "\n", \
-              RTFL_PREFIX_ARGS, this, aspect, prio, __VA_ARGS__); \
-      fflush (stdout); \
-   } D_STMT_END
+#define DBG_OBJ_ENTER_S(aspect, prio, funname, fmt, ...) \
+   STMT_START { \
+      char args[256]; \
+      snprintf (args, sizeof (args), fmt, __VA_ARGS__); \
+      RTFL_OBJ_PRINT ("enter", "s:s:d:s:s", "<static>", aspect, prio, funname, \
+                      args); \
+   } STMT_END
 
-#define DBG_OBJ_MSG_START() \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-msg-start:%p\n", \
-              RTFL_PREFIX_ARGS, this); \
-      fflush (stdout); \
-   } D_STMT_END
+#define DBG_OBJ_LEAVE_S() \
+   RTFL_OBJ_PRINT ("leave", "s", "<static>");
 
-#define DBG_OBJ_MSG_END() \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-msg-end:%p\n", \
-              RTFL_PREFIX_ARGS, this); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_CREATE(klass) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-create:%p:%s\n", \
-              RTFL_PREFIX_ARGS, this, klass); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_DELETE() \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-delete:%p\n", \
-              RTFL_PREFIX_ARGS, this); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_BASECLASS(klass) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-ident:%p:%p\n", \
-              RTFL_PREFIX_ARGS, this, (klass*)this); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_ASSOC(parent, child) \
-   D_STMT_START { \
-      if (child) { \
-         printf (RTFL_PREFIX_FMT "obj-assoc:%p:%p\n", \
-                 RTFL_PREFIX_ARGS, parent, child); \
-         fflush (stdout); \
-      } \
-   } D_STMT_END
-
-#define DBG_OBJ_ASSOC_PARENT(parent) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-assoc:%p:%p\n", \
-              RTFL_PREFIX_ARGS, parent, this); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_ASSOC_CHILD(child) \
-   D_STMT_START { \
-      if (child) { \
-         printf (RTFL_PREFIX_FMT "obj-assoc:%p:%p\n", \
-                 RTFL_PREFIX_ARGS, this, child); \
-         fflush (stdout); \
-      } \
-   } D_STMT_END
-
-#define DBG_OBJ_SET_NUM(var, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:%s:%d\n", \
-              RTFL_PREFIX_ARGS, this, var, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_SET_STR(var, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:%s:%s\n", \
-              RTFL_PREFIX_ARGS, this, var, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_SET_PTR(var, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:%s:%p\n", \
-              RTFL_PREFIX_ARGS, this, var, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_ARRSET_NUM(var, ind, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:" var ".%d:%d\n", \
-              RTFL_PREFIX_ARGS, this, ind, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_ARRSET_STR(var, ind, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:" var ".%d:%s\n", \
-              RTFL_PREFIX_ARGS, this, ind, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_ARRSET_PTR(var, ind, val) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-set:%p:" var ".%d:%p\n", \
-              RTFL_PREFIX_ARGS, this, ind, val); \
-      fflush (stdout); \
-   } D_STMT_END
-
-#define DBG_OBJ_COLOR(color, klass) \
-   D_STMT_START { \
-      printf (RTFL_PREFIX_FMT "obj-color:%s:%s\n", \
-              RTFL_PREFIX_ARGS, color, klass); \
-      fflush (stdout); \
-   } D_STMT_END
+#define DBG_OBJ_LEAVE_VAL_S(fmt, ...) \
+   STMT_START { \
+      char vals[256]; \
+      snprintf (vals, sizeof (vals), fmt, __VA_ARGS__); \
+      RTFL_OBJ_PRINT ("leave", "s:s", "<static>", vals); \
+   } STMT_END
 
 #else /* DBG_RTFL */
 
-#define DBG_OBJ_MSG(aspect, prio, msg)
-#define DBG_OBJ_MSGF(aspect, prio, fmt, ...)
-#define DBG_OBJ_MSG_START()
-#define DBG_OBJ_MSG_END()
-#define DBG_OBJ_CREATE(klass)
-#define DBG_OBJ_DELETE()
-#define DBG_OBJ_BASECLASS(klass)
-#define DBG_OBJ_ASSOC_PARENT(parent)
-#define DBG_OBJ_ASSOC_CHILD(child)
-#define DBG_OBJ_ASSOC(parent, child)
-#define DBG_OBJ_SET_NUM(var, val)
-#define DBG_OBJ_SET_STR(var, val)
-#define DBG_OBJ_SET_PTR(var, val)
-#define DBG_OBJ_ARRSET_NUM(var, ind, val)
-#define DBG_OBJ_ARRSET_STR(var, ind, val)
-#define DBG_OBJ_ARRSET_PTR(var, ind, val)
-#define DBG_OBJ_COLOR(klass, color)
+#define STMT_NOP         do { } while (0)
+
+#define DBG_IF_RTFL if(0)
+
+#define DBG_OBJ_MSG_S(aspect, prio, msg)                  STMT_NOP
+#define DBG_OBJ_MSGF_S(aspect, prio, fmt, ...)            STMT_NOP
+#define DBG_OBJ_ENTER0_S(aspect, prio, funname)           STMT_NOP
+#define DBG_OBJ_ENTER_S(aspect, prio, funname, fmt, ...)  STMT_NOP
+#define DBG_OBJ_LEAVE_S()                                 STMT_NOP
+#define DBG_OBJ_LEAVE_VAL_S(fmt, ...)                     STMT_NOP
 
 #endif /* DBG_RTFL */
 

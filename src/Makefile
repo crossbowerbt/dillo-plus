@@ -17,7 +17,7 @@ paths.o: paths.cc paths.hh
 tipwin.o: tipwin.cc tipwin.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c tipwin.cc
 
-ui.o: ui.cc ui.hh
+ui.o: ui.cc ui.hh pixmaps.h
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c -o ui.o ui.cc
 
 uicmd.o: uicmd.cc uicmd.hh
@@ -46,6 +46,9 @@ misc.o: misc.c misc.h
 
 history.o: history.c history.h
 	$(COMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CFLAGS) $(LIBPNG16_CXXFLAGS) -c history.c
+
+hsts.o: hsts.c hsts.h
+	$(COMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CFLAGS) $(LIBPNG16_CXXFLAGS) -c hsts.c
 
 prefs.o: prefs.c
 	$(COMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CFLAGS) $(LIBPNG16_CXXFLAGS) -c prefs.c
@@ -153,8 +156,8 @@ xembed.o: xembed.cc xembed.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c xembed.cc
 
 
-dillo: dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
-	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) $(LDFLAGS) $(DILLO_LDFLAGS) -o dillo dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
+dillo: dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) $(LDFLAGS) $(DILLO_LDFLAGS) $(MBED_TLS_LDFLAGS) -o dillo dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
 
 clean:
 	rm -f *.o *.a dillo

@@ -44,6 +44,7 @@ typedef struct {
    char *http_proxyuser;
    char *http_referer;
    char *http_user_agent;
+   char *media_player;
    char *no_proxy;
    DilloUrl *start_page;
    DilloUrl *home;
@@ -66,7 +67,8 @@ typedef struct {
    int panel_size;
    bool_t small_icons;
    bool_t limit_text_width;
-   bool_t w3c_plus_heuristics;
+   bool_t adjust_min_width;
+   bool_t adjust_table_min_width;
    bool_t focus_new_tab;
    double font_factor;
    int32_t font_max_size;
@@ -92,6 +94,8 @@ typedef struct {
    bool_t load_stylesheets;
    bool_t parse_embedded_css;
    bool_t load_reader_mode_css;
+   bool_t http_persistent_conns;
+   bool_t http_strict_transport_security;
    int32_t buffered_drawing;
    char *font_serif;
    char *font_sans_serif;

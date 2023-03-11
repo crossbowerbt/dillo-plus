@@ -142,6 +142,8 @@ int ImageMapsList::link (object::Object *key, int x, int y)
 
 int Image::CLASS_ID = -1;
 
+int Image::lastallocationx = 0;
+
 Image::Image(const char *altText)
 {
    DBG_OBJ_CREATE ("dw::Image");
@@ -149,11 +151,15 @@ Image::Image(const char *altText)
    this->altText = altText ? strdup (altText) : NULL;
    altTextWidth = -1; // not yet calculated
    buffer = NULL;
+   bufWidth = bufHeight = -1;
    clicking = false;
    currLink = -1;
    mapList = NULL;
    mapKey = NULL;
    isMap = false;
+
+   DBG_OBJ_SET_NUM ("bufWidth", bufWidth);
+   DBG_OBJ_SET_NUM ("bufHeight", bufHeight);
 }
 
 Image::~Image()
@@ -168,46 +174,25 @@ Image::~Image()
    DBG_OBJ_DELETE ();
 }
 
-void Image::sizeRequestImpl (core::Requisition *requisition)
+void Image::sizeRequestSimpl (core::Requisition *requisition)
 {
+   DBG_OBJ_ENTER0 ("resize", 0, "sizeRequestImpl");
+
+   int styleWidth = core::style::absLengthVal (getStyle ()->width);
+   int styleMaxWidth = core::style::absLengthVal (getStyle ()->maxWidth);
+   int styleHeight = core::style::absLengthVal (getStyle ()->height);
+  
    if (buffer) {
-      if (getStyle ()->height == core::style::LENGTH_AUTO &&
-          core::style::isAbsLength (getStyle ()->width) &&
-          buffer->getRootWidth () > 0) {
-         // preserve aspect ratio when only width is given
-         if (core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
-             core::style::absLengthVal (getStyle ()->maxWidth) < core::style::absLengthVal (getStyle ()->width))
-            // take max-width into account
-            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
-         else
-            requisition->width = core::style::absLengthVal (getStyle ()->width);
-         requisition->ascent = buffer->getRootHeight () *
-                               requisition->width / buffer->getRootWidth ();
-      } else if (getStyle ()->width == core::style::LENGTH_AUTO &&
-                 core::style::isAbsLength (getStyle ()->height) &&
-                 buffer->getRootHeight () > 0) {
-         // preserve aspect ratio when only height is given
-         requisition->ascent = core::style::absLengthVal (getStyle ()->height);
-         requisition->width = buffer->getRootWidth () *
-                               requisition->ascent / buffer->getRootHeight ();
-         // adjust for max-width
-         if(core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
-            core::style::absLengthVal (getStyle ()->maxWidth) < requisition->width) {
-            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
-            requisition->ascent = buffer->getRootHeight () *
-                                  requisition->width / buffer->getRootWidth ();
-         }
-      } else {
-         requisition->width = buffer->getRootWidth ();
-         requisition->ascent = buffer->getRootHeight ();
-         // adjust for max-width
-         if(core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
-            core::style::absLengthVal (getStyle ()->maxWidth) < requisition->width) {
-            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
-            requisition->ascent = buffer->getRootHeight () *
-                                  requisition->width / buffer->getRootWidth ();
-         }
-      }
+      requisition->width = buffer->getRootWidth ();
+
+      // respect CSS width and max-width
+      if (styleWidth >0)
+         requisition->width = styleMaxWidth > 0 && styleMaxWidth < styleWidth ?
+                              styleMaxWidth : styleWidth;
+      else if (styleMaxWidth > 0 && styleMaxWidth < requisition->width)
+         requisition->width = styleMaxWidth;
+      
+      requisition->ascent = buffer->getRootHeight ();
       requisition->descent = 0;
    } else {
       if (altText && altText[0]) {
@@ -225,45 +210,153 @@ void Image::sizeRequestImpl (core::Requisition *requisition)
       }
    }
 
-   requisition->width += getStyle()->boxDiffWidth ();
-   requisition->ascent += getStyle()->boxOffsetY ();
-   requisition->descent += getStyle()->boxRestHeight ();
+   requisition->width += boxDiffWidth ();
+   requisition->ascent += boxOffsetY ();
+   requisition->descent += boxRestHeight ();
+
+   correctRequisition (requisition, core::splitHeightPreserveDescent, true,
+                       true);
+
+   if (buffer) {
+      // If one dimension is set, preserve the aspect ratio (without
+      // extraSpace/margin/border/padding). Notice that
+      // requisition->descent could have been changed in
+      // core::splitHeightPreserveDescent, so we do not make any
+      // assumtions here about it (and requisition->ascent).
+
+      // TODO Check again possible overflows. (Aren't buffer
+      // dimensions limited to 2^15?)
+
+      bool widthSpecified = getStyle()->width != core::style::LENGTH_AUTO; /*||
+         getStyle()->minWidth != core::style::LENGTH_AUTO ||
+         getStyle()->maxWidth != core::style::LENGTH_AUTO;*/
+      bool heightSpecified = getStyle()->height != core::style::LENGTH_AUTO;/* ||
+         getStyle()->minHeight != core::style::LENGTH_AUTO ||
+         getStyle()->maxHeight != core::style::LENGTH_AUTO;*/
+
+      // XXX: After a browser windows is resized and the page is
+      // refreshed allocation.x becomes -1 in this scope and I don't
+      // know of a better way to check what the new value should be.
+      // This public static int Image::lastallocationx is my hacked
+      // way of trying to remember it. It's updated in Image::sizeAllocateImpl
+      // Surely there's a better way :p. Nevertheless, this seems to
+      // work during the initial page load.
+      if (allocation.x < 0)
+         allocation.x = lastallocationx;
+      else
+         lastallocationx = allocation.x;
+
+      // XXX: If an image is not going to fit in the viewport, resize it to fit
+      // TODO: I ignored boxDiffWidth() and boxOffsetY() and boxRestHeight()
+      // for no good reason :s.
+      if ((allocation.x + requisition->width) > layout->getWidthViewport()) {
+         heightSpecified = false;
+         requisition->width = layout->getWidthViewport() - 2 * allocation.x;
+         requisition->ascent = requisition->width
+            * buffer->getRootHeight () / buffer->getRootWidth ();
+         requisition->descent = 0;
+      }
+      else if (!widthSpecified && heightSpecified) {
+         requisition->width =
+            (requisition->ascent + requisition->descent - boxDiffHeight ())
+            * buffer->getRootWidth () / buffer->getRootHeight ()
+            + boxDiffWidth ();
+      } else if (!heightSpecified) {
+         requisition->ascent = (requisition->width + boxDiffWidth ())
+            * buffer->getRootHeight () / buffer->getRootWidth ()
+            + boxOffsetY ();
+         requisition->descent = boxRestHeight ();
+      }
+      
+   }
+
+   DBG_OBJ_MSGF ("resize", 1, "=> %d * (%d + %d)",
+                 requisition->width, requisition->ascent, requisition->descent);
+   DBG_OBJ_LEAVE ();
+}
+
+void Image::getExtremesSimpl (core::Extremes *extremes)
+{
+   int contentWidth;
+   if (buffer)
+      contentWidth = buffer->getRootWidth ();
+   else {
+      if (altText && altText[0]) {
+         if (altTextWidth == -1)
+            altTextWidth =
+               layout->textWidth (getStyle()->font, altText, strlen (altText));
+         contentWidth = altTextWidth;
+      } else
+         contentWidth = 0;
+   }
+
+   // Adjust for CSS max-width
+   if(core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
+      core::style::absLengthVal (getStyle ()->maxWidth) < contentWidth)
+      contentWidth = core::style::absLengthVal (getStyle ()->maxWidth);
+
+   int width = contentWidth + boxDiffWidth ();
+
+   // With percentage width, the image may be narrower than the buffer.
+   extremes->minWidth =
+      core::style::isPerLength (getStyle()->width) ? boxDiffWidth () : width;
+
+   // (We ignore the same effect for the maximal width.)
+   extremes->maxWidth = width;
+
+   extremes->minWidthIntrinsic = extremes->minWidth;
+   extremes->maxWidthIntrinsic = extremes->maxWidth;
+
+   correctExtremes (extremes, false);
+
+   extremes->adjustmentWidth =
+      misc::min (extremes->minWidthIntrinsic, extremes->minWidth);
 }
 
 void Image::sizeAllocateImpl (core::Allocation *allocation)
 {
-   core::Imgbuf *oldBuffer;
-   int dx, dy;
+   DBG_OBJ_ENTER ("resize", 0, "sizeAllocateImpl", "%d, %d; %d * (%d + %d)",
+                  allocation->x, allocation->y, allocation->width,
+                  allocation->ascent, allocation->descent);
 
-   /* if image is moved only */
-   if (allocation->width == this->allocation.width &&
-       allocation->ascent + allocation->descent == getHeight ())
-      return;
 
-   dx = getStyle()->boxDiffWidth ();
-   dy = getStyle()->boxDiffHeight ();
-#if 0
-   MSG("boxDiffHeight = %d + %d, buffer=%p\n",
-       getStyle()->boxOffsetY(), getStyle()->boxRestHeight(), buffer);
-   MSG("getContentWidth() = allocation.width - style->boxDiffWidth ()"
-       " = %d - %d = %d\n",
-       this->allocation.width, getStyle()->boxDiffWidth(),
-       this->allocation.width - getStyle()->boxDiffWidth());
-   MSG("getContentHeight() = getHeight() - style->boxDiffHeight ()"
-       " = %d - %d = %d\n", this->getHeight(), getStyle()->boxDiffHeight(),
-       this->getHeight() - getStyle()->boxDiffHeight());
-#endif
-   if (buffer &&
-       (allocation->width - dx > 0 ||
-        allocation->ascent + allocation->descent - dy > 0)) {
-      // Zero content size : simply wait...
-      // Only one dimension: naturally scale
-      oldBuffer = buffer;
-      buffer = oldBuffer->getScaledBuf (allocation->width - dx,
-                                        allocation->ascent
-                                        + allocation->descent - dy);
+   int newBufWidth = allocation->width - boxDiffWidth ();
+   int newBufHeight =
+      allocation->ascent + allocation->descent - boxDiffHeight ();
+
+   if (buffer && newBufWidth > 0 && newBufHeight > 0 &&
+       // Save some time when size did not change:
+       (newBufWidth != bufWidth || newBufHeight != bufHeight)) {
+      DBG_OBJ_MSG ("resize", 1, "replacing buffer");
+
+      core::Imgbuf *oldBuffer = buffer;
+      buffer = oldBuffer->getScaledBuf (newBufWidth, newBufHeight);
       oldBuffer->unref ();
+
+      bufWidth = newBufWidth;
+      bufHeight = newBufHeight;
+
+      // TODO: Surely there's a better place (and a better way) to remember
+      // the allocation->x of an image?! This was the best place I could think
+      // of - at least it works with initial page loads - and _sortof_ works
+      // when pages are refreshed (although I had to force the value to 0
+      // in Image::setBuffer to avoid the more annoying issue of using stale
+      // values when isolating an image, or going back in cached history.
+      lastallocationx = allocation->x;
+
+      DBG_OBJ_ASSOC_CHILD (this->buffer);
+      DBG_OBJ_SET_NUM ("bufWidth", bufWidth);
+      DBG_OBJ_SET_NUM ("bufHeight", bufHeight);
    }
+
+   DBG_OBJ_LEAVE ();
+}
+
+void Image::containerSizeChangedForChildren ()
+{
+   DBG_OBJ_ENTER0 ("resize", 0, "containerSizeChangedForChildren");
+   // Nothing to do.
+   DBG_OBJ_LEAVE ();
 }
 
 void Image::enterNotifyImpl (core::EventCrossing *event)
@@ -295,7 +388,7 @@ void Image::leaveNotifyImpl (core::EventCrossing *event)
  */
 int Image::contentX (core::MousePositionEvent *event)
 {
-   int ret = event->xWidget - getStyle()->boxOffsetX();
+   int ret = event->xWidget - boxOffsetX();
 
    ret = misc::min(getContentWidth(), misc::max(ret, 0));
    return ret;
@@ -303,7 +396,7 @@ int Image::contentX (core::MousePositionEvent *event)
 
 int Image::contentY (core::MousePositionEvent *event)
 {
-   int ret = event->yWidget - getStyle()->boxOffsetY();
+   int ret = event->yWidget - boxOffsetY();
 
    ret = misc::min(getContentHeight(), misc::max(ret, 0));
    return ret;
@@ -365,7 +458,8 @@ bool Image::buttonReleaseImpl (core::EventButton *event)
    return false;
 }
 
-void Image::draw (core::View *view, core::Rectangle *area)
+void Image::draw (core::View *view, core::Rectangle *area,
+                  core::DrawingContext *context)
 {
    int dx, dy;
    core::Rectangle content, intersection;
@@ -373,8 +467,8 @@ void Image::draw (core::View *view, core::Rectangle *area)
    drawWidgetBox (view, area, false);
 
    if (buffer) {
-      dx = getStyle()->boxOffsetX ();
-      dy = getStyle()->boxOffsetY ();
+      dx = boxOffsetX ();
+      dy = boxOffsetY ();
       content.x = dx;
       content.y = dy;
       content.width = getContentWidth ();
@@ -401,31 +495,29 @@ void Image::draw (core::View *view, core::Rectangle *area)
              (getContentHeight() <
               getStyle()->font->ascent + getStyle()->font->descent)) {
             clippingView = usedView =
-               view->getClippingView (allocation.x + getStyle()->boxOffsetX (),
-                                      allocation.y + getStyle()->boxOffsetY (),
+               view->getClippingView (allocation.x + boxOffsetX (),
+                                      allocation.y + boxOffsetY (),
                                       getContentWidth(),
                                       getContentHeight());
          }
 
          usedView->drawSimpleWrappedText (getStyle()->font, getStyle()->color,
                              core::style::Color::SHADING_NORMAL,
-                             allocation.x + getStyle()->boxOffsetX (),
-                             allocation.y + getStyle()->boxOffsetY (),
+                             allocation.x + boxOffsetX (),
+                             allocation.y + boxOffsetY (),
                              getContentWidth(), getContentHeight(), altText);
 
          if (clippingView)
             view->mergeClippingView (clippingView);
       }
       if (mapKey) {
-         clippingView = view->getClippingView (allocation.x +
-                                               getStyle()->boxOffsetX (),
-                                               allocation.y +
-                                               getStyle()->boxOffsetY (),
+         clippingView = view->getClippingView (allocation.x + boxOffsetX (),
+                                               allocation.y + boxOffsetY (),
                                                getContentWidth(),
                                                getContentHeight());
          mapList->drawMap(mapKey, clippingView, getStyle(),
-                          allocation.x + getStyle()->boxOffsetX (),
-                          allocation.y + getStyle()->boxOffsetY ());
+                          allocation.x + boxOffsetX (),
+                          allocation.y + boxOffsetY ());
          view->mergeClippingView (clippingView);
       }
    }
@@ -444,19 +536,32 @@ void Image::setBuffer (core::Imgbuf *buffer, bool resize)
 {
    core::Imgbuf *oldBuf = this->buffer;
 
+   // TODO: I hack this to 0 to avoid using stale values when viewing
+   // a single image (Isolate image), and when going back in the browser
+   // history - but this sucks because when going back to a cached page
+   // lastallocationx isn't updated "properly" like it was during the
+   // initial page load. Hmmm.
+   lastallocationx = 0;
+
    if (wasAllocated () && needsResize () &&
       getContentWidth () > 0 && getContentHeight () > 0) {
       // Don't create a new buffer for the transition from alt text to img,
       // and only scale when both dimensions are known.
-      this->buffer =
-         buffer->getScaledBuf (getContentWidth (), getContentHeight ());
+
+      bufWidth = getContentWidth ();
+      bufHeight = getContentHeight ();
+      this->buffer = buffer->getScaledBuf (bufWidth, bufHeight);
    } else {
       this->buffer = buffer;
+      bufWidth = buffer->getRootWidth ();
+      bufHeight = buffer->getRootHeight ();
       buffer->ref ();
    }
    queueResize (0, true);
 
    DBG_OBJ_ASSOC_CHILD (this->buffer);
+   DBG_OBJ_SET_NUM ("bufWidth", bufWidth);
+   DBG_OBJ_SET_NUM ("bufHeight", bufHeight);
 
    if (oldBuf)
       oldBuf->unref ();
@@ -470,9 +575,8 @@ void Image::drawRow (int row)
 
    buffer->getRowArea (row, &area);
    if (area.width && area.height)
-      queueDrawArea (area.x + getStyle()->boxOffsetX (),
-                     area.y + getStyle()->boxOffsetY (),
-                     area.width, area.height);
+      queueDrawArea (area.x + boxOffsetX (), area.y + boxOffsetY (), area.width,
+                     area.height);
 }
 
 void Image::finish ()

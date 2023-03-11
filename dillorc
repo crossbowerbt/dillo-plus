@@ -37,6 +37,9 @@
 # 2 full fltk-based double buffering for all windows
 #buffered_drawing=1
 
+# Video player (e.g. for Youtube videos)
+media_player=mpv --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" --ytdl-format="bestvideo[height<=?360]+bestaudio/best"
+
 # Set your default directory for download/save operations
 #save_dir=/tmp
 
@@ -79,6 +82,15 @@ font_cursive="DejaVu Serif"
 # Set this to YES to limit the word wrap width to the viewport width
 #limit_text_width=NO
 
+# If this is set to YES, all CSS size specifications are adjusted so that
+# all contents can be displayed. (Except for tables, see below.)
+#adjust_min_width=YES
+
+# If this is set to YES, all CSS size specifications for tables are
+# adjusted so that all contents can be displayed. This is seperated
+# from "adjust_min_width" so that it is able to mimic Firefox, which
+# differenciates between tables and, say, textblocks (in some cases).
+#adjust_table_min_width=YES
 
 #-------------------------------------------------------------------------
 #                               PENALTIES
@@ -163,7 +175,7 @@ search_url="se2 SearX (metasearx.com) https://metasearx.com/search?q=%s"
 search_url="se3 SearX (searxng.au) https://searxng.au/search?q=%s"
 search_url="se4 SearX (cosmohub.io) https://srx.cosmohub.io/search?q=%s"
 search_url="ya Yandex https://yandex.com/search/?text=%s"
-search_url="wp Wikipedia https://www.wikipedia.org/w/index.php?search=%s&go=Go"
+search_url="wk Wikipedia https://www.wikipedia.org/w/index.php?search=%s&go=Go"
 search_url="ar Internet Archive https://archive.org/search.php?query=%s"
 search_url="fd Free Dictionary https://www.thefreedictionary.com/%s"
 search_url="sp Startpage https://www.startpage.com/do/search?query=%s"
@@ -174,6 +186,10 @@ search_url="ge GeminiSpace gemini://geminispace.info/search?q=%s"
 search_url="lg LibGen http://libgen.is/search.php?req=%s"
 search_url="gr GoodReads https://www.goodreads.com/search?query=%s"
 search_url="pb The Pirate Bay https://thepiratebay.party/search/%s"
+search_url="tw Twitter https://uhttps://nitter.net/search?f=users&q=%s"
+search_url="un Unsplash https://unsplash.com/s/photos/%s"
+search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
+
 
 # If set, dillo will ask web servers to send pages in this language.
 # This setting does NOT change dillo's user interface.
@@ -187,7 +203,21 @@ search_url="pb The Pirate Bay https://thepiratebay.party/search/%s"
 # Maximum number of simultaneous TCP connections to a single server or proxy.
 # http_max_conns=6
 
-# Set the proxy information for http.
+# If enabled, Dillo will reuse HTTP connections to a server or proxy when
+# possible rather than making a new connection for every request for a new
+# page/image/stylesheet.
+#http_persistent_conns=YES
+
+# This mechanism allows servers to specify that they are only to be contacted
+# through HTTPS and not HTTP.
+#
+# Overall, this is a valuable security measure against TLS stripping
+# attacks, etc., but in principle a site could contrive to use this as a
+# tracking mechanism. The term is "HSTS super cookie", although note that these
+# HSTS directives are not saved between browser sessions.
+#http_strict_transport_security=YES
+
+# Set the proxy information for http/https.
 # Note that the http_proxy environment variable overrides this setting.
 # WARNING: FTP and downloads plugins use wget. To use a proxy with them,
 #          you will need to configure wget accordingly. See
@@ -271,9 +301,32 @@ bg_color=0xDDDDFF
 # theme=plastic
 
 # UI colors
-# The first four colors map to concepts in the underlying FLTK toolkit. Note
-# that FLTK may sometimes override colors, generally for contrast and
+# Note that FLTK may sometimes override colors, generally for contrast and
 # readability.
+#
+# ui_fg_color, ui_main_bg_color, ui_text_bg_color, and ui_selection_color
+# map to concepts in the underlying FLTK toolkit which are described as:
+# "the default foreground color...used for labels and text", "default
+# background color", "the default background color for text, list, and
+# valuator widgets", and "the default selection/highlight color". They
+# sometimes have other uses in the more complex FLTK widgets.
+#
+# ui_button_highlight_color is the background used when the mouse cursor is
+# over a button. By default, this is a lightened version of the main
+# background color.
+#
+# ui_tab_active_fg_color and ui_tab_active_bg_color are used for the current
+# tab. By default, they are the main foreground color and the text background
+# color, respectively.
+#
+# ui_tab_fg_color and ui_tab_bg_color are used for the other tabs. By default,
+# they are the main foreground color and the main background color,
+# respectively.
+#
+# Note to packagers: leaving these variables for the system to guess
+# gives different results in different environments, so we played it safe
+# by defining the traditional colors.  Please choose the color theme that
+# better fits your distro.
 #
 #ui_fg_color=black
 #ui_main_bg_color=silver
@@ -290,12 +343,6 @@ bg_color=0xDDDDFF
 # Colors for the other tabs.
 #ui_tab_bg_color=(by default, the main background color)
 #ui_tab_fg_color=(by default, the main foreground color)
-
-
-# Note to packagers: leaving these variables for the system to guess
-# gives different results in different environments, so we played it safe
-# by defining the traditional colors.  Please choose the color theme that
-# better fits your distro.
 
 #
 # Gray theme (traditional)
@@ -343,6 +390,18 @@ ui_button_highlight_color=#BBCCDD
 ui_tab_active_bg_color=#BBCCDD
 ui_tab_active_fg_color=#100404
 ui_tab_bg_color=#AABBCC
+
+#
+# w00f theme
+#
+#ui_fg_color=black
+#ui_main_bg_color=#E8E8FF
+#ui_text_bg_color=#FFFFFF
+#ui_selection_color=#191970
+#ui_button_highlight_color=#a9a9a9
+#ui_tab_active_bg_color=#D3E7F3
+#ui_tab_active_fg_color=black
+#ui_tab_bg_color=#A4CCE3
 
 # Size of dillo panel
 # tiny   : buttons, location, and progress boxes in one row

@@ -26,22 +26,69 @@
 
 namespace dw {
 
+int Ruler::CLASS_ID = -1;
+
 Ruler::Ruler ()
 {
-   setFlags (BLOCK_LEVEL);
-   unsetFlags (HAS_CONTENTS);
+   DBG_OBJ_CREATE ("dw::Ruler");
+   registerName ("dw::Ruler", &CLASS_ID);
 }
 
-void Ruler::sizeRequestImpl (core::Requisition *requisition)
+Ruler::~Ruler ()
 {
-   requisition->width = getStyle()->boxDiffWidth ();
-   requisition->ascent = getStyle()->boxOffsetY ();
-   requisition->descent = getStyle()->boxRestHeight ();
+   DBG_OBJ_DELETE ();
 }
 
-void Ruler::draw (core::View *view, core::Rectangle *area)
+void Ruler::sizeRequestSimpl (core::Requisition *requisition)
+{
+   requisition->width = lout::misc::max (getAvailWidth (true), boxDiffWidth ());
+   requisition->ascent = boxOffsetY ();
+   requisition->descent = boxRestHeight ();
+}
+
+void Ruler::getExtremesSimpl (core::Extremes *extremes)
+{
+   extremes->minWidth = extremes->maxWidth = boxDiffWidth ();
+   extremes->minWidthIntrinsic = extremes->minWidth;
+   extremes->maxWidthIntrinsic = extremes->maxWidth;
+   correctExtremes (extremes, false);
+   extremes->adjustmentWidth =
+      lout::misc::min (extremes->minWidthIntrinsic, extremes->minWidth);
+}
+
+bool Ruler::isBlockLevel ()
+{
+   return true;
+}
+
+void Ruler::containerSizeChangedForChildren ()
+{
+   DBG_OBJ_ENTER0 ("resize", 0, "containerSizeChangedForChildren");
+   // Nothing to do.
+   DBG_OBJ_LEAVE ();
+}
+
+bool Ruler::usesAvailWidth ()
+{
+   return true;
+}
+
+void Ruler::draw (core::View *view, core::Rectangle *area,
+                  core::DrawingContext *context)
 {
    drawWidgetBox (view, area, false);
+}
+
+core::Widget *Ruler::getWidgetAtPoint (int x, int y,
+                                       core::GettingWidgetAtPointContext
+                                       *context)
+{
+   // Override (complex) implementation OOFAwareWidget::getWidgetAtPoint().
+
+   if (inAllocation (x, y))
+      return this;
+   else
+      return NULL;
 }
 
 core::Iterator *Ruler::iterator (core::Content::Type mask, bool atEnd)

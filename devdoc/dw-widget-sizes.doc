@@ -1,0 +1,278 @@
+/** \page dw-widget-sizes Sizes of Dillo Widgets
+
+<div style="border: 2px solid #ffff00; margin: 1em 0;
+  padding: 0.5em 1em; background-color: #ffffe0">The complex "widget
+  sizes" is currently divided into three documents: **Sizes of Dillo
+  Widgets** (this document), \ref dw-grows, and \ref
+  dw-size-request-pos. Furthermore, there are some notes in
+  \ref dw-miscellaneous.</div>
+
+<div style="border: 2px solid #ff4040; margin: 1em 0;
+  padding: 0.5em 1em; background-color: #fff0f0"><b>Info:</b>
+  Not up to date, see other documents.</div>
+
+Allocation
+==========
+
+Each widget has an \em allocation at a given time, this includes
+
+- the position (\em x, \em y) relative to the upper left corner of the
+  canvas, and
+- the size (\em width, \em ascent, \em descent).
+
+The \em canvas is the whole area available for the widgets, in most
+cases, only a part is seen in a viewport. The allocation of the
+toplevel widget is exactly the allocation of the canvas, i.e.
+
+- the position of the toplevel widget is always (0, 0), and
+- the canvas size is defined by the size of the toplevel widget.
+
+The size of a widget is not simply defined by the width and the
+height, instead, widgets may have a base line, and so are vertically
+divided into an ascender (which height is called \em ascent), and a
+descender (which height is called \em descent). The total height is so
+the sum of \em ascent and \em descent.
+
+Sizes of zero are allowed. The upper limit for the size of a widget is
+defined by the limits of the C++ type \em int.
+
+\image html dw-size-of-widget.png Allocation of a Widget
+
+In the example in the image, the widget has the following allocation:
+
+- \em x = 50
+- \em y = 50
+- \em width = 150
+- \em ascent = 150
+- \em descent = 100
+
+The current allocation of a widget is hold in
+dw::core::Widget::allocation. It can be set from outside by
+calling dw::core::Widget::sizeAllocate. This is a concrete method,
+which will call dw::core::Widget::sizeAllocateImpl (see code of
+dw::core::Widget::sizeAllocate for details).
+
+For trivial widgets (like dw::Bullet),
+dw::core::Widget::sizeAllocateImpl does not need to be
+implemented. For more complex widgets, the implementation should call
+dw::core::Widget::sizeAllocate (not
+dw::core::Widget::sizeAllocateImpl) on all child widgets, with
+appropriate child allocations. dw::core::Widget::allocation should not
+be changed here, this is already done in
+dw::core::Widget::sizeAllocate.
+
+
+Requisitions
+============
+
+A widget may prefer a given size for the allocation. This size, the
+\em requisition, should be returned by the method
+dw::core::Widget::sizeRequestImpl. In the simplest case, this is
+independent of the context, e.g. for an
+image. dw::Image::sizeRequestImpl returns the following size:
+
+- If no buffer has yet been assigned (see dw::Image for more details),
+  the size necessary for the alternative text is returned. If no
+  alternative text has been set, zero is returned.
+
+- If a buffer has been assigned (by dw::Image::setBuffer), the root
+  size is returned (i.e. the original size of the image to display).
+
+This is a bit simplified, dw::Image::sizeRequestImpl should also deal
+with margins, borders and paddings, see dw::core::style.
+
+From the outside, dw::Image::sizeRequest should be called, which does
+a bit of optimization. Notice that in dw::Image::sizeRequestImpl, no
+optimization like lazy evaluation is necessary, this is already done
+in dw::Image::sizeRequest.
+
+A widget, which has children, will likely call dw::Image::sizeRequest
+on its children, to calculate the total requisition.
+
+The caller (this is either the dw::core::Layout, or the parent
+widget), may, but also may not consider the requisition. Instead, a
+widget must deal with any allocation. (For example, dw::Image scales
+the image buffer when allocated at another size.)
+
+
+Size Hints
+==========
+
+<div style="border: 2px solid #ff4040; margin-bottom: 0.5em;
+padding: 0.5em 1em; background-color: #fff0f0"><b>Info:</b>
+Size hints have been removed, see \ref dw-grows.</div>
+
+
+Width Extremes
+==============
+
+dw::Table uses width extremes for fast calculation of column
+widths. The structure dw::core::Extremes represents the minimal and
+maximal width of a widget, as defined by:
+
+- the minimal width is the smallest width, at which a widget can still
+  display contents, and
+- the maximal width is the largest width, above which increasing the
+  width- does not make any sense.
+
+Especially the latter is vaguely defined, here are some examples:
+
+- For those widgets, which do not depend on size hints, the minimal
+  and the maximal width is the inherent width (the one returned by
+  dw::core::Widget::sizeRequest).
+
+- For a textblock, the minimal width is the width of the widest
+  (unbreakable) word, the maximal width is the width of the total
+  paragraph (stretching a paragraph further would only waste space).
+  Actually, the implementation of dw::Textblock::getExtremesImpl is a
+  bit more complex.
+
+- dw::Table is an example, where the width extremes are calculated
+  from the width extremes of the children.
+
+Handling width extremes is similar to handling requisitions, a widget
+must implement dw::core::Widget::getExtremesImpl, but a caller will
+use dw::core::Widget::getExtremes.
+
+
+Resizing
+========
+
+When the widget changes its size (requisition), it should call
+dw::core::Widget::queueResize. The next call of
+dw::core::Widget::sizeRequestImpl should then return the new
+size. See dw::Image::setBuffer as an example.
+
+Interna are described in the code of dw::core::Widget::queueResize.
+
+<h3>Incremental Resizing</h3>
+
+A widget may calculate its size based on size calculations already
+done before. In this case, a widget must exactly know the reasons, why
+a call of dw::core::Widget::sizeRequestImpl is necessary. To make use
+of this, a widget must implement the following:
+
+1. There is a member dw::core::Widget::parentRef, which is totally
+   under control of the parent widget (and so sometimes not used at
+   all). It is necessary to define how parentRef is used by a specific
+   parent widget, and it has to be set to the correct value whenever
+   necessary.
+2. The widget must implement dw::core::Widget::markSizeChange and
+     dw::core::Widget::markExtremesChange, these methods are called in
+     two cases:
+     1. directly after dw::core::Widget::queueResize, with the
+        argument ref was passed to dw::core::Widget::queueResize,
+        and
+     2. if a child widget has called dw::core::Widget::queueResize,
+        with the value of the parent_ref member of this child.
+
+This way, a widget can exactly keep track on size changes, and so
+implement resizing in a faster way. A good example on how to use this
+is dw::Textblock.
+
+
+Rules for Methods Related to Resizing
+=====================================
+
+Which method can be called, when the call of another method is not
+finished? These rules are important in two circumstances:
+
+1. To know which method can be called, and, especially, which methods
+   *must not* be called, within the implementation of
+   *sizeRequestImpl* (called by *sizeRequest*), *markSizeChange*, and
+   *markExtremesChange* (the latter two are called by *queueResize*).
+2. On the other hand, to make sure that the calls, which are allowed,
+   are handled correctly, especially in implementations of
+   *sizeRequestImpl*, *markSizeChange*, *markExtremesChange*
+
+Generally, the rules defined below are, in case of doubt, rather
+strict; when changing the rules, loosening is simpler than to tighten
+them, since this will make it neccessary to review old code for calls
+previously allowed but now forbidden.
+
+Short recap:
+
+- *QueueResize* directly calls *markSizeChange* and
+  *markExtremesChanges*, and queues an idle function for the actual
+  resizing (dw::core::Layout::resizeIdle). (The idle function is
+  called some time after *queueResize* is finished.)
+- The resize idle function first calls *sizeRequest*, then
+  *sizeAllocate*, for the toplevel widget.
+
+In the following table, the rules are defined in detail. "Within call
+of ..." includes all methods called from the original method: the
+first row (*queueResize*) defines also the rules for
+*markExtremesChanges* and *markExtremesChanges*, and in the second row
+(*sizeAllocate*), even *sizeRequest* has to be considered.
+
+<div style="border: 2px solid #ff4040; margin-bottom: 0.5em;
+padding: 0.5em 1em; background-color: #fff0f0"><b>Info:</b>
+Not up to date: *queueResize* can now be called recursively (so to
+speak). See code there.</div>
+
+<table>
+   <tr>
+      <th>Within call of ... ↓
+      <th>... is call allowed of ... ? →
+      <th>queueResize
+      <th>sizeAllocate
+      <th>sizeRequest
+      <th>getExtremes
+   <tr>
+      <th colspan=2>queueResize
+      <td>No
+      <td>No<sup>1</sup>
+      <td>No<sup>1</sup>
+      <td>No<sup>1</sup>
+   <tr>
+      <th colspan=2>sizeAllocate
+      <td>Yes
+      <td>Only for children<sup>2</sup>
+      <td>Yes(?)
+      <td>Yes(?)
+   <tr>
+      <th colspan=2>sizeRequest
+      <td>Yes<sup>3</sup>
+      <td>No
+      <td>Limited<sup>4</sup>
+      <td>Limited<sup>4</sup>
+   <tr>
+      <th colspan=2>getExtremes
+      <td>Yes<sup>3</sup>
+      <td>No
+      <td>Limited<sup>4</sup>
+      <td>Limited<sup>4</sup>
+   <tr>
+     <td colspan=6><sup>1</sup>) Otherwise, since these other methods
+may be call *queueResize*, the limitation that *queueResize* must not
+call *queueResize* can be violated.
+
+<sup>2</sup>) Could perhaps be loosened as for *sizeRequest* and
+*getExtremes*, but there is probably no need.
+
+<sup>3</sup>) Therefore the distinction between *RESIZE_QUEUED* and
+*NEEDS_RESIZE*, and *EXTREMES_QUEUED* and *EXTREMES_CHANGED*,
+respectively.
+
+<sup>4</sup>) Calls only for children are safe. In other cases, you
+take a large responsibility to prevent endless recursions by
+(typically indirectly) calling *sizeRequest* / *getExtremes* for
+direct ancestors.
+</table>
+
+Furthermore, *sizeAllocate* can only be called within a call of
+dw::core::Layout::resizeIdleId, so (if you do not touch dw::core) do
+not call it outside of *sizeAllocateImpl*. The other methods can be
+called outsize; e.&nbsp;g. *sizeRequest* is called in
+dw::Textblock::addWidget.
+
+To avoid painful debugging, there are some tests for the cases that
+one method call is strictly forbidden while another method is called.
+
+This could be done furthermore:
+
+- The tests could be refined.
+- Is it possible to define exacter rules, along with a proof that no
+  problems (like endless recursion) can occur?
+
+*/

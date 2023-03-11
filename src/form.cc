@@ -23,6 +23,7 @@
 #include "msg.h"
 #include "prefs.h"
 #include "uicmd.hh"
+#include "dialog.hh"
 
 using namespace lout;
 using namespace dw;
@@ -452,6 +453,11 @@ void Html_tag_open_input(DilloHtml *html, const char *tag, int tagsize)
    name = a_Html_get_attr_wdef(html, tag, tagsize, "name", NULL);
    type = a_Html_get_attr_wdef(html, tag, tagsize, "type", "");
 
+   if (a_Html_get_attr(html, tag, tagsize, "hidden")) {
+	   // TODO: set type to 'hidden' directly, since I don't think attribute is used
+      type = a_Html_get_attr_wdef(html, tag, tagsize, "type", "hidden");
+   }
+
    init_str = NULL;
    inp_type = DILLO_HTML_INPUT_UNKNOWN;
    if (!dStrAsciiCasecmp(type, "password")) {
@@ -658,7 +664,7 @@ void Html_tag_content_textarea(DilloHtml *html, const char *tag, int tagsize)
    } else {
       if (html->DocType != DT_HTML || html->DocTypeVersion <= 4.01f)
          BUG_MSG("<textarea> requires rows attribute.");
-      rows = 10;
+      rows = 3;
    }
    if (rows < 1 || rows > MAX_ROWS) {
       int badRows = rows;
@@ -943,7 +949,7 @@ void Html_tag_open_button(DilloHtml *html, const char *tag, int tagsize)
       /* We used to have Textblock (prefs.limit_text_width, ...) here,
        * but it caused 100% CPU usage.
        */
-      page = new Textblock (false);
+      page = new Textblock (false, true);
       page->setStyle (html->backgroundStyle ());
 
       ResourceFactory *factory = HT2LT(html)->getResourceFactory();
@@ -951,9 +957,7 @@ void Html_tag_open_button(DilloHtml *html, const char *tag, int tagsize)
       embed = new Embed(resource);
 // a_Dw_button_set_sensitive (DW_BUTTON (button), FALSE);
 
-      HT2TB(html)->addParbreak (5, html->wordStyle ());
       HT2TB(html)->addWidget (embed, html->backgroundStyle ());
-      HT2TB(html)->addParbreak (5, html->wordStyle ());
 
       S_TOP(html)->textblock = html->dw = page;
 
@@ -1039,6 +1043,16 @@ void DilloHtmlForm::eventHandler(Resource *resource, EventButton *event)
  */
 void DilloHtmlForm::submit(DilloHtmlInput *active_input, EventButton *event)
 {
+   if (!dStrAsciiCasecmp(URL_SCHEME(html->page_url), "https") &&
+       dStrAsciiCasecmp(URL_SCHEME(action), "https")) {
+      int choice = a_Dialog_choice("Dillo: Insecure form submission",
+                                   "A form on a SECURE page wants to use an "
+                                   "INSECURE protocol to submit data.",
+                                   "Continue", "Cancel", NULL);
+      if (choice != 1)
+         return;
+   }
+
    DilloUrl *url = buildQueryUrl(active_input);
    if (url) {
       if (event && event->button == 2) {

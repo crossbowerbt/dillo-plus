@@ -1,0 +1,84 @@
+:s0: Searching
+:s1: General
+:s2: News
+:s3: Videos
+:s4: Hacking and Tech
+:s5: Local Services
+:s6: Blogs
+:s7: Forums and Lists
+:s8: Popular Sites
+:s9: Social
+:s10: Other
+:s11: Magazines
+
+s0 https://wiby.me Wiby - Search user submitted light/personable websites
+s0 https://duckduckgo.com/lite Duck Duck Go
+s0 https://google.com Google
+s0 https://wikipedia.org Wikipedia
+s0 https://www.refdesk.com/ Reference Desk
+s0 https://archive.org/?noscript=true Archive.org light
+s0 https://unsplash.com Unsplash - image search
+s1 https://wttr.in Weather
+s1 https://www.gutenberg.org/ Gutenberg free books
+s2 https://68k.news 68k
+s2 https://skimfeed.com SkimFeed
+s2 https://tildes.net Tildes
+s2 https://legiblenews.com Legible news
+s2 https://news.yahoo.com Yahoo News
+s2 https://teddit.net Teddit - Reddit alternative
+s2 https://www.reddit.com/.compact Reddit Compact
+s2 https://old.reddit.com/ Reddit Old
+s2 https://lite.cnn.com/en CNN Lite
+s2 https://text.npr.org/ NPR (Text)
+s2 https://www.reuters.com/commentary Reuters
+s2 https://www.newshound.co/editions/en-us/ News Hound
+s2 https://www.bbc.co.uk/ BBC
+s2 https://nytimes.com  NY Times
+s3 https://localhost/tools/youtube/ Youtube local
+s3 https://invidious.kavin.rocks/feed/popular Youtube kavin
+s3 https://redirect.invidious.io Youtube invidious
+s3 https://open-video.org/ Open Video Project
+s3 https://www.ted.com/talks TED talks
+s3 https;//archive.org/details/movies The Archive movies
+s3 https://teddit.net/r/MadeMeSmile/comments/qq16z0/this_duck_ran_the_new_york_marathon_and_look_at/ Test video page
+s4 https://alterslash.org/ Alterdash
+s4 https://lobste.rs/ Lobsters Techie news
+s4 https://lwn.net/ Linux Weekly News
+s4 https://retro.hackaday.com Hackaday
+s4 https://news.ycombinator.com/news Ycombinator Hacking news
+s4 https://anonymousplanet.org/guide.html Hitchiker's Guide to Online Anonymity
+s4 https://liliputing.com/ Lilliputing
+s4 https://www.i18nguy.com/humor/support.html  Customer Support Stories
+s5 https://localhost Local webserver
+s5 https://localhost:8000 Wiki (if turned on)
+s5 https://127.0.0.1/blog/ Blog
+s6 https://www.paritybit.ca/ Parity Bit's blog
+s6 https://www.chriszacharias.com Chris Zacharia's blog
+s6 https://greycoder.com/interesting-new-apps/ Greycoder
+s6 https://www.crazythoughts.com/ Crazy Thoughts
+s6 https://txti.es Txties - Microblog without an account
+s6 https://smol.pub/feed Smol Microblog recent posts
+s6 https://bearblog.dev/discover/?newest=true Bear Microblog recent posts
+s6 https://txti.es/hyperlight-webpages  - HyperLight Txti page
+s6 https://txti.es/online-etiquette - Online Etiquette
+s7 https://inkscape.org/forums Inkscape
+s7 https://forum.puppylinux.com/ Puppy Linux
+s7 https://groups.google.com/g/yad-common Yad developr Mailing List
+s7 https://forums.raspberrypi.com Raspberry Pi Forum
+s8 https://www.amazon.com Amazon
+s8 https://ebay.com Ebay
+s8 https://craigslist.com Craigslist
+s8 https://www.allrecipes.com/ AllRecipes
+s8 https://www.yelp.com Yelp
+s8 https://webmd.com WebMD
+s9 https://facebook.com Facebook
+s9 https://nitter.net/search?f=users&q=news Nitter (anonymous Twitter)
+s9 https://mastodon.social/@anonypla Mastodon
+s9 https://anonymous-story.com Instagram alternative
+s10 https://www.webdesignerdepot.com WebDesigner Depot
+s10 https://dir.xiph.org Xiph music streams directory
+s11 https://popularmechanics.com Popular Mechanics
+s11 https://popularscience.com Popular Science
+s11 https://www.lowtechmagazine.com Low Tech Magazine
+s11 https://farmersalmanac.com Farmer's Almanac
+s11 https://motherearthnews.com Mother Earth News

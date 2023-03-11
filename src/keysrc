@@ -54,20 +54,21 @@
 #<ctrl>r = reload
 
 # "home" goes to the homepage that you set in your dillorc.
-#<ctrl>h = home
+#h = home
 
 # "find" lets you search for a text string on the current page.
 #<ctrl>f = find
+#/=find
 
 # "hide-panels" hides the findbar if present, control panels if not.
-#esc = hide-panels
+<ctrl>h = hide-panels
 
 # "websearch" lets you send a text string to the search engine that you
 # set in your dillorc.
-#<ctrl>s = websearch
+#s = websearch
 
 # go to your "bookmarks".
-#<ctrl>b = bookmarks
+b = bookmarks
 
 # "file-menu" pops up the file menu.
 #<alt>f = file-menu
@@ -80,16 +81,17 @@
 
 # "stop" loading the page.
 #(stop has no default binding)
+esc = stop
 
 # "save" the current page.
-#(save has no default binding)
+#<ctrl>s = save
 
 #--------------------------------------------------------------------
 #                     MOTION COMMANDS
 #--------------------------------------------------------------------
 
 #pageup = screen-up
-#b = screen-up
+#<shift>space = screen-up
 
 #pagedown = screen-down
 #space = screen-down

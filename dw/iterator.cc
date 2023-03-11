@@ -55,6 +55,24 @@ bool Iterator::equals (Object *other)
       (getWidget() == otherIt->getWidget() && compareTo(otherIt) == 0);
 }
 
+void Iterator::intoStringBuffer(misc::StringBuffer *sb)
+{
+   sb->append ("{ widget = ");
+   //widget->intoStringBuffer (sb);
+   sb->appendPointer (widget);
+   sb->append (" (");
+   sb->append (widget->getClassName());
+   sb->append (")>");
+
+   sb->append (", mask = ");
+   Content::maskIntoStringBuffer (mask, sb);
+
+   sb->append (", content = ");
+   Content::intoStringBuffer (&content, sb);
+
+   sb->append (" }");
+}
+
 /**
  * \brief Delete the iterator.
  *
@@ -103,7 +121,7 @@ void Iterator::scrollTo (Iterator *it1, Iterator *it2, int start, int end,
       y1 = INT_MAX;
       y2 = INT_MIN;
 
-      for (eit3 = (DeepIterator*)eit1->clone (), atStart = true;
+      for (atStart = true, eit3 = (DeepIterator*)eit1->clone ();
            (cmp = eit3->compareTo (eit2)) <= 0;
            eit3->next (), atStart = false) {
          if (atStart)
@@ -343,8 +361,8 @@ Iterator *DeepIterator::searchDownward (Iterator *it, Content::Type mask,
    //DEBUG_MSG (1, "%*smoving down (%swards) from %s\n",
    //          indent, "", from_end ? "back" : "for", a_Dw_iterator_text (it));
 
-   assert (it->getContent()->type == Content::WIDGET);
-   it2 = it->getContent()->widget->iterator (mask, fromEnd);
+   assert (it->getContent()->type & Content::ANY_WIDGET);
+   it2 = it->getContent()->getWidget()->iterator (mask, fromEnd);
 
    if (it2 == NULL) {
       // Moving downwards failed.
@@ -356,7 +374,7 @@ Iterator *DeepIterator::searchDownward (Iterator *it, Content::Type mask,
       //DEBUG_MSG (1, "%*sexamining %s\n",
       //           indent, "", a_Dw_iterator_text (it2));
 
-      if (it2->getContent()->type == Content::WIDGET) {
+      if (it2->getContent()->type & Content::ANY_WIDGET) {
          // Another widget. Search in it downwards.
          it3 = searchDownward (it2, mask, fromEnd);
          if (it3 != NULL) {
@@ -390,11 +408,11 @@ Iterator *DeepIterator::searchSideward (Iterator *it, Content::Type mask,
    //DEBUG_MSG (1, "%*smoving %swards from %s\n",
    //          indent, "", from_end ? "back" : "for", a_Dw_iterator_text (it));
 
-   assert (it->getContent()->type == Content::WIDGET);
+   assert (it->getContent()->type & Content::ANY_WIDGET);
    it2 = it->cloneIterator ();
 
    while (fromEnd ? it2->prev () : it2->next ()) {
-      if (it2->getContent()->type == Content::WIDGET) {
+      if (it2->getContent()->type & Content::ANY_WIDGET) {
          // Search downwards in this widget.
          it3 = searchDownward (it2, mask, fromEnd);
          if (it3 != NULL) {
@@ -416,14 +434,15 @@ Iterator *DeepIterator::searchSideward (Iterator *it, Content::Type mask,
 
    /* Nothing found, go upwards in the tree (if possible). */
    it2->unref ();
-   if (it->getWidget()->getParent ()) {
-      it2 = it->getWidget()->getParent()->iterator (mask, false);
+   Widget *respParent = getRespectiveParent (it->getWidget(), it->getMask());
+   if (respParent) {
+      it2 = respParent->iterator (mask, false);
       while (true) {
          if (!it2->next ())
             misc::assertNotReached ();
 
-         if (it2->getContent()->type == Content::WIDGET &&
-             it2->getContent()->widget == it->getWidget ()) {
+         if (it2->getContent()->type & Content::ANY_WIDGET &&
+             it2->getContent()->getWidget () == it->getWidget ()) {
             it3 = searchSideward (it2, mask, fromEnd);
             it2->unref ();
             //DEBUG_MSG (1, "%*smoving %swards succeeded: %s\n",
@@ -438,6 +457,27 @@ Iterator *DeepIterator::searchSideward (Iterator *it, Content::Type mask,
    // DEBUG_MSG (1, "%*smoving %swards failed (nothing found)\n",
    //            indent, "", from_end ? "back" : "for");
    return NULL;
+}
+
+Widget *DeepIterator::getRespectiveParent (Widget *widget, Content::Type mask)
+{
+   // Return, depending on which is requested indirectly (follow
+   // references or containments) the parent (container) or the
+   // generator.  At this point, the type of the parent/generator is
+   // not known (since the parent/generator is not known), so we have
+   // to examine the mask. This is the reason why only one of
+   // WIDGET_OOF_CONT and WIDGET_OOF_REF is allowed.
+
+   return (mask & Content::WIDGET_OOF_REF) ?
+      widget->getGenerator() : widget->getParent();
+}
+
+int DeepIterator::getRespectiveLevel (Widget *widget, Content::Type mask)
+{
+   // Similar to getRespectiveParent.
+
+   return (mask & Content::WIDGET_OOF_REF) ?
+      widget->getGeneratorLevel() : widget->getLevel();
 }
 
 /**
@@ -456,6 +496,19 @@ Iterator *DeepIterator::searchSideward (Iterator *it, Content::Type mask,
  */
 DeepIterator::DeepIterator (Iterator *it)
 {
+   //printf ("Starting creating DeepIterator %p ...\n", this);
+   //printf ("Initial iterator: ");
+   //it->print ();
+   //printf ("\n");
+
+   // Widgets out of flow are either followed widtin containers, or
+   // generators. Both (and also nothing at all) is not allowed. See
+   // also comment in getRespectiveParent.
+   int oofMask =
+      it->getMask() & (Content::WIDGET_OOF_CONT | Content::WIDGET_OOF_REF);
+   assert (oofMask == Content::WIDGET_OOF_CONT ||
+           oofMask == Content::WIDGET_OOF_REF);
+
    //DEBUG_MSG (1, "a_Dw_ext_iterator_new: %s\n", a_Dw_iterator_text (it));
 
    // Clone input iterator, so the iterator passed as parameter
@@ -467,7 +520,7 @@ DeepIterator::DeepIterator (Iterator *it)
 
    // If it points to a widget, find a near non-widget content,
    // since an DeepIterator should never return widgets.
-   if (it->getContent()->type == Content::WIDGET) {
+   if (it->getContent()->type & Content::ANY_WIDGET) {
       Iterator *it2;
 
       // The second argument of searchDownward is actually a matter of
@@ -494,31 +547,50 @@ DeepIterator::DeepIterator (Iterator *it)
       // \todo There may be a faster way instead of iterating through the
       //    parent widgets.
 
+      //printf ("Starting with: ");
+      //it->print ();
+      //printf ("\n");
+
       // Construct the iterators.
-      int thisLevel = it->getWidget()->getLevel (), level;
+      int thisLevel = getRespectiveLevel (it->getWidget()), level;
       Widget *w;
-      for (w = it->getWidget (), level = thisLevel; w->getParent() != NULL;
-           w = w->getParent (), level--) {
-         Iterator *it = w->getParent()->iterator (mask, false);
+      for (w = it->getWidget (), level = thisLevel;
+           getRespectiveParent (w) != NULL;
+           w = getRespectiveParent (w), level--) {
+         Iterator *it = getRespectiveParent(w)->iterator (mask, false);
+
+         //printf ("   parent: %s %p\n", w->getClassName (), w);
+
          stack.put (it, level - 1);
          while (true) {
+            //printf ("         ");
+            //it->print ();
+            //printf ("\n");
+
             bool hasNext = it->next();
             assert (hasNext);
 
-            if (it->getContent()->type == Content::WIDGET &&
-                it->getContent()->widget == w)
+            if (it->getContent()->type & Content::ANY_WIDGET &&
+                it->getContent()->getWidget () == w)
                break;
          }
+
+         //printf ("      %d: ", level - 1);
+         //it->print ();
+         //printf ("\n");
       }
 
       stack.put (it, thisLevel);
       content = *(it->getContent());
    }
+
+   //printf ("... done creating DeepIterator %p.\n", this);
 }
 
 
 DeepIterator::~DeepIterator ()
 {
+   //printf ("Deleting DeepIterator %p ...\n", this);
 }
 
 object::Object *DeepIterator::clone ()
@@ -539,8 +611,28 @@ int DeepIterator::compareTo (object::Comparable *other)
 {
    DeepIterator *otherDeepIterator = (DeepIterator*)other;
 
+   //printf ("Compare: %s\n", stack.toString ());
+   //printf ("     to: %s\n", otherDeepIterator->stack.toString ());
+
    // Search the highest level, where the widgets are the same.
    int level = 0;
+
+   // The Comparable interface does not define "uncomparable". Deep
+   // iterators are only comparable if they belong to the same widget
+   // tree, so have the same widget at the bottom at the
+   // stack. If this is not the case, we abort.
+
+   assert (stack.size() > 0);
+   assert (otherDeepIterator->stack.size() > 0);
+
+   //printf ("Equal? The %s %p (of %p) and the %s %p (of %p)?\n",
+   //        stack.get(0)->getWidget()->getClassName(),
+   //        stack.get(0)->getWidget(), this,
+   //        otherDeepIterator->stack.get(0)->getWidget()->getClassName(),
+   //        otherDeepIterator->stack.get(0)->getWidget(), otherDeepIterator);
+
+   assert (stack.get(0)->getWidget()
+           == otherDeepIterator->stack.get(level)->getWidget());
 
    while (stack.get(level)->getWidget ()
           == otherDeepIterator->stack.get(level)->getWidget ()) {
@@ -550,9 +642,13 @@ int DeepIterator::compareTo (object::Comparable *other)
       level++;
    }
 
+   //printf ("      => level = %d (temorally)\n", level);
+
    while (stack.get(level)->getWidget ()
           != otherDeepIterator->stack.get(level)->getWidget ())
       level--;
+
+   //printf ("      => level = %d (finally)\n", level);
 
    return stack.get(level)->compareTo (otherDeepIterator->stack.get(level));
 }
@@ -577,9 +673,9 @@ bool DeepIterator::next ()
    Iterator *it = stack.getTop ();
 
    if (it->next ()) {
-      if (it->getContent()->type == Content::WIDGET) {
+      if (it->getContent()->type & Content::ANY_WIDGET) {
          // Widget: new iterator on stack, to search in this widget.
-         stack.push (it->getContent()->widget->iterator (mask, false));
+         stack.push (it->getContent()->getWidget()->iterator (mask, false));
          return next ();
       } else {
          // Simply return the content of the iterartor.
@@ -610,9 +706,9 @@ bool DeepIterator::prev ()
    Iterator *it = stack.getTop ();
 
    if (it->prev ()) {
-      if (it->getContent()->type == Content::WIDGET) {
+      if (it->getContent()->type & Content::ANY_WIDGET) {
          // Widget: new iterator on stack, to search in this widget.
-         stack.push (it->getContent()->widget->iterator (mask, true));
+         stack.push (it->getContent()->getWidget()->iterator (mask, true));
          return prev ();
       } else {
          // Simply return the content of the iterartor.
@@ -642,9 +738,17 @@ CharIterator::CharIterator ()
    it = NULL;
 }
 
-CharIterator::CharIterator (Widget *widget)
+/**
+ * \brief ...
+ *
+ * If followReferences is true, only the reference are followed, when
+ * the container and generator for a widget is different. If false,
+ * only the container is followed.
+ */
+CharIterator::CharIterator (Widget *widget, bool followReferences)
 {
-   Iterator *i = widget->iterator (Content::SELECTION_CONTENT, false);
+   Iterator *i =
+      widget->iterator (Content::maskForSelection (followReferences), false);
    it = new DeepIterator (i);
    i->unref ();
    ch = START;

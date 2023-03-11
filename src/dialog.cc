@@ -325,6 +325,7 @@ static void choice_cb(Fl_Widget *button, void *number)
 {
   choice_answer = VOIDP2INT(number);
   _MSG("choice_cb: %d\n", choice_answer);
+
   button->window()->hide();
 }
 
@@ -354,31 +355,19 @@ int a_Dialog_choice(const char *title, const char *msg, ...)
    int gap = 8;
    int ww = 140 + n * 60, wh = 120;
    int bw = (ww - gap) / n - gap, bh = 45;
-   int ih = 50;
 
    Fl_Window *window = new Fl_Window(ww, wh, title);
    window->set_modal();
    window->begin();
-    Fl_Group *ib = new Fl_Group(0, 0, window->w(), window->h());
-    ib->begin();
-    window->resizable(ib);
 
-    /* '?' Icon */
-    Fl_Box *o = new Fl_Box(10, (wh - bh - ih) / 2, ih, ih);
-    o->box(FL_THIN_UP_BOX);
-    o->labelfont(FL_TIMES_BOLD);
-    o->labelsize(34);
-    o->color(FL_WHITE);
-    o->labelcolor(FL_BLUE);
-    o->label("?");
-    o->show();
-
-    if (msg != NULL){
-       Fl_Box *box = new Fl_Box(60, 0, ww - 60, wh - bh, msg);
-       box->labelfont(FL_HELVETICA);
-       box->labelsize(14);
-       box->align(FL_ALIGN_WRAP);
-    }
+    Fl_Text_Buffer *buf = new Fl_Text_Buffer();
+    buf->text(msg);
+    Fl_Text_Display *td = new Fl_Text_Display(0, 0, ww, wh - bh);
+    td->buffer(buf);
+    td->textsize((int) rint(14.0 * prefs.font_factor));
+    td->wrap_mode(Fl_Text_Display::WRAP_AT_BOUNDS, 0);
+    
+    window->resizable(td);
 
     int xpos = gap;
     va_start(ap, msg);
@@ -393,10 +382,14 @@ int a_Dialog_choice(const char *title, const char *msg, ...)
     va_end(ap);
    window->end();
 
+   choice_answer = 0;
+
    window->show();
    while (window->shown())
       Fl::wait();
    _MSG("Dialog_choice answer = %d\n", answer);
+   td->buffer(NULL);
+   delete buf;
    delete window;
 
    return choice_answer;

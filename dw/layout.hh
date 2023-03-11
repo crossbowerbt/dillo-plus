@@ -42,11 +42,12 @@ public:
    /**
     * \brief Receiver interface different signals.
     *
-    * May be extended
+    * May be extended.
     */
    class Receiver: public lout::signal::Receiver
    {
    public:
+      virtual void resizeQueued (bool extremesChanged);
       virtual void canvasSizeChanged (int width, int ascent, int descent);
    };
 
@@ -126,7 +127,7 @@ private:
    class Emitter: public lout::signal::Emitter
    {
    private:
-      enum { CANVAS_SIZE_CHANGED };
+      enum { RESIZE_QUEUED, CANVAS_SIZE_CHANGED };
 
    protected:
       bool emitToReceiver (lout::signal::Receiver *receiver, int signalNo,
@@ -135,6 +136,7 @@ private:
    public:
       inline void connectLayout (Receiver *receiver) { connect (receiver); }
 
+      void emitResizeQueued (bool extremesChanged);
       void emitCanvasSizeChanged (int width, int ascent, int descent);
    };
 
@@ -153,6 +155,7 @@ private:
    Platform *platform;
    View *view;
    Widget *topLevel, *widgetAtPoint;
+   lout::container::typed::Vector<Widget> *queueResizeList;
 
    /* The state, which must be projected into the view. */
    style::Color *bgColor;
@@ -185,6 +188,8 @@ private:
    FindtextState findtextState;
 
    enum ButtonEventType { BUTTON_PRESS, BUTTON_RELEASE, MOTION_NOTIFY };
+
+   void detachWidget (Widget *widget);
 
    Widget *getWidgetAtPoint (int x, int y);
    void moveToWidget (Widget *newWidgetAtPoint, ButtonState state);
@@ -233,8 +238,18 @@ private:
    void queueDraw (int x, int y, int width, int height);
    void queueDrawExcept (int x, int y, int width, int height,
       int ex, int ey, int ewidth, int eheight);
-   void queueResize ();
+   void queueResize (bool extremesChanged);
    void removeWidget ();
+
+   /* For tests regarding the respective Layout and (mostly) Widget
+      methods. Accessed by respective methods (enter..., leave...,
+      ...Entered) defined here and in Widget. */
+
+   int resizeIdleCounter, queueResizeCounter, sizeAllocateCounter,
+      sizeRequestCounter, getExtremesCounter;
+
+   void enterResizeIdle () { resizeIdleCounter++; }
+   void leaveResizeIdle () { resizeIdleCounter--; }
 
 public:
    Layout (Platform *platform);
@@ -281,7 +296,12 @@ public:
 
    /* View */
 
-   inline void expose (View *view, Rectangle *area) { draw (view, area); }
+   inline void expose (View *view, Rectangle *area) {
+      DBG_OBJ_ENTER ("draw", 0, "expose", "%d, %d, %d * %d",
+                     area->x, area->y, area->width, area->height);
+      draw (view, area);
+      DBG_OBJ_LEAVE ();
+   }
 
    /**
     * \brief This function is called by a view, to delegate a button press
@@ -297,6 +317,8 @@ public:
       return buttonEvent (BUTTON_PRESS, view, numPressed, x, y, state, button);
    }
 
+   void containerSizeChanged ();
+
    /**
     * \brief This function is called by a view, to delegate a button press
     * event.
@@ -310,7 +332,7 @@ public:
                           button);
    }
 
-   bool motionNotify (View *view,  int x, int y, ButtonState state);
+   bool motionNotify (View *view, int x, int y, ButtonState state);
    void enterNotify (View *view, int x, int y, ButtonState state);
    void leaveNotify (View *view, ButtonState state);
 

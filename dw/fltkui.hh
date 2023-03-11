@@ -211,7 +211,8 @@ public:
    virtual void detachView (FltkView *view);
 
    void sizeAllocate (core::Allocation *allocation);
-   void draw (core::View *view, core::Rectangle *area);
+   void draw (core::View *view, core::Rectangle *area,
+              core::DrawingContext *context);
 
    void setStyle (core::style::Style *style);
 
@@ -223,11 +224,12 @@ public:
 template <class I> class FltkSpecificResource: public I, public FltkResource
 {
 public:
-   inline FltkSpecificResource (FltkPlatform *platform) :
-      FltkResource (platform) { }
+   FltkSpecificResource (FltkPlatform *platform);
+   ~FltkSpecificResource ();
 
    void sizeAllocate (core::Allocation *allocation);
-   void draw (core::View *view, core::Rectangle *area);
+   void draw (core::View *view, core::Rectangle *area,
+              core::DrawingContext *context);
    void setStyle (core::style::Style *style);
 
    bool isEnabled ();

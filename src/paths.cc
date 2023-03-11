@@ -17,6 +17,8 @@
 #include "../dlib/dlib.h"
 #include "paths.hh"
 
+#include   <fcntl.h>
+
 /*
  * Local data
  */
@@ -81,21 +83,37 @@ FILE *Paths::getPrefsFP(const char *rcFile)
 {
    FILE *fp;
    char *path = dStrconcat(dGethomedir(), "/.dillo/", rcFile, NULL);
+   char *path2 = dStrconcat(DILLO_SYSCONF, rcFile, NULL);
 
    if (!(fp = fopen(path, "r"))) {
-      MSG("paths: Cannot open file '%s': %s\n", path, dStrerror(errno));
-
-      char *path2 = dStrconcat(DILLO_SYSCONF, rcFile, NULL);
-      if (!(fp = fopen(path2, "r"))) {
-         MSG("paths: Cannot open file '%s': %s\n", path2, dStrerror(errno));
-         MSG("paths: Using internal defaults...\n");
-      } else {
-         MSG("paths: Using %s\n", path2);
+      copy_file(path2, path);
+        if (!(fp = fopen(path, "r"))) {
+         MSG("paths: Using internal defaults because could not make '%s': %s\n", path, dStrerror(errno));
       }
-      dFree(path2);
    }
 
    dFree(path);
+   dFree(path2);
+
    return fp;
 }
 
+void Paths::copy_file( char *filename, char *outfile){
+   int     in_fd, out_fd, n_chars;
+   char    buf[BUFFERSIZE];
+
+   if ( (in_fd=open(filename, O_RDONLY)) == -1 )
+      MSG("Cannot open %s: %s", filename,dStrerror(errno));
+
+   if ( (out_fd=creat( outfile, COPYMODE)) == -1 )
+      MSG( "Cannot create %s: %s", outfile, dStrerror(errno));
+
+   while ( (n_chars = read(in_fd , buf, BUFFERSIZE)) > 0 )
+
+   if ( write( out_fd, buf, n_chars ) != n_chars )
+      MSG("Write error to %s: %s", outfile, dStrerror(errno));
+   if ( n_chars == -1 )
+      MSG("Read error from %s: %s", outfile, dStrerror(errno));
+   if ( close(in_fd) == -1 || close(out_fd) == -1 )
+      MSG("Error closing files %s", dStrerror(errno));
+}

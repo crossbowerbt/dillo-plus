@@ -1,0 +1,12 @@
+[Desktop Entry]
+GenericName=Web Browser
+GenericName[lt]=Web naršyklė
+Name=Dillo
+Comment=Lightweight browser
+Comment[lt]=Labai paprasta naršyklė
+MimeType=text/html;text/xml;application/xhtml+xml;
+Exec=dillo
+Terminal=false
+Type=Application
+Categories=X-Internet-browser
+Icon=dillo.xpm

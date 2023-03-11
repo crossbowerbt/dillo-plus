@@ -15,11 +15,11 @@
 #define FL_INTERNALS
 #include <FL/Fl_Window.H>
 #include <FL/Fl.H>
-#include <FL/x.H>
 
 #include "xembed.hh"
 
-#ifdef X_PROTOCOL
+#if !( defined(DISABLE_XEMBED) || defined(WIN32) || defined(__APPLE__) )
+#include <FL/x.H>
 
 typedef enum {
   XEMBED_EMBEDDED_NOTIFY        = 0,

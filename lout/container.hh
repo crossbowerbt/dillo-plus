@@ -93,6 +93,7 @@ class Collection: public Collection0
 public:
    void intoStringBuffer(misc::StringBuffer *sb);
    inline Iterator iterator() { Iterator it(createIterator()); return it; }
+   virtual int size() = 0;
 };
 
 
@@ -128,6 +129,8 @@ public:
    Vector(int initSize, bool ownerOfObjects);
    ~Vector();
 
+   int size();
+
    void put(object::Object *newElement, int newPos = -1);
    void insert(object::Object *newElement, int pos);
 
@@ -137,16 +140,23 @@ public:
     * Notice that insertion is not very efficient, unless the position
     * is rather at the end.
     */
-   inline void insertSorted(object::Object *newElement)
-   { insert (newElement, bsearch (newElement, false)); }
+   inline int insertSorted(object::Object *newElement,
+                           object::Comparator *comparator =
+                           &object::standardComparator)
+   { int pos = bsearch (newElement, false, comparator);
+      insert (newElement, pos); return pos; }
 
    void remove(int pos);
    inline object::Object *get(int pos) const
    { return (pos >= 0 && pos < numElements) ? array[pos] : NULL; }
-   inline int size() { return numElements; }
    void clear();
-   void sort();
-   int bsearch(Object *key, bool mustExist);
+   void sort(object::Comparator *comparator = &object::standardComparator);
+   int bsearch(Object *key, bool mustExist, int start, int end,
+               object::Comparator *comparator = &object::standardComparator);
+   inline int bsearch(Object *key, bool mustExist,
+                      object::Comparator *comparator =
+                      &object::standardComparator)
+   { return bsearch (key, mustExist, 0, size () - 1, comparator); }
 };
 
 
@@ -188,8 +198,14 @@ public:
    List(bool ownerOfObjects);
    ~List();
 
+   bool equals(Object *other);
+   int hashValue();
+
+   int size ();
+
    void clear();
    void append(object::Object *element);
+   bool insertBefore(object::Object *beforeThis, object::Object *neew);
    inline bool removeRef(object::Object *element)
    { return remove0(element, false, false); }
    inline bool remove(object::Object *element)
@@ -218,7 +234,7 @@ protected:
    };
 
    Node **table;
-   int tableSize;
+   int tableSize, numElements;
    bool ownerOfObjects;
 
    inline int calcHashValue(object::Object *object) const
@@ -254,6 +270,8 @@ public:
    HashSet(bool ownerOfObjects, int tableSize = 251);
    ~HashSet();
 
+   int size ();
+
    void put (object::Object *object);
    bool contains (object::Object *key) const;
    bool remove (object::Object *key);
@@ -288,7 +306,8 @@ public:
 };
 
 /**
- * \brief A stack (LIFO).
+ * \brief A stack (LIFO). Can be used as Queue (FIFO) when pushUnder()
+ *     is used instead of push().
  *
  * Note that the iterator returns all elements in the reversed order they have
  * been put on the stack.
@@ -325,6 +344,8 @@ protected:
 public:
    Stack (bool ownerOfObjects);
    ~Stack();
+
+   int size ();
 
    void push (object::Object *object);
    void pushUnder (object::Object *object);
@@ -385,11 +406,16 @@ public:
    Collection () { this->base = NULL; }
    ~Collection () { if (this->base) delete this->base; }
 
+   bool equals(Object *other)
+   { return this->base->equals (((Collection<T>*)other)->base); }
+
+   int hashValue() { return this->base->hashValue (); }
+
    void intoStringBuffer(misc::StringBuffer *sb)
    { this->base->intoStringBuffer(sb); }
-
    inline Iterator<T> iterator() {
       Iterator<T> it; it.base = this->base->iterator(); return it; }
+   inline int size() { return this->base->size (); }
 };
 
 
@@ -406,16 +432,28 @@ public:
    { ((untyped::Vector*)this->base)->put(newElement, newPos); }
    inline void insert(T *newElement, int pos)
    { ((untyped::Vector*)this->base)->insert(newElement, pos); }
-   inline void insertSorted(T *newElement)
-   { ((untyped::Vector*)this->base)->insertSorted(newElement); }
+   inline int insertSorted(T *newElement,
+                           object::Comparator *comparator =
+                           &object::standardComparator)
+   { return ((untyped::Vector*)this->base)->insertSorted(newElement,
+                                                         comparator); }
    inline void remove(int pos) { ((untyped::Vector*)this->base)->remove(pos); }
    inline T *get(int pos) const
    { return (T*)((untyped::Vector*)this->base)->get(pos); }
-   inline int size() const { return ((untyped::Vector*)this->base)->size(); }
    inline void clear() { ((untyped::Vector*)this->base)->clear(); }
-   inline void sort() { ((untyped::Vector*)this->base)->sort(); }
-   inline int bsearch(T *key, bool mustExist)
-   { return ((untyped::Vector*)this->base)->bsearch(key, mustExist); }
+   inline void sort(object::Comparator *comparator =
+                    &object::standardComparator)
+   { ((untyped::Vector*)this->base)->sort(comparator); }
+   inline int bsearch(T *key, bool mustExist, int start, int end,
+                      object::Comparator *comparator =
+                      &object::standardComparator)
+   { return ((untyped::Vector*)this->base)->bsearch(key, mustExist, start, end,
+                                                    comparator); }
+   inline int bsearch(T *key, bool mustExist,
+                      object::Comparator *comparator =
+                      &object::standardComparator)
+   { return ((untyped::Vector*)this->base)->bsearch(key, mustExist,
+                                                    comparator); }
 };
 
 
@@ -431,6 +469,8 @@ public:
    inline void clear() { ((untyped::List*)this->base)->clear(); }
    inline void append(T *element)
    { ((untyped::List*)this->base)->append(element); }
+   inline bool insertBefore(object::Object *beforeThis, object::Object *neew)
+   { return ((untyped::List*)this->base)->insertBefore(beforeThis, neew); }
    inline bool removeRef(T *element) {
       return ((untyped::List*)this->base)->removeRef(element); }
    inline bool remove(T *element) {
@@ -438,7 +478,6 @@ public:
    inline bool detachRef(T *element) {
       return ((untyped::List*)this->base)->detachRef(element); }
 
-   inline int size() const { return ((untyped::List*)this->base)->size(); }
    inline bool isEmpty() const
    { return ((untyped::List*)this->base)->isEmpty(); }
    inline T *getFirst() const
@@ -501,7 +540,6 @@ public:
    inline T *getTop () const
    { return (T*)((untyped::Stack*)this->base)->getTop (); }
    inline void pop () { ((untyped::Stack*)this->base)->pop (); }
-   inline int size() const { return ((untyped::Stack*)this->base)->size(); }
 };
 
 } // namespace untyped

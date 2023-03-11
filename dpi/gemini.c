@@ -415,10 +415,10 @@ static void yes_ssl_support(void)
 	  a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
 
 	  snprintf(buf2, sizeof(buf2),
-		   "<form>"
+		   "<body><form action=\"\">"
 		   "<label for=\"q\">Search:</label><br>"
 		   "<input type=\"text\" id=\"q\" name=\"q\"><br>"
-		   "</form>");
+		   "</form></body>");
 
 	  a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
 	  

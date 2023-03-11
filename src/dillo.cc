@@ -45,18 +45,21 @@
 
 #include "dns.h"
 #include "web.hh"
+#include "IO/tls.h"
 #include "IO/Url.h"
 #include "IO/mime.h"
 #include "capi.h"
 #include "dicache.h"
 #include "cookies.h"
+#include "hsts.h"
 #include "domain.h"
 #include "auth.h"
 #include "styleengine.hh"
 
-#include "lout/debug.hh"
 #include "dw/fltkcore.hh"
+#include "dw/widget.hh"
 #include "dw/textblock.hh"
+#include "dw/table.hh"
 
 /*
  * Command line options structure
@@ -377,11 +380,6 @@ static DilloUrl *makeStartUrl(char *str, bool local)
  */
 int main(int argc, char **argv)
 {
-   DBG_OBJ_COLOR("#c0ff80", "dw::*");
-   DBG_OBJ_COLOR("#c0c0ff", "dw::fltk::*");
-   DBG_OBJ_COLOR("#ffa0a0", "dw::core::*");
-   DBG_OBJ_COLOR("#ffe0a0", "dw::core::style::*");
-
    uint_t opt_id;
    uint_t options_got = 0;
    uint32_t xid = 0;
@@ -450,6 +448,9 @@ int main(int argc, char **argv)
    if ((fp = Paths::getPrefsFP(PATHS_RC_PREFS))) {
       PrefsParser::parse(fp);
    }
+   // parse bm.txt
+   if ((fp = Paths::getPrefsFP(PATHS_BM))) {
+   }
    // parse keysrc
    if ((fp = Paths::getPrefsFP(PATHS_RC_KEYS))) {
       Keys::parse(fp);
@@ -466,15 +467,19 @@ int main(int argc, char **argv)
    a_Dns_init();
    a_Web_init();
    a_Http_init();
+   a_Tls_init();
    a_Mime_init();
    a_Capi_init();
    a_Dicache_init();
    a_Bw_init();
    a_Cookies_init();
+   a_Hsts_init(Paths::getPrefsFP(PATHS_HSTS_PRELOAD));
    a_Auth_init();
    a_UIcmd_init();
    StyleEngine::init();
 
+   dw::core::Widget::setAdjustMinWidth (prefs.adjust_min_width);
+   dw::Table::setAdjustTableMinWidth (prefs.adjust_table_min_width);
    dw::Textblock::setPenaltyHyphen (prefs.penalty_hyphen);
    dw::Textblock::setPenaltyHyphen2 (prefs.penalty_hyphen_2);
    dw::Textblock::setPenaltyEmDashLeft (prefs.penalty_em_dash_left);
@@ -582,9 +587,11 @@ int main(int argc, char **argv)
     */
    a_Domain_freeall();
    a_Cookies_freeall();
+   a_Hsts_freeall();
    a_Cache_freeall();
    a_Dicache_freeall();
    a_Http_freeall();
+   a_Tls_freeall();
    a_Dns_freeall();
    a_History_freeall();
    a_Prefs_freeall();

@@ -94,9 +94,6 @@ static FILE *Cookies_fopen(const char *filename, char *init_str)
 
          MSG("Cookies: Created file: %s\n", filename);
          F_in = fopen(filename, "r");
-
-         /* set close on exec */
-         fcntl(fileno(F_in), F_SETFD, FD_CLOEXEC | fcntl(fileno(F_in), F_GETFD));
       } else {
          MSG("Cookies: Could not create file: %s!\n", filename);
       }

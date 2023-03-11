@@ -1,0 +1,209 @@
+/** \page dw-grows GROWS - Grand Redesign Of Widget Sizes
+
+<div style="border: 2px solid #ffff00; margin: 1em 0;
+  padding: 0.5em 1em; background-color: #ffffe0">The complex "widget
+  sizes" is currently divided into three documents: \ref
+  dw-widget-sizes, **Grand Redesign Of Widget Sizes** (this document),
+  and \ref dw-size-request-pos. Furthermore, there are some notes in
+  \ref dw-miscellaneous.</div>
+
+This paper describes (will describe) some design changes to
+calculating widget sizes. Goals are:
+
+- Simplification of widget size calculation by the parent widget;
+  dw::Textblock::calcWidgetSize, dw::OutOfFlowMgr::ensureFloatSize
+  etc. should become simpler or perhaps even obsolete.
+
+- Making the implementation of some features possible:
+
+  - *max-width*, *max-height*, *min-width*, *min-height*;
+  - correct aspect ratio for images with only one percentage size defined;
+  - *display: inline-block*;
+  - &lt;button&gt;.
+
+
+A short sketch
+==============
+
+**dw::core::Widget::sizeRequest and dw::core::Widget::getExtremes will
+return final results.** The caller does not have to correct the size,
+e.&nbsp;g. when percentages are defined. As an example,
+dw::Textblock::calcWidgetSize has already become much simpler.
+
+**A new hierarchy, *container*:** Aside from dw::core::Widget::parent
+and dw::core::Widget::generator, there is a third hierarchy
+dw::core::Widget::container, which is (unlike *generator*) always a
+direct ancestor, and represents what in CSS is called *containing
+block*. Containers are important to define the "context size", which
+is (not solely) used for percentage sizes.
+
+(There is another "containing block", dw::Textblock::containingBlock;
+these may be consolidated some day.)
+
+**The process of size calculation is split between the widget itself
+and its container:**
+
+- The container provides some abstract methods:
+  dw::core::Widget::getAvailWidthOfChild,
+  dw::core::Widget::getAvailHeightOfChild,
+  dw::core::Widget::correctRequisitionOfChild, and
+  dw::core::Widget::correctExtremesOfChild, which can be used in the
+  actual implementation of dw::core::Widget::sizeRequestImpl;
+  different containers with different ways how to arrange their
+  children will implement these methods in a different way. (Simple
+  example: the *available width* for children within a textblock is
+  the *available width* for the textblock itself, minus
+  margin/border/padding; on the other hand, it is completely different
+  for children of tables, for which a complex column width calculation
+  is used.)
+
+- The actual size calculation is, however, controlled by the widget
+  itself, which only *uses* these methods above.
+
+<div style="border: 2px solid #ffff00; margin-top: 0.5em;
+   margin-bottom: 0.5em; padding: 0.5em 1em; background-color: #ffffe0">
+   <b>Update:</b> This is not fully correct; the parents are also involved
+   for calculating available widths and heights, at least when CSS 'width'
+   and 'height' are not set.</div>
+
+**Size hints are removed.** Instead, the container methods in the
+previous paragraph are used. Changes of container sizes (especially
+viewport the size) are handled in a different way.
+
+**Extremes are extended by intrinsic values.** In some cases (see
+dw::Table::forceCalcCellSizes, case *minWidth* > *totalWidth*, for an
+example) it is useful to know about minimal and maximal width of a
+widget independent of CSS attributes. For this, dw::core::Extremes is
+extended by:
+
+- dw::core::Extremes::minWidthIntrinsic and
+- dw::core::Extremes::maxWidthIntrinsic.
+
+The rules for the calculation:
+
+1. If a widget has no children, it calculates *minWidthIntrinsic* and
+   *maxWidthIntrinsic* as those values not affected by CSS hints.
+   (dw::core::Widget::correctExtremes will not change these values.)
+2. A widget must calculate *minWidthIntrinsic* and *maxWidthIntrinsic*
+   from *minWidthIntrinsic* and *maxWidthIntrinsic* of its children,
+   and *minWidth* and *maxWidth* from *minWidth* and *maxWidth* of its
+   children.
+3. At the end, *minWidth* and *maxWidth* of a widget are corrected by
+   CSS attributes. (dw::core::Widget::correctExtremes will do this.)
+
+<div style="border: 2px solid #ffff00; margin-top: 0.5em;
+   margin-bottom: 0.5em; padding: 0.5em 1em; background-color: #ffffe0">
+   <b>Notice:</b> Currently, dw::core::Widget::getExtremesImpl must
+   set all four members in dw::core::Extremes; this may change.</div>
+
+Another **extension of extremes: *adjustmentWidth*.** This is used as
+minimum for the width, when "adjust_min_width" (or,
+"adjust_table_min_width", respectively) is set.
+
+The rules for the calculation:
+
+1. If a widget has no children, it can choose a suitable value,
+   typically based on dw::core::Extremes::minWidth and
+   dw::core::Extremes::minWidthIntrinsic.
+2. A widget must calculate *adjustmentWidth* from *adjustmentWidth* of
+   its children.
+
+*Note:* An implementation of dw::core::Widget::getExtremesImpl may set
+this value *after* calling dw::core::Widget::correctExtremesOfChild,
+so that it cannot be used for the correction of extremes. In this case
+*useAdjustmentWidth = false* should be passed to
+dw::core::Widget::correctExtremesOfChild. On the other hand, if known
+before, *useAdjustmentWidth* should be set to *true*.
+
+Rules for *new* methods related to resizing
+===========================================
+
+- Of course, *sizeRequestImpl* may (should) call *correctRequisition*,
+  and *getExtremesImpl* may (should) call *correctExtremes*.
+
+- *sizeRequestImpl* (and *correctRequisition*) is allowed to call
+  *getAvailWidth* and *getAvailHeight* with *forceValue* set, but
+  *getExtremesImpl* (and *correctExtremes*) is allowed to call these
+  only with *forceValue* unset.
+
+- For this reason, *sizeRequestImpl* is indeed allowed to call
+  *getExtremes* (dw::Table does so), but the opposite
+  (*getExtremesImpl* calling *sizeRequest*) is not allowed
+  anymore. (Before GROWS, the standard implementation
+  dw::core::Widget::getExtremesImpl did so.)
+
+- Finally, *getAvailWidth* and *getAvailHeight* may call
+  *getExtremes*, if and only if *forceValue* is set.
+
+Here is a diagram showing all permitted dependencies:
+
+\dot
+digraph G {
+   node [shape=record, fontname=Helvetica, fontsize=10, color="#c0c0c0"];
+   edge [arrowhead="open", arrowtail="none", color="#404040"];
+
+   "sizeRequest[Impl]" -> "getExtremes[Impl]";
+   "sizeRequest[Impl]" -> correctRequisition;
+   "getExtremes[Impl]" -> correctExtremes;
+   "sizeRequest[Impl]" -> "getAvail[Width|Height] (true)";
+   "getExtremes[Impl]" -> "getAvail[Width|Height] (false)";
+   correctRequisition -> "getAvail[Width|Height] (true)";
+   correctExtremes -> "getAvail[Width|Height] (false)";
+   "getAvail[Width|Height] (true)" -> "getExtremes[Impl]";   
+}
+\enddot
+
+Open issues
+===========
+
+**Do CSS size dimensions override intrinsic sizes in all cases?** If a
+textblock needs at least, say, 100 pixels width so that the text can
+be read, but has a specification "width: 50px", should half of the
+text be invisible? Or should the width be corrected again to 100
+pixels?
+
+Currently, in the CSS size specification is honoured in all cases,
+with one exception: see dw::Textblock::sizeRequestImpl and see
+dw::Textblock::getExtremesImpl (the time when
+dw::core::Widget::correctRequisition and
+dw::core::Widget::correctExtremes, respectively, is called).
+
+*Not* honouring the CSS size specification in all cases could improve
+readability in some cases, so this could depend on a user preference.
+
+**Update:** There is now a dillorc option <tt>adjust_min_width</tt>,
+which is implemented for widths, but not heights (since it is based on
+width extremes, but there are currently no height extremes).
+
+Another problem is that in most cases, there is no clippping, so that
+contents may exceed the allocation of the widget, but redrawing is not
+necessarily triggered.
+
+**Percentage values for margins and paddings, as well as negative
+margins** are interesting applications, but have not been considered
+yet. For negative margins, a new attribute
+dw::core::Widget::extraSpace could solve the problem of widgets
+sticking out of the allocation of parent.
+
+**Clarify percentage heights.** Search in widget.cc, and compare
+section 10.5 ('height') of the CSS 2.1 specification to section 10.2
+('width').
+
+**Fast queue resize does not work fully.** Example: run
+*test/dw-simple-container-test* (dw_simple_container_test.cc), resize
+(best maximize) the window and follow (e.&nbsp;g. by using RTFL) what
+happens in consequence of dw::core::Layout::viewportSizeChanged. The
+dw::SimpleContainer in the middle is not affected, so only the two
+dw::Textblock's (at the top and at the bottom) call queueResize with
+*fast = true*, and so get *NEEDS_RESIZE* set; but since it is not set
+for the dw::SimpleContainer, *sizeRequest* is never called for the
+bottom dw::Textblock.
+
+There does not seem to be a real case for this problem in dillo, since
+all widgets which may contain other widgets (except
+dw::SimpleContainer, which is not used outside tests) use the
+available width and height (dw::core::Widget::usesAvailWidth and
+dw::core::Widget::usesAvailHeight), and so are always affected by
+viewport size changes.
+
+*/

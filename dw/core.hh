@@ -12,6 +12,9 @@
  */
 namespace dw {
 
+/** Used (temporally) for code related to positioned elements. */
+enum { IMPL_POS = false };
+
 /**
  * \brief The core of Dw is defined in this namespace.
  *
@@ -25,6 +28,7 @@ class Layout;
 class View;
 class Widget;
 class Iterator;
+class StackingContextMgr;
 
 // Nothing yet to free.
 inline void freeall () { }
@@ -41,6 +45,7 @@ class ResourceFactory;
 #include "../lout/container.hh"
 #include "../lout/signal.hh"
 
+#include "tools.hh"
 #include "types.hh"
 #include "events.hh"
 #include "imgbuf.hh"
@@ -53,6 +58,7 @@ class ResourceFactory;
 #include "selection.hh"
 #include "layout.hh"
 #include "widget.hh"
+#include "stackingcontextmgr.hh"
 #include "ui.hh"
 
 #undef __INCLUDED_FROM_DW_CORE_HH__

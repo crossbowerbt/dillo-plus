@@ -2,27 +2,40 @@
 #define __DW_TABLECELL_HH__
 
 #include "core.hh"
-#include "alignedtextblock.hh"
 
 namespace dw {
 
-class TableCell: public AlignedTextblock
-{
-private:
-   int charWordIndex, charWordPos;
+namespace tablecell {
 
-protected:
-   bool wordWrap (int wordIndex, bool wrapAll);
+inline bool usesMaxGeneratorWidth () { return true; }
 
-   int getValue ();
-   void setMaxValue (int maxValue, int value);
+bool getAdjustMinWidth ();
+bool isBlockLevel ();
 
-public:
-   static int CLASS_ID;
+int correctAvailWidthOfChild (core::Widget *widget, core::Widget *child,
+                              int width, bool forceValue);
+int correctAvailHeightOfChild (core::Widget *widget, core::Widget *child,
+                               int height, bool forceValue);
 
-   TableCell(TableCell *ref, bool limitTextWidth);
-   ~TableCell();
-};
+void correctCorrectedRequisitionOfChild (core::Widget *widget,
+                                         core::Widget *child,
+                                         core::Requisition *requisition,
+                                         void (*splitHeightFun) (int, int*,
+                                                                 int*),
+                                         bool allowDecreaseWidth,
+                                         bool allowDecreaseHeight);
+void correctCorrectedExtremesOfChild (core::Widget *widget, core::Widget *child,
+                                      core::Extremes *extremes,
+                                      bool useAdjustmentWidth);
+
+int applyPerWidth (core::Widget *widget, int containerWidth,
+                   core::style::Length perWidth);
+int applyPerHeight (core::Widget *widget, int containerHeight,
+                    core::style::Length perHeight);
+
+inline bool adjustExtraSpaceWhenCorrectingRequisitionByOOF () { return false; }
+
+} // namespace dw
 
 } // namespace dw
 

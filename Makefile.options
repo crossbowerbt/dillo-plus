@@ -27,10 +27,16 @@ LIBFLTK_CXXFLAGS = $(LIBFLTK_CFLAGS) -fvisibility-inlines-hidden
 LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau
 
 HTTPS_LDFLAGS = -lcrypto -lssl
+MBED_TLS_LDFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
 
 DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -L/usr/local/lib -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
+
+# == HTTPS CERTS ==
+
+CA_CERTS_FILE = /etc/ssl/cert.pem
+CA_CERTS_DIR = /etc/ssl/
 
 # == INSTALL PATHS ==
 

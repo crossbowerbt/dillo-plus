@@ -142,10 +142,10 @@ static int parseOption(char *name, char *value,
 void PrefsParser::parse(FILE *fp)
 {
    char *line, *name, *value, *oldLocale;
-   int st;
+   int st, line_number = 1;
 
    /* Symbol array, sorted alphabetically */
-   SymNode_t symbols[] = {
+   static SymNode_t symbols[] = {
       { "allow_white_bg", &prefs.allow_white_bg, PREFS_BOOL, 0 },
       { "white_bg_replacement", &prefs.white_bg_replacement, PREFS_COLOR, 0 },
       { "bg_color", &prefs.bg_color, PREFS_COLOR, 0 },
@@ -167,13 +167,19 @@ void PrefsParser::parse(FILE *fp)
       { "home", &prefs.home, PREFS_URL, 0 },
       { "http_language", &prefs.http_language, PREFS_STRING, 0 },
       { "http_max_conns", &prefs.http_max_conns, PREFS_INT32, 0 },
+      { "http_persistent_conns", &prefs.http_persistent_conns, PREFS_BOOL, 0 },
       { "http_proxy", &prefs.http_proxy, PREFS_URL, 0 },
       { "http_proxyuser", &prefs.http_proxyuser, PREFS_STRING, 0 },
       { "http_referer", &prefs.http_referer, PREFS_STRING, 0 },
+      { "http_strict_transport_security",&prefs.http_strict_transport_security,
+        PREFS_BOOL, 0 },
       { "http_user_agent", &prefs.http_user_agent, PREFS_STRING, 0 },
       { "limit_text_width", &prefs.limit_text_width, PREFS_BOOL, 0 },
+      { "adjust_min_width", &prefs.adjust_min_width, PREFS_BOOL, 0 },
+      { "adjust_table_min_width", &prefs.adjust_table_min_width, PREFS_BOOL, 0 },
       { "load_images", &prefs.load_images, PREFS_BOOL, 0 },
       { "load_background_images", &prefs.load_background_images, PREFS_BOOL, 0 },
+      { "media_player", &prefs.media_player, PREFS_STRING, 0 },
       { "load_stylesheets", &prefs.load_stylesheets, PREFS_BOOL, 0 },
       { "middle_click_drags_page", &prefs.middle_click_drags_page,
         PREFS_BOOL, 0 },
@@ -217,7 +223,6 @@ void PrefsParser::parse(FILE *fp)
       { "ui_tab_active_fg_color", &prefs.ui_tab_active_fg_color, PREFS_COLOR, 0 },
       { "ui_tab_fg_color", &prefs.ui_tab_fg_color, PREFS_COLOR, 0 },
       { "ui_text_bg_color", &prefs.ui_text_bg_color, PREFS_COLOR, 0 },
-      { "w3c_plus_heuristics", &prefs.w3c_plus_heuristics, PREFS_BOOL, 0 },
       { "penalty_hyphen", &prefs.penalty_hyphen, PREFS_FRACTION_100, 0 },
       { "penalty_hyphen_2", &prefs.penalty_hyphen_2, PREFS_FRACTION_100, 0 },
       { "penalty_em_dash_left", &prefs.penalty_em_dash_left,
@@ -242,11 +247,11 @@ void PrefsParser::parse(FILE *fp)
          _MSG("prefsparser: name=%s, value=%s\n", name, value);
          parseOption(name, value, symbols, sizeof(symbols) / sizeof(symbols[0]));
       } else if (st < 0) {
-         MSG_ERR("prefsparser: Syntax error in dillorc:"
-                 " name=\"%s\" value=\"%s\"\n", name, value);
+         MSG_ERR("prefsparser: Syntax error in dillorc line %d:"
+                 " name=\"%s\" value=\"%s\"\n", line_number, name, value);
       }
-
       dFree(line);
+      line_number++;
    }
    fclose(fp);
 

@@ -1,0 +1,102 @@
+/** \page dw-out-of-flow Handling Elements Out Of Flow
+
+Introduction
+============
+
+This texts deals with both floats and positioned elements, which have
+in common that there is a distinction between generating block and
+containing block (we are here using the same notation as in the
+CSS&nbsp;2 specification). Consider this snippet (regarding floats):
+
+
+    <ul>
+      <li>Some text.</li>
+      <li>
+        <div style="float:right; width: 50%">Some longer text, so
+          that the effect described in this passage can be
+          demonstrated.
+        </div>
+        Some more and longer text.</li>
+      <li>Final text. Plus some more to demonstrate how text flows
+        around the float on the right side.</li>
+    </ul>
+
+which may be rendered like this
+
+\image html dw-floats-01.png
+
+The float (the DIV section, yellow in the image) is defined
+("generated") within the list item (green), so, in CSS 2 terms, the
+list item is the generating block of the float. However, as the image
+shows, the float is not contained by the list item, but another block,
+several levels above (not shown here). In terms of ::dw, this means
+that the dw::Textblock representing the float cannot be a child of the
+dw::Textblock representing the generating block, the list item, since
+the allocation of a child widget must be within the allocation of the
+parent widget. Instead, to each dw::Textblock, another dw::Textblock
+is assigned as the containing box.
+
+(Notice also that other text blocks must regard floats to calculate
+their borders, and so their size. In this example, the following list
+item (gray) must consider the position of the float. This is discussed
+in detail in the following section, _Implementation overview_.)
+
+
+Implementation overview
+=======================
+
+- dw::oof::OOFAwareWidget is the base for both generators and containers.
+  dw::Textblock and dw::Table are based on this, but dw::Table is only relevant
+  for positioned elements, so much simpler than dw::Textblock.
+- For a given textblock (or, generally, generator), the float container is not
+  necessary the same container as for positioned elements. For this reason,
+  dw::oof::OOFAwareWidget::oofContainer is an array.
+- The containers are set in dw::oof::OOFAwareWidget::notifySetAsTopLevel and
+  dw::oof::OOFAwareWidget::notifySetParent.
+- If a widget is out of flow, the generating widget keeps a reference with the
+  type dw::core::Content::WIDGET_OOF_REF, while the containing block refers to
+  it as dw::core::Content::WIDGET_OOF_CONT.  For widgets within flow,
+  dw::core::Content::WIDGET_IN_FLOW is used. Notice that in the first case,
+  there are two pieces of content referring to the same widget. An application
+  of this distinction is iterators. (For selection and searching, the generating
+  hierarchy is used, whih is different from the widget hierarchy.)
+
+Handling widgets out of flow is partly the task of class implementing
+dw::oof::OutOfFlowMgr, which is stored by dw::oof::OOFAwareWidget::outOfFlowMgr,
+but only for containing blocks. Generating blocks should refer
+to *container->outOfFlowMgr[...]*.
+
+Overview of the dw::oof::OutOfFlowMgr hierarchy;
+
+\dot
+digraph G {
+   node [shape=record, fontname=Helvetica, fontsize=10];
+   edge [arrowhead="none", arrowtail="empty", dir="both"];
+   fontname=Helvetica; fontsize=8;
+
+   OutOfFlowMgr [URL="\ref dw::oof::OutOfFlowMgr"; color="#a0a0a0"];
+   OOFFloatsMgr [URL="\ref dw::oof::OOFFloatsMgr"];
+   OOFPositionedMgr [URL="\ref dw::oof::OOFPositionedMgr"; color="#a0a0a0"];
+   OOFPosAbsLikeMgr [URL="\ref dw::oof::OOFPosAbsLikeMgr"; color="#a0a0a0"];
+   OOFPosAbsMgr [URL="\ref dw::oof::OOFPosAbsMgr"];
+   OOFPosFixedMgr [URL="\ref dw::oof::OOFPosFixedMgr"];
+   OOFPosRelMgr [URL="\ref dw::oof::OOFPosRelMgr"];
+
+   OutOfFlowMgr -> OOFFloatsMgr;
+   OutOfFlowMgr -> OOFPositionedMgr;
+   OOFPositionedMgr -> OOFPosAbsLikeMgr;
+   OOFPosAbsLikeMgr -> OOFPosAbsMgr;
+   OOFPosAbsLikeMgr -> OOFPosFixedMgr;  
+   OOFPositionedMgr -> OOFPosRelMgr;
+}
+\enddot
+</div>
+
+
+Further details
+===============
+
+- \ref dw-out-of-flow-floats
+- \ref dw-out-of-flow-positioned
+
+*/

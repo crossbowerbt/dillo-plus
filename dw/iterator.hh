@@ -31,6 +31,7 @@ private:
 
 public:
    bool equals (Object *other);
+   void intoStringBuffer(lout::misc::StringBuffer *sb);
 
    inline Widget *getWidget () { return widget; }
    inline Content *getContent () { return &content; }
@@ -168,6 +169,16 @@ private:
 
    inline DeepIterator () { }
 
+   static Widget *getRespectiveParent (Widget *widget, Content::Type mask);
+   inline Widget *getRespectiveParent (Widget *widget) {
+      return getRespectiveParent (widget, mask);
+   }
+
+   static int getRespectiveLevel (Widget *widget, Content::Type mask);
+   inline int getRespectiveLevel (Widget *widget) {
+      return getRespectiveLevel (widget, mask);
+   }
+
 public:
    DeepIterator(Iterator *it);
    ~DeepIterator();
@@ -230,7 +241,7 @@ private:
    CharIterator ();
 
 public:
-   CharIterator (Widget *widget);
+   CharIterator (Widget *widget, bool followReferences);
    ~CharIterator ();
 
    lout::object::Object *clone();

@@ -95,13 +95,28 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
+"<style>\n"
+"	h1 {\n"
+"		color: white;\n"
+"		margin-left: 1em;\n"
+"		text-align: center;\n"
+"	}\n"
+"	h4 {\n"
+"		color: #677FFF;\n"
+"		margin-left: 1em;\n"
+"		text-align: center;\n"
+"	}\n"
+"	a:visited {\n"
+"	  color: #262626;\n"
+"	}\n"
+"</style>\n"
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#778899' link='black' vlink='brown'>\n"
-"<table border='1' cellpadding='0' width='100%'>\n"
+"<body id='dillo_bm' bgcolor='#6980E0' link='black' vlink='brown'>\n"
+"<table border='0' cellpadding='0' width='100%'>\n"
 " <tr><td>\n"
-"  <table width='100%' bgcolor='#b4b4b4'>\n"
+"  <table width='100%' bgcolor='transparent;'>\n"
 "   <tr>\n"
-"    <td> Bookmarks :: </td>\n"
+"    <td><h1> Bookmarks ::  </h1></td>\n"
 "    <td align='right'>\n"
 "     [<a href='dpi:/bm/modify'>modify</a>]\n"
 "    </td></tr>\n"
@@ -114,13 +129,28 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
+"<style>\n"
+"	h1 {\n"
+"		color: white;\n"
+"		margin-left: 1em;\n"
+"		text-align: center;\n"
+"	}\n"
+"	h4 {\n"
+"		color: #677FFF;\n"
+"		margin-left: 1em;\n"
+"		text-align: center;\n"
+"	}\n"
+"	a:visited {\n"
+"	  color: #262626;\n"
+"	}\n"
+"</style>\n"
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#778899' link='black' vlink='brown'>\n"
-"<table border='1' cellpadding='0' width='100%'>\n"
+"<body id='dillo_bm' bgcolor='#6980E0' link='black' vlink='brown'>\n"
+"<table border='0' cellpadding='0' width='100%'>\n"
 " <tr><td>\n"
-"  <table width='100%' bgcolor='#b4b4b4'>\n"
+"  <table width='100%' bgcolor='transparent;'>\n"
 "   <tr>\n"
-"    <td> Bookmarks :: modify</td>\n"
+"    <td><h1> Bookmarks :: modify</h1></td>\n"
 "    <td align='right'>\n"
 "     [<a href='dpi:/bm/'>cancel</a>]\n"
 "    </td>\n"
@@ -129,8 +159,8 @@ DOCTYPE
 "</table>                                        \n"
 "\n"
 "<form action='modify'>\n"
-"<table width='100%' border='1' cellpadding='0'>\n"
-" <tr style='background-color: teal'>\n"
+"<table width='100%' border='0' cellpadding='0'>\n"
+" <tr style='background-color: #D6D6D6'>\n"
 "  <td>\n"
 "   <b>Select an operation</b>\n"
 "   <select name='operation'>\n"
@@ -148,22 +178,22 @@ DOCTYPE
 "</table>\n";
 
 static const char *mainpage_sections_header =
-"<table border='1' cellpadding='0' cellspacing='20' width='100%'>\n"
+"<table border='0' cellpadding='0' cellspacing='20' width='100%'>\n"
 " <tr valign='top'>\n"
 "  <td>\n"
-"   <table bgcolor='#b4b4b4' border='2' cellpadding='4' cellspacing='1'>\n"
+"   <table bgcolor='#F7F7F7' border='0' cellpadding='4' cellspacing='1'>\n"
 "    <tr><td>\n"
-"     <table width='100%' bgcolor='#b4b4b4'>\n"
-"      <tr><td><small>Sections:</small></td></tr></table></td></tr>\n";
+"     <table bgcolor='#4F4F4F'>\n"
+"      <tr><td><b style='color: white;'>Sections:</b></td></tr></table></td></tr>\n";
 
 static const char *modifypage_sections_header =
-"<table border='1' cellpadding='0' cellspacing='20' width='100%'>\n"
+"<table border='0' cellpadding='0' cellspacing='20' width='100%'>\n"
 " <tr valign='top'>\n"
 "  <td>\n"
-"   <table bgcolor='#b4b4b4' border='1'>\n"
+"   <table bgcolor='#F7F7F7' border='0'>\n"
 "    <tr><td>\n"
-"     <table width='100%' bgcolor='#b4b4b4'>\n"
-"      <tr><td><small>Sections:</small></td></tr></table></td></tr>\n";
+"     <table width='100%' bgcolor='#4F4F4F'>\n"
+"      <tr><td><b style='color: white;'>Sections:</b></td></tr></table></td></tr>\n";
 
 static const char *mainpage_sections_item =
 "    <tr><td align='center'>\n"
@@ -192,19 +222,19 @@ static const char *modifypage_middle1 =
 
 static const char *mainpage_section_card_header =
 "   <a name='s%d'></a>\n"
-"   <table bgcolor='#bfbfbf' width='100%%' cellspacing='2'>\n"
+"   <table bgcolor='#F1F3FA' width='100%%' cellspacing='0'>\n"
 "    <tr>\n"
-"     <td bgcolor='#bf0c0c'><font color='white'><b>\n"
+"     <td bgcolor='#4F4F4F'><font color='white'><b>\n"
 "      &nbsp;&nbsp;&nbsp;%s&nbsp;&nbsp;&nbsp;</b></font></td>\n"
-"     <td bgcolor='white' width='100%%'>&nbsp;</td></tr>\n";
+"     <td bgcolor='#4F4F4F' width='100%%'>&nbsp;</td></tr>\n";
 
 static const char *modifypage_section_card_header =
 "   <a name='s%d'></a>\n"
-"   <table bgcolor='#bfbfbf' width='100%%' cellspacing='2'>\n"
+"   <table bgcolor='#F1F3FA' width='100%%' cellspacing='0'>\n"
 "    <tr>\n"
-"     <td bgcolor='#bf0c0c'><font color='white'><b>\n"
+"     <td bgcolor='#4F4F4F'><font color='white'><b>\n"
 "      &nbsp;&nbsp;&nbsp;%s&nbsp;&nbsp;&nbsp;</b></font></td>\n"
-"     <td bgcolor='white' width='100%%'>&nbsp;</td></tr>\n";
+"     <td bgcolor='#4F4F4F' width='100%%'>&nbsp;</td></tr>\n";
 
 static const char *mainpage_section_card_item =
 "    <tr><td colspan='2'>\n"
@@ -245,13 +275,13 @@ DOCTYPE
 "<head>\n"
 "<title>Bookmarks</title>\n"
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#778899' link='black' vlink='brown'>\n"
-"<table border='1' cellpadding='0' width='100%'>\n"
+"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
+"<table border='0' cellpadding='0' width='100%'>\n"
 " <tr><td colspan='2'>\n"
-"  <table bgcolor='#b4b4b4' width='100%'>\n"
+"  <table bgcolor='#999BDE' width='100%'>\n"
 "   <tr>\n"
-"    <td bgcolor='#b4b4b4'>\n"
-"     Modify bookmarks :: add section\n"
+"    <td bgcolor='#4F4F4F'><h1>\n"
+"     Modify bookmarks :: add section</h1>\n"
 "    </td>\n"
 "    <td align='right'>\n"
 "     [<a href='dpi:/bm/'>cancel</a>]\n"
@@ -262,14 +292,14 @@ DOCTYPE
 "<br>\n"
 "<form action='modify'>\n"
 " <input type='hidden' name='operation' value='add_section'>\n"
-"<table border='1' width='100%'>\n"
+"<table border='0' width='100%'>\n"
 " <tr>\n"
-"  <td bgcolor='olive'><b>New&nbsp;section:</b></td>\n"
-"  <td bgcolor='white' width='100%'></td></tr>\n"
+"  <td bgcolor='#7D9BAF'><b>New&nbsp;section:</b></td>\n"
+"  <td bgcolor='#4F4F4F' width='100%'></td></tr>\n"
 "</table>\n"
 "<table width='100%' cellpadding='10'>\n"
 "<tr><td>\n"
-" <table width='100%' bgcolor='teal'>\n"
+" <table width='100%' bgcolor='#D6D6D6'>\n"
 "  <tr>\n"
 "   <td>Title:</td>\n"
 "   <td><input type='text' name='title' size='64'></td></tr>\n"
@@ -292,11 +322,11 @@ DOCTYPE
 "<head>\n"
 "<title>Bookmarks</title>\n"
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#778899' link='black' vlink='brown'>\n"
-"<table border='1' cellpadding='0' width='100%'>\n"
+"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
+"<table border='0' cellpadding='0' width='100%'>\n"
 " <tr><td colspan='2'>\n"
-"  <table bgcolor='#b4b4b4' width='100%'>\n"
-"   <tr><td bgcolor='#b4b4b4'> Modify bookmarks :: update\n"
+"  <table bgcolor='#999BDE' width='100%'>\n"
+"   <tr><td bgcolor='#4F4F4F'><h1> Modify bookmarks :: update</h1>\n"
 "    </td>\n"
 "    <td align='right'>\n"
 "     [<a href='dpi:/bm/'>cancel</a>]\n"
@@ -309,10 +339,10 @@ DOCTYPE
 "<input type='hidden' name='operation' value='modify2'>\n";
 
 static const char *modifypage_update_title =
-"<table border='1' width='100%%'>\n"
+"<table border='0' width='100%%'>\n"
 " <tr>\n"
-"  <td bgcolor='olive'><b>%s</b></td>\n"
-"  <td bgcolor='white' width='100%%'></td></tr>\n"
+"  <td bgcolor='#7D9BAF'><b>%s</b></td>\n"
+"  <td bgcolor='#4F4F4F' width='100%%'></td></tr>\n"
 "</table>\n";
 
 static const char *modifypage_update_item_header =
@@ -320,7 +350,7 @@ static const char *modifypage_update_item_header =
 
 static const char *modifypage_update_item =
 "<tr><td>\n"
-" <table width='100%%' bgcolor='teal'>\n"
+" <table width='100%%' bgcolor='#D6D6D6'>\n"
 "  <tr>\n"
 "   <td>Title:</td>\n"
 "   <td><input type='text' name='title%d' size='64'\n"
@@ -333,7 +363,7 @@ static const char *modifypage_update_item =
 
 static const char *modifypage_update_item2 =
 "<tr><td>\n"
-" <table width='100%%' bgcolor='teal'>\n"
+" <table width='100%%' bgcolor='#D6D6D6'>\n"
 "  <tr>\n"
 "   <td>Title:</td>\n"
 "   <td><input type='text' name='s%d' size='64'\n"
@@ -360,11 +390,11 @@ DOCTYPE
 "<head>\n"
 "<title>Bookmarks</title>\n"
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#778899' link='black' vlink='brown'>\n"
-"<table border='1' cellpadding='0' width='100%'>\n"
+"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
+"<table border='0' cellpadding='0' width='100%'>\n"
 " <tr><td colspan='2'>\n"
-"  <table bgcolor='#b4b4b4' width='100%'>\n"
-"   <tr><td bgcolor='#b4b4b4'> Modify bookmarks :: add url\n"
+"  <table bgcolor='#999BDE' width='100%'>\n"
+"   <tr><td bgcolor='#4F4F4F'><h1> Modify bookmarks :: add url</h1>\n"
 "    </td>\n"
 "    <td align='right'>\n"
 "     [<a href='dpi:/bm/'>cancel</a>]\n"
@@ -375,14 +405,14 @@ DOCTYPE
 "<br>\n"
 "<form action='modify'>\n"
 "<input type='hidden' name='operation' value='add_url2'>\n"
-"<table border='1' width='100%'>\n"
+"<table border='0' width='100%'>\n"
 " <tr>\n"
-"  <td bgcolor='olive'><b>Add&nbsp;url:</b></td>\n"
-"  <td bgcolor='white' width='100%'></td></tr>\n"
+"  <td bgcolor='#7D9BAF'><b>Add&nbsp;url:</b></td>\n"
+"  <td bgcolor='#4F4F4F' width='100%'></td></tr>\n"
 "</table>\n"
 "<table width='100%' cellpadding='10'>\n"
 "<tr><td>\n"
-" <table width='100%' bgcolor='teal'>\n"
+" <table width='100%' bgcolor='#D6D6D6'>\n"
 "  <tr>\n"
 "   <td>Title:</td>\n"
 "   <td><input type='text' name='title' size='64'></td></tr>\n"
@@ -740,11 +770,20 @@ static int Bms_load(void)
       if (buf[0] == 's') {
          /* get section, url and title */
          section = strtol(buf + 1, NULL, 10);
-         p = strchr(buf, ' '); *p = 0;
+         p = strchr(buf, ' ');
+         if (!p)
+            goto error;
+         *p = 0;
          url = ++p;
-         p = strchr(p, ' '); *p = 0;
+         p = strchr(p, ' ');
+         if (!p)
+            goto error;
+         *p = 0;
          title = ++p;
-         p = strchr(p, '\n'); *p = 0;
+         p = strchr(p, '\n');
+         if (!p)
+            goto error;
+         *p = 0;
          u_title = Unescape_html_str(title);
          Bms_add(section, url, u_title);
          dFree(u_title);
@@ -752,13 +791,22 @@ static int Bms_load(void)
       } else if (buf[0] == ':' && buf[1] == 's') {
          /* section = strtol(buf + 2, NULL, 10); */
          p = strchr(buf + 2, ' ');
+         if (!p)
+            goto error;
          title = ++p;
          p = strchr(p, '\n'); *p = 0;
+         if (!p)
+            goto error;
          Bms_sec_add(title);
-
       } else {
-         MSG("Syntax error in bookmarks file:\n %s", buf);
+         goto error;
       }
+
+      dFree(buf);
+      continue;
+
+error:
+      MSG("Syntax error in bookmarks file:\n %s", buf);
       dFree(buf);
    }
    fclose(BmTxt);

@@ -107,6 +107,39 @@ static void Menu_open_url_nw_cb(Fl_Widget*, void *user_data)
 }
 
 /*
+ * Open URL in media player
+ */
+static void Menu_open_url_mp_cb(Fl_Widget*, void *user_data)
+{
+   DilloUrl *url = (DilloUrl *)user_data;
+
+   int size = 0;
+   char *str;
+
+   size += strlen(prefs.media_player);
+   size += sizeof(" \"");
+   size += strlen(URL_STR_(url));
+   size += sizeof("\" > /dev/null 2>&1 &");
+   size += 1;
+
+   str = (char *) malloc(size);
+
+   if(!str) {
+     MSG_WARN ("Error: can not allocate media player cmd string.");
+     return;
+   }
+   
+   strcpy (str, prefs.media_player);
+   strcat(str, " \"");
+   strcat (str, URL_STR_(url));
+   strcat(str, "\" > /dev/null 2>&1 &");
+   puts (str);
+   system(str);
+
+   free(str);
+}
+
+/*
  * Open URL in new Tab
  */
 static void Menu_open_url_nt_cb(Fl_Widget*, void *user_data)
@@ -232,17 +265,31 @@ static void Menu_stylesheet_cb(Fl_Widget*, void *vUrl)
    }
 }
 
+static void Menu_bugmeter_validate(const char *validator_url)
+{
+   if (popup_url &&
+       dStrAsciiCasecmp(URL_SCHEME(popup_url), "dpi")) {
+      const char *popup_str = URL_STR(popup_url),
+                 *ptr = strrchr(popup_str, '#');
+      char *no_fragment = ptr ? dStrndup(popup_str, ptr - popup_str)
+                              : dStrdup(popup_str);
+      char *encoded = a_Url_encode_hex_str(no_fragment);
+      Dstr *dstr = dStr_sized_new(128);
+
+      dStr_sprintf(dstr, validator_url, encoded);
+      a_UIcmd_open_urlstr(popup_bw, dstr->str);
+      dStr_free(dstr, 1);
+      dFree(encoded);
+      dFree(no_fragment);
+   }
+}
+
 /*
  * Validate URL with the W3C
  */
 static void Menu_bugmeter_validate_w3c_cb(Fl_Widget*, void*)
 {
-   Dstr *dstr = dStr_sized_new(128);
-
-   dStr_sprintf(dstr, "http://validator.w3.org/check?uri=%s",
-                URL_STR(popup_url));
-   a_UIcmd_open_urlstr(popup_bw, dstr->str);
-   dStr_free(dstr, 1);
+   Menu_bugmeter_validate("http://validator.w3.org/check?uri=%s");
 }
 
 /*
@@ -250,13 +297,8 @@ static void Menu_bugmeter_validate_w3c_cb(Fl_Widget*, void*)
  */
 static void Menu_bugmeter_validate_wdg_cb(Fl_Widget*, void*)
 {
-   Dstr *dstr = dStr_sized_new(128);
-
-   dStr_sprintf(dstr,
-      "http://www.htmlhelp.org/cgi-bin/validate.cgi?url=%s&warnings=yes",
-      URL_STR(popup_url));
-   a_UIcmd_open_urlstr(popup_bw, dstr->str);
-   dStr_free(dstr, 1);
+   Menu_bugmeter_validate(
+      "http://www.htmlhelp.org/cgi-bin/validate.cgi?url=%s&warnings=yes");
 }
 
 /*
@@ -412,8 +454,8 @@ void a_Menu_page_popup(BrowserWindow *bw, const DilloUrl *url,
 
 static Fl_Menu_Item link_menu[] = {
    {"Open link in new tab", 0, Menu_open_url_nt_cb,0,0,0,0,0,0},
-   {"Open link in new window", 0, Menu_open_url_nw_cb,0,FL_MENU_DIVIDER,0,0,
-    0,0},
+   {"Open link in new window", 0, Menu_open_url_nw_cb,0,FL_MENU_DIVIDER,0,0,0,0},
+   {"Open link with media player", 0, Menu_open_url_mp_cb,0,FL_MENU_DIVIDER,0,0,0,0},
    {"Bookmark this link", 0, Menu_add_bookmark_cb,0,0,0,0,0,0},
    {"Copy link location", 0, Menu_copy_urlstr_cb,0,FL_MENU_DIVIDER,0,0,0,0},
    {"Save link as...", 0, Menu_save_link_cb,0,0,0,0,0,0},
@@ -551,7 +593,7 @@ void a_Menu_file_popup(BrowserWindow *bw, void *v_wid)
        (void*)"ou",0,0,0,0,0},
       {"Close", Keys::getShortcut(KEYS_CLOSE_TAB), filemenu_cb,
        (void*)"cw", FL_MENU_DIVIDER,0,0,0,0},
-      {"Exit Dillo", Keys::getShortcut(KEYS_CLOSE_ALL), filemenu_cb,
+      {"Exit", Keys::getShortcut(KEYS_CLOSE_ALL), filemenu_cb,
        (void*)"ed",0,0,0,0,0},
       {0,0,0,0,0,0,0,0,0}
    };

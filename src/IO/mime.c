@@ -22,10 +22,10 @@ typedef struct {
 /*
  *  Local data
  */
-static int MimeMinItemsSize = 0, MimeMinItemsMax = 13;
+static int MimeMinItemsSize = 0, MimeMinItemsMax = 8;
 static MimeItem_t *MimeMinItems = NULL;
 
-static int MimeMajItemsSize = 0, MimeMajItemsMax = 13;
+static int MimeMajItemsSize = 0, MimeMajItemsMax = 8;
 static MimeItem_t *MimeMajItems = NULL;
 
 

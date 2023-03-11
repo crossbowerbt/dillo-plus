@@ -40,6 +40,11 @@ ListItem::~ListItem()
    DBG_OBJ_DELETE ();
 }
 
+bool ListItem::usesMaxGeneratorWidth ()
+{
+   return true;
+}
+
 void ListItem::initWithWidget (core::Widget *widget,
                                 core::style::Style *style)
 {
@@ -69,7 +74,7 @@ int ListItem::getValue ()
 
 void ListItem::setMaxValue (int maxValue, int value)
 {
-   innerPadding = maxValue;
+   leftInnerPadding = maxValue;
    line1Offset = - value;
    redrawY = 0;
    queueResize (0, true);

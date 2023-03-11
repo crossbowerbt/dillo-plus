@@ -66,9 +66,12 @@ libDw_fltk_a-fltkviewbase.o: fltkviewbase.cc fltkviewbase.hh
 libDw_fltk_a-fltkviewport.o: fltkviewport.cc fltkviewport.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) -c -o libDw_fltk_a-fltkviewport.o fltkviewport.cc
 
-libDw-widgets.a: alignedtextblock.o bullet.o hyphenator.o image.o listitem.o ruler.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o
-	$(AR) $(ARFLAGS) libDw-widgets.a alignedtextblock.o bullet.o hyphenator.o image.o listitem.o ruler.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o
+libDw-widgets.a: alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o
+	$(AR) $(ARFLAGS) libDw-widgets.a alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o
 	$(RANLIB) libDw-widgets.a
+
+alignedtablecell.o: alignedtablecell.cc alignedtablecell.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c alignedtablecell.cc
 
 alignedtextblock.o: alignedtextblock.cc alignedtextblock.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c alignedtextblock.cc
@@ -85,11 +88,56 @@ image.o: image.cc image.hh
 listitem.o: listitem.cc listitem.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c listitem.cc
 
+oofawarewidget.o: oofawarewidget.cc oofawarewidget.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofawarewidget.cc
+
+ooffloatsmgr.o: ooffloatsmgr.cc ooffloatsmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c ooffloatsmgr.cc
+
+oofposabslikemgr.o: oofposabslikemgr.cc oofposabslikemgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofposabslikemgr.cc
+
+oofposabsmgr.o: oofposabsmgr.cc oofposabsmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofposabsmgr.cc
+
+oofposabslikemgr.o: oofposabslikemgr.cc oofposabslikemgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofposabslikemgr.cc
+
+oofposfixedmgr.o: oofposfixedmgr.cc oofposfixedmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofposfixedmgr.cc
+
+oofpositionedmgr.o: oofpositionedmgr.cc oofpositionedmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofpositionedmgr.cc
+
+oofposrelmgr.o: oofposrelmgr.cc oofposrelmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofposrelmgr.cc
+
+oofawarewidget_iterator.o: oofawarewidget_iterator.cc oofawarewidget.hh ooffloatsmgr.hh oofposabsmgr.hh oofposfixedmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c oofawarewidget_iterator.cc
+
+outofflowmgr.o: outofflowmgr.cc outofflowmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c outofflowmgr.cc
+
+regardingborder.o: regardingborder.cc regardingborder.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c regardingborder.cc
+
 ruler.o: ruler.cc ruler.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c ruler.cc
 
+selection.o: selection.cc selection.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c selection.cc
+
+simpletablecell.o: simpletablecell.cc simpletablecell.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c simpletablecell.cc
+
+stackingcontextmgr.o: stackingcontextmgr.cc stackingcontextmgr.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c stackingcontextmgr.cc
+
 table.o: table.cc table.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c table.cc
+
+table_iterator.o: table_iterator.cc table.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c table_iterator.cc
 
 tablecell.o: tablecell.cc tablecell.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c tablecell.cc
@@ -102,6 +150,9 @@ textblock_iterator.o: textblock_iterator.cc
 
 textblock_linebreaking.o: textblock_linebreaking.cc
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c textblock_linebreaking.cc
+
+tools.o: tools.cc tools.hh
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) -c tools.cc
 
 clean:
 	rm -f *.a *.o

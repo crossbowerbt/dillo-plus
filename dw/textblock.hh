@@ -3,13 +3,17 @@
 
 #include <limits.h>
 
-#include "core.hh"
+#include "regardingborder.hh"
 #include "../lout/misc.hh"
 
-// These were used when improved line breaking and hyphenation were
-// implemented. Should be cleaned up; perhaps reactivate RTFL again.
+// These were used when improved line breaking and hyphenation were implemented.
+// Should be, bit by bit, replaced by RTFL (see ../lout/debug.hh).
 #define PRINTF(fmt, ...)
 #define PUTCHAR(ch)
+
+#ifdef DBG_RTFL
+#   define DEBUG
+#endif
 
 namespace dw {
 
@@ -18,9 +22,9 @@ namespace dw {
  *    of paragraphs.
  *
  * <div style="border: 2px solid #ffff00; margin-top: 0.5em;
- * margin-bottom: 0.5em; padding: 0.5em 1em;
- * background-color: #ffffe0"><b>Info:</b> The recent changes (line
- * breaking and hyphenation) have not yet been incorporated into this
+ * margin-bottom: 0.5em; padding: 0.5em 1em; background-color:
+ * #ffffe0"><b>Info:</b> Some (not so) recent changes, line breaking
+ * and hyphenation, have not yet been incorporated into this
  * documentation. See \ref dw-line-breaking.</div>
  *
  * <h3>Signals</h3>
@@ -31,6 +35,11 @@ namespace dw {
  *
  *
  * <h3>Collapsing Spaces</h3>
+ *
+ * <div style="border: 2px solid #ffff00; margin-top: 0.5em;
+ * margin-bottom: 0.5em; padding: 0.5em 1em; background-color:
+ * #ffffe0"><b>Info:</b> Collapsing spaces are deprecated, in favor of
+ * collapsing margins (see below).</div>
  *
  * The idea behind this is that every paragraph has a specific vertical
  * space around and that they are combined to one space, according to
@@ -47,9 +56,9 @@ namespace dw {
  *
  *      \image html dw-textblock-collapsing-spaces-1-1.png
  *
- *       are combined like this:
+ *      are combined like this:
  *
- *       \image html dw-textblock-collapsing-spaces-1-2.png
+ *      \image html dw-textblock-collapsing-spaces-1-2.png
  *
  * <li> a) If one paragraph is the first paragraph within another, the upper
  *      space of these paragraphs collapse. b) The analogue is the case for the
@@ -73,25 +82,66 @@ namespace dw {
  *      automatically. See the code of dw::Textblock::addParBreak.
  *
  *  <li> To collapse spaces according to rule 2b,
- *        dw::Textblock::addParBreak::handOverBreak must be called for
- *        the \em inner widget. The HTML parser does this in
- *        Html_eventually_pop_dw.
+ *       dw::Textblock::addParBreak::handOverBreak must be called for
+ *       the \em inner widget. The HTML parser does this in
+ *       Html_eventually_pop_dw.
  * </ul>
  *
  *
  * <h3>Collapsing Margins</h3>
  *
  * Collapsing margins, as defined in the CSS2 specification, are,
- * supported in addition to collapsing spaces. Also, spaces and margins
- * collapse themselves. I.e., the space between two paragraphs is the
- * maximum of the space calculated as described in "Collapsing Spaces"
- * and the space calculated according to the rules for collapsing margins.
+ * supported in addition to collapsing spaces. Also, spaces and
+ * margins collapse themselves. I.&nbsp;e., the space between two
+ * paragraphs is the maximum of the space calculated as described in
+ * "Collapsing Spaces" and the space calculated according to the rules
+ * for collapsing margins.
  *
  * (This is an intermediate hybrid state, collapsing spaces are used in
  * the current version of dillo, while I implemented collapsing margins
  * for the CSS prototype and integrated it already into the main trunk. For
  * a pure CSS-based dillo, collapsing spaces will not be needed anymore, and
  * may be removed for simplicity.)
+ *
+ * Currently implemented cases:
+ *
+ * - The top margin of of the textblock widget and the top margin of
+ *   the first line box (based on widgets in the first line) collapse.
+ *
+ * - The bottom margin of of the textblock widget and the bottom
+ *   margin of the last line box collapse.
+ *
+ * - The bottom margin of a line box and the top margin of the
+ *   following line collapse. Here, the break space is regarded, too.
+ *
+ * Open issues:
+ *
+ * - Only the value of Style::margin is regarded, not the result of
+ *   the collapsing itself. For the widgets A, B (child of A), and C
+ *   (child of B), the effective margin of A is the maximum of the
+ *   *style* margins of A and B, while the effective margin of B (the
+ *   collapsed margin of B and C) is ignored here. This could be
+ *   solved by introducing an additional "effective" ("calculated",
+ *   "collapsed") margin as an attribute of Widget.
+ *
+ * - For similar reasons, backgrounds to not work exactly. Usage of
+ *   Widget::extraSpace should fix this, but it is only fully working
+ *   in the GROWS branch (<http://flpsed.org/hgweb/dillo_grows>).
+ *
+ *   Update: This needs to be re-evaluated.
+ *
+ * - Do margins of inline blocks and tables collapse? Check CSS
+ *   spec. (They do currently; if not, ignoring them is simple.)
+ *
+ * - Lines which only contain a BREAK should be skipped for collapsing
+ *   margins, or at least all three should collapse: the previous
+ *   margin, the break, and the following margin. (Compare this with
+ *   the CSS spec.)
+ *
+ * - Related to this: adding breaks should be revised.
+ *   Textblock::addLinebreak and Textblock::addParbreak work quite
+ *   differently, and Textblock::addParbreak seems much to complex for
+ *   our needs, even when spaces of lines are kept.
  *
  *
  * <h3>Some Internals</h3>
@@ -114,17 +164,17 @@ namespace dw {
  * Anchors associate the anchor name with the index of the next word at
  * the point of the anchor.
  *
- * <h4>Incremental Resizing</h4>
+ * <h3>Incremental Resizing</h3>
  *
  * dw::Textblock makes use of incremental resizing as described in \ref
  * dw-widget-sizes. The parentRef is, for children of a dw::Textblock, simply
- * the number of the line.
+ * the number of the line. [<b>Update:</b> Incorrect; see \ref dw-out-of-flow.]
  *
  * Generally, there are three cases which may change the size of the
  * widget:
  *
  * <ul>
- * <li> The available size of the widget has changed, e.g., because the
+ * <li> The line break size of the widget has changed, e.g., because the
  *      user has changed the size of the browser window. In this case,
  *      it is necessary to rewrap all the lines.
  *
@@ -145,8 +195,14 @@ namespace dw {
  * dw::Textblock, which has the value -1 if no rewrapping of lines
  * necessary, or otherwise the line from which a rewrap is necessary.
  *
+ * <h3>Widgets Ouf Of Flow</h3>
+ *
+ * See
+ *
+ * - dw::oof::OOFAwareWidget (base class) and
+ * - \ref dw-out-of-flow.
  */
-class Textblock: public core::Widget
+class Textblock: public RegardingBorder
 {
 private:
    /**
@@ -157,7 +213,7 @@ private:
     * badness is not well defined, so fiddling with the penalties is a
     * bit difficult.
     */
-   
+
    enum {
       PENALTY_FORCE_BREAK = INT_MIN,
       PENALTY_PROHIBIT_BREAK = INT_MAX
@@ -170,7 +226,7 @@ private:
          badnessState;
       int ratio; // ratio is only defined when badness is defined
       int badness, penalty[2];
-      
+
       // For debugging: define DEBUG for more informations in print().
 #ifdef DEBUG
       int totalWidth, idealWidth, totalStretchability, totalShrinkability;
@@ -204,12 +260,15 @@ private:
       void setSinglePenalty (int index, int penalty);
       int badnessValue (int infLevel);
       int penaltyValue (int index, int infLevel);
-      
+
    public:
       void calcBadness (int totalWidth, int idealWidth,
                         int totalStretchability, int totalShrinkability);
       inline void setPenalty (int penalty) { setPenalties (penalty, penalty); }
       void setPenalties (int penalty1, int penalty2);
+
+      // Rather for debugging:
+      inline int getPenalty (int i) { return penalty[i]; }
 
       bool lineLoose ();
       bool lineTight ();
@@ -218,7 +277,7 @@ private:
       bool lineCanBeBroken (int penaltyIndex);
       int compareTo (int penaltyIndex, BadnessAndPenalty *other);
 
-      void print ();
+      void intoStringBuffer(lout::misc::StringBuffer *sb);
    };
 
    enum { PENALTY_HYPHEN, PENALTY_EM_DASH_LEFT, PENALTY_EM_DASH_RIGHT,
@@ -238,6 +297,7 @@ private:
    static const char *hyphenDrawChar;
 
 protected:
+
    /**
     * \brief Implementation used for words.
     */
@@ -252,7 +312,7 @@ protected:
    public:
       WordImgRenderer (Textblock *textblock, int wordNo);
       ~WordImgRenderer ();
-      
+
       void setData (int xWordWidget, int lineNo);
 
       bool readyToDraw ();
@@ -260,8 +320,6 @@ protected:
       void getRefArea (int *xRef, int *yRef, int *widthRef, int *heightRef);
       core::style::Style *getStyle ();
       void draw (int x, int y, int width, int height);
-
-      virtual void print ();
    };
 
    class SpaceImgRenderer: public WordImgRenderer
@@ -272,8 +330,6 @@ protected:
 
       void getBgArea (int *x, int *y, int *width, int *height);
       core::style::Style *getStyle ();
-
-      void print ();
    };
 
    struct Paragraph
@@ -294,14 +350,20 @@ protected:
       int parMin;       /* The sum of all word minima (plus spaces,
                            hyphen width etc.) since the last possible
                            break within this paragraph. */
+      int parMinIntrinsic;
+      int parAdjustmentWidth;
       int parMax;       /* The sum of all word maxima in this
-                         * paragraph (plus spaces, hyphen width
-                         * etc.). */
+                           paragraph (plus spaces, hyphen width
+                           etc.). */
+      int parMaxIntrinsic;
 
       int maxParMin;    /* Maximum of all paragraph minima (value of
-                         * "parMin), including this paragraph. */
+                           "parMin"), including this paragraph. */
+      int maxParMinIntrinsic;
+      int maxParAdjustmentWidth;
       int maxParMax;    /* Maximum of all paragraph maxima (value of
-                         * "parMax"), including this paragraph. */
+                           "parMax""), including this paragraph. */
+      int maxParMaxIntrinsic;
    };
 
    struct Line
@@ -309,14 +371,39 @@ protected:
       int firstWord;    /* first word's index in word vector */
       int lastWord;     /* last word's index in word vector */
 
-      /* "top" is always relative to the top of the first line, i.e.
-       * page->lines[0].top is always 0. */
-      int top, boxAscent, boxDescent, contentAscent, contentDescent,
-          breakSpace, leftOffset;
 
-      /* This is similar to descent, but includes the bottom margins of the
-       * widgets within this line. */
-      int marginDescent;
+      int top;                  /* "top" is always relative to the top of the
+                                   first line, i.e.  page->lines[0].top is
+                                   always 0. */
+      int marginAscent;         /* Maximum of all total ascents (including
+                                   margin: hence the name) of the words in this
+                                   line. */
+      int marginDescent;        /* Maximum of all total decents (including
+                                   margin: hence the name) of the words in this
+                                   line. */
+      int borderAscent;         /* Maximum of all ascents minus margin (but
+                                   including padding and border: hence the name)
+                                   of the words in this line. */
+      int borderDescent;        /* Maximum of all descents minus margin (but
+                                   including padding and border: hence the name)
+                                   of the words in this line. */
+      int contentAscent;        /* ??? (depricated?) */
+      int contentDescent;       /* ??? (depricated?) */
+      int breakSpace;           /* Space between this line and the next one. */
+      int textOffset;           /* Horizontal position of the first word of the
+                                   line, in widget coordinates. */
+
+      /**
+       * \brief Returns the difference between two vertical lines
+       *    positions: height of this line plus space below this
+       *    line. The margin of the next line (marginAscent -
+       *    borderAscent) must be passed seperately.
+       */
+      inline int totalHeight (int marginNextLine)
+      { return borderAscent + borderDescent
+            // Collapsing of the margins of adjacent lines is done here:
+            + lout::misc::max (marginDescent - borderDescent, marginNextLine,
+                               breakSpace); }
 
       /* Maximum of all line widths, including this line. Does not
        * include the last space, but the last hyphen width. Please
@@ -324,6 +411,18 @@ protected:
        * changed line breaking), the values were accumulated up to the
        * last line, not this line.*/
       int maxLineWidth;
+
+      /* The word index of the last OOF reference (most importantly:
+       * float) whic is positioned before this line, or -1, if there
+       * is no OOF reference positioned before.
+       *
+       * **Important:** These references may still be part of this or
+       * even a following line, when positioned before (this is the
+       * reason this attribute exists); see \ref dw-out-of-flow. */
+      int lastOofRefPositionedBeforeThisLine;
+
+      int leftOffset, rightOffset;
+      enum { LEFT, RIGHT, CENTER } alignment;
    };
 
    struct Word
@@ -352,8 +451,13 @@ protected:
          WORD_START                = 1 << 5,
          /* If a word represents a "real" text word, or (after
           * hyphenation) the last part of a "real" text word, this
-          * flag is set. Analogue to WORD_START.  */
-         WORD_END                  = 1 << 6
+          * flag is set. Analogue to WORD_START. */
+         WORD_END                  = 1 << 6,
+         /* This word is put at the top of the line, and at the
+          * left. This is necessary if the size of a child widget
+          * depends on the position, which, on the other hand, cannot
+          * be determined before the whole line is broken. */
+         TOPLEFT_OF_LINE           = 1 << 7
       };
 
       /* TODO: perhaps add a xLeft? */
@@ -396,33 +500,27 @@ protected:
       SpaceImgRenderer *spaceImgRenderer;
    };
 
-   void printWordShort (Word *word);
-   void printWordFlags (short flags);
-   void printWordWithFlags (Word *word);
-   void printWord (Word *word);
-
    struct Anchor
    {
       char *name;
       int wordIndex;
    };
 
-   class TextblockIterator: public core::Iterator
+   class TextblockIterator: public OOFAwareWidgetIterator
    {
-   private:
-      int index;
+   protected:
+      int numContentsInFlow ();
+      void getContentInFlow (int index, core::Content *content);
 
    public:
       TextblockIterator (Textblock *textblock, core::Content::Type mask,
                          bool atEnd);
-      TextblockIterator (Textblock *textblock, core::Content::Type mask,
-                         int index);
+
+      static TextblockIterator *createWordIndexIterator
+        (Textblock *textblock, core::Content::Type mask, int wordIndex);
 
       lout::object::Object *clone();
-      int compareTo(lout::object::Comparable *other);
 
-      bool next ();
-      bool prev ();
       void highlight (int start, int end, core::HighlightLayer layer);
       void unhighlight (int direction, core::HighlightLayer layer);
       void getAllocation (int start, int end, core::Allocation *allocation);
@@ -433,7 +531,7 @@ protected:
    /* These fields provide some ad-hoc-functionality, used by sub-classes. */
    bool hasListitemValue; /* If true, the first word of the page is treated
                           specially (search in source). */
-   int innerPadding;    /* This is an additional padding on the left side
+   int leftInnerPadding;  /* This is an additional padding on the left side
                             (used by ListItem). */
    int line1Offset;     /* This is an additional offset of the first line.
                            May be negative (shift to left) or positive
@@ -450,7 +548,7 @@ protected:
     *      (which is used by DwTable!), and
     * (ii) line1_offset is ignored (line1_offset_eff is set to 0),
     *      when line1_offset plus the width of the first word is
-    *      greater than the the available witdh.
+    *      greater than the the line break witdh.
     *
     * \todo Eliminate all these ad-hoc features by a new, simpler and
     *       more elegant design. ;-)
@@ -473,14 +571,40 @@ protected:
    static int stretchabilityFactor;
 
    bool limitTextWidth; /* from preferences */
-
+   bool treatAsInline;
+   
    int redrawY;
    int lastWordDrawn;
 
-   /* These values are set by set_... */
-   int availWidth, availAscent, availDescent;
+   core::SizeParams sizeRequestParams;
+   
+   /* Stores the value of getAvailWidth(). */
+   int lineBreakWidth;
 
-   int wrapRefLines, wrapRefParagraphs;  /* [0 based] */
+   int wrapRefLines, wrapRefParagraphs;  /* 0-based. Important: Both
+                                            are the line numbers, not
+                                            the value stored in
+                                            parentRef. */
+   int wrapRefLinesFCX, wrapRefLinesFCY;
+
+   // These four values are calculated by containingBlock->outOfFlowMgr
+   // (when defined; otherwise, they are  false, or 0, respectively), for
+   // the newly constructed line, only when needed: when a new line is
+   // added, or if something in the line currently constucted has
+   // changed, e. g. a float has been added.
+
+   bool newLineHasFloatLeft, newLineHasFloatRight;
+   int newLineLeftBorder, newLineRightBorder; /* As returned by
+                                                 outOfFlowMgr->get...Border,
+                                                 or 0, if outOfFlowMgr
+                                                 is NULL */
+   int newLineLeftFloatHeight, newLineRightFloatHeight;
+
+   // Ascent and descent of the newly constructed line, i. e. maximum
+   // of all words ascent/descent since the end of the last line. Not
+   // neccessary the ascent and descent of the newly added line, since
+   // not all words are added to it.
+   int newLineAscent, newLineDescent;
 
    lout::misc::SimpleVector <Line> *lines;
    lout::misc::SimpleVector <Paragraph> *paragraphs;
@@ -488,19 +612,26 @@ protected:
    lout::misc::NotSoSimpleVector <Word> *words;
    lout::misc::SimpleVector <Anchor> *anchors;
 
-   struct {int index, nChar;}
+   struct { int index, nChar; }
       hlStart[core::HIGHLIGHT_NUM_LAYERS], hlEnd[core::HIGHLIGHT_NUM_LAYERS];
 
    int hoverLink;  /* The link under the mouse pointer */
 
-
+   int numSizeReferences;
+   Widget *sizeReferences[NUM_OOFM];
+   
    void queueDrawRange (int index1, int index2);
+   int calcVerticalBorder (int widgetPadding, int widgetBorder,
+                           int widgetMargin, int lineBorderTotal,
+                           int lineMarginTotal);
    void getWordExtremes (Word *word, core::Extremes *extremes);
    void justifyLine (Line *line, int diff);
-   Line *addLine (int firstWord, int lastWord, bool temporary);
-   void calcWidgetSize (core::Widget *widget, core::Requisition *size);
+   Line *addLine (int firstWord, int lastWord, int newLastOofPos,
+                  bool temporary, int minHeight);
    void rewrap ();
    void fillParagraphs ();
+   void initNewLine ();
+   void calcBorders (int lastOofRef, int height);
    void showMissingLines ();
    void removeTemporaryLines ();
 
@@ -519,15 +650,22 @@ protected:
                    core::Rectangle *area, int xWidget, int yWidgetBase);
    void drawSpace (int wordIndex, core::View *view, core::Rectangle *area,
                    int xWidget, int yWidgetBase);
-   void drawLine (Line *line, core::View *view, core::Rectangle *area);
+   void drawLine (Line *line, core::View *view, core::Rectangle *area,
+                  core::DrawingContext *context);
+
    int findLineIndex (int y);
+   int findLineIndexWhenNotAllocated (int y);
+   int findLineIndexWhenAllocated (int y);
+   int findLineIndex (int y, int ascent);
    int findLineOfWord (int wordIndex);
    int findParagraphOfWord (int wordIndex);
    Word *findWord (int x, int y, bool *inSpace);
 
    Word *addWord (int width, int ascent, int descent, short flags,
                   core::style::Style *style);
+   void breakAdded ();
    void initWord (int wordNo);
+   void cleanupWord (int wordNo);
    void removeWordImgRenderer (int wordNo);
    void setWordImgRenderer (int wordNo);
    void removeSpaceImgRenderer (int wordNo);
@@ -537,119 +675,177 @@ protected:
    void fillSpace (int wordNo, core::style::Style *style);
    void setBreakOption (Word *word, core::style::Style *style,
                         int breakPenalty1, int breakPenalty2, bool forceBreak);
-   bool isBreakAllowed (Word *word);
+   bool isBreakAllowedInWord (Word *word)
+   { return isBreakAllowed (word->style); }
+   bool isBreakAllowed (core::style::Style *style);
    int textWidth (const char *text, int start, int len,
                   core::style::Style *style, bool isStart, bool isEnd);
    void calcTextSize (const char *text, size_t len, core::style::Style *style,
                       core::Requisition *size, bool isStart, bool isEnd);
+   bool calcSizeOfWidgetInFlow (int wordIndex, Widget *widget,
+                                core::Requisition *size);
+   bool findSizeRequestReference (Widget *reference, int *xRef = NULL,
+                                  int *yRef = NULL);
+   bool findSizeRequestReference (int oofmIndex, int *xRef = NULL,
+                                  int *yRef = NULL)
+   { return findSizeRequestReference (oofContainer[oofmIndex], xRef, yRef); }
 
    /**
-    * \brief Returns the x offset (the indentation plus any offset needed for
-    *    centering or right justification) for the line.
-    *
-    * The offset returned is relative to the page *content* (i.e. without
-    * border etc.).
+    * Of nested text blocks, only the most inner one must regard the
+    * borders of floats.
     */
-   inline int lineXOffsetContents (Line *line)
+   inline bool mustBorderBeRegarded (Line *line)
    {
-      return innerPadding + line->leftOffset +
-         (line == lines->getFirstRef() ? line1OffsetEff : 0);
+      return getWidgetRegardingBorderForLine (line) == NULL;
    }
 
-   /**
-    * \brief Like lineXOffset, but relative to the allocation (i.e.
-    *    including border etc.).
-    */
-   inline int lineXOffsetWidget (Line *line)
+   inline bool mustBorderBeRegarded (int lineNo)
    {
-      return lineXOffsetContents (line) + getStyle()->boxOffsetX ();
+      return getWidgetRegardingBorderForLine (lineNo) == NULL;
    }
 
-   inline int lineYOffsetWidgetAllocation (Line *line,
-                                           core::Allocation *allocation)
+   // The following methods return the y offset of a line,
+   // - given as pointer or by index;
+   // - either within the canvas, or within this widget;
+   // - with allocation passed explicitely, or using the widget allocation
+   //   (important: this is set *after* sizeRequestImpl is returning.
+
+   inline int lineYOffsetWidget (Line *line, core::Allocation *allocation)
    {
-      return line->top + (allocation->ascent - lines->getRef(0)->boxAscent);
+      return line->top + (allocation->ascent - lines->getRef(0)->borderAscent);
    }
 
    inline int lineYOffsetWidget (Line *line)
    {
-      return lineYOffsetWidgetAllocation (line, &allocation);
+      return lineYOffsetWidget (line, &allocation);
    }
 
-   /**
-    * Like lineYOffsetCanvas, but with the allocation as parameter.
-    */
-   inline int lineYOffsetCanvasAllocation (Line *line,
-                                           core::Allocation *allocation)
+   inline int lineYOffsetCanvas (Line *line, core::Allocation *allocation)
    {
-      return allocation->y + lineYOffsetWidgetAllocation(line, allocation);
+      return allocation->y + lineYOffsetWidget (line, allocation);
    }
 
-   /**
-    * Returns the y offset (within the canvas) of a line.
-    */
    inline int lineYOffsetCanvas (Line *line)
    {
-      return lineYOffsetCanvasAllocation(line, &allocation);
+      return lineYOffsetCanvas (line, &allocation);
    }
 
-   inline int lineYOffsetWidgetI (int lineIndex)
+   inline int lineYOffsetWidget (int lineIndex)
    {
       return lineYOffsetWidget (lines->getRef (lineIndex));
    }
 
-   inline int lineYOffsetCanvasI (int lineIndex)
+   inline int lineYOffsetWidget (int lineIndex, core::Allocation *allocation)
+   {
+      return lineYOffsetWidget (lines->getRef (lineIndex), allocation);
+   }
+
+   inline int lineYOffsetCanvas (int lineIndex)
    {
       return lineYOffsetCanvas (lines->getRef (lineIndex));
    }
-   
+
    inline int calcPenaltyIndexForNewLine ()
    {
       if (lines->size() == 0)
          return 0;
-      else
-         return
-            (words->getRef(lines->getLastRef()->lastWord)->flags &
-             (Word::DIV_CHAR_AT_EOL | Word::PERM_DIV_CHAR)) ? 1 : 0;
+      else {
+         Line *line = lines->getLastRef();
+         if (line->firstWord <= line->lastWord)
+            return
+               (words->getRef(line->lastWord)->flags &
+                (Word::DIV_CHAR_AT_EOL | Word::PERM_DIV_CHAR)) ? 1 : 0;
+         else
+            // empty line
+            return 0;
+      }
    }
+
+   RegardingBorder *getWidgetRegardingBorderForLine (Line *line);
+   RegardingBorder *getWidgetRegardingBorderForLine (int lineNo);
+   RegardingBorder *getWidgetRegardingBorderForLine (int firstWord,
+                                                     int lastWord);
+   int yOffsetOfLineToBeCreated (int *lastMargin = NULL);
+   int yOffsetOfLineCreated (Line *line);
 
    bool sendSelectionEvent (core::SelectionState::EventType eventType,
                             core::MousePositionEvent *event);
 
-   void accumulateWordExtremes (int firstWord, int lastWord,
-                                int *maxOfMinWidth, int *sumOfMaxWidth);
    void processWord (int wordIndex);
-   virtual bool wordWrap (int wordIndex, bool wrapAll);
+   
+   virtual int wordWrap (int wordIndex, bool wrapAll);
+
+   int wrapWordInFlow (int wordIndex, bool wrapAll);
+   int wrapWordOofRef (int wordIndex, bool wrapAll);
+   void balanceBreakPosAndHeight (int wordIndex, int firstIndex,
+                                  int *searchUntil, bool tempNewLine,
+                                  int penaltyIndex, bool borderIsCalculated,
+                                  bool *thereWillBeMoreSpace, bool wrapAll,
+                                  int *diffWords, int *wordIndexEnd,
+                                  int *lastFloatPos, bool regardBorder,
+                                  int *height, int *breakPos);
+   int searchBreakPos (int wordIndex, int firstIndex, int *searchUntil,
+                       bool tempNewLine, int penaltyIndex,
+                       bool thereWillBeMoreSpace, bool wrapAll,
+                       int *diffWords, int *wordIndexEnd,
+                       int *addIndex1 = NULL);
    int searchMinBap (int firstWord, int lastWordm, int penaltyIndex,
-                     bool correctAtEnd);
+                     bool thereWillBeMoreSpace, bool correctAtEnd);
    int considerHyphenation (int firstIndex, int breakPos);
    bool isHyphenationCandidate (Word *word);
+   int calcLinePartHeight (int firstWord, int lastWord);
 
    void handleWordExtremes (int wordIndex);
    void correctLastWordExtremes ();
 
    static int getSpaceShrinkability(struct Word *word);
    static int getSpaceStretchability(struct Word *word);
-   static int getLineShrinkability(Word *lastWord);
-   static int getLineStretchability(Word *lastWord);
-   int hyphenateWord (int wordIndex);
+   int getLineShrinkability(int lastWordIndex);
+   int getLineStretchability(int lastWordIndex);
+   int hyphenateWord (int wordIndex, int *addIndex1 = NULL);
+   void moveWordIndices (int wordIndex, int num, int *addIndex1 = NULL);
    void accumulateWordForLine (int lineIndex, int wordIndex);
    void accumulateWordData (int wordIndex);
-   int calcAvailWidth (int lineIndex);
+   int calcLineBreakWidth (int lineIndex);
    void initLine1Offset (int wordIndex);
    void alignLine (int lineIndex);
+   void calcTextOffset (int lineIndex, int totalWidth);
 
-   void sizeRequestImpl (core::Requisition *requisition);
-   void getExtremesImpl (core::Extremes *extremes);
+   void drawLevel (core::View *view, core::Rectangle *area, int level,
+                   core::DrawingContext *context);
+
+   Widget *getWidgetAtPointLevel (int x, int y, int level,
+                                  core::GettingWidgetAtPointContext *context);
+
+   void sizeRequestImpl (core::Requisition *requisition, int numPos,
+                         Widget **references, int *x, int *y);
+   int numSizeRequestReferences ();
+   Widget *sizeRequestReference (int index);
+
+   void getExtremesSimpl (core::Extremes *extremes);
+
+   int numGetExtremesReferences ();
+   Widget *getExtremesReference (int index);
+
+   void notifySetAsTopLevel ();
+   void notifySetParent ();
+
    void sizeAllocateImpl (core::Allocation *allocation);
+
+   void calcExtraSpaceImpl (int numPos, Widget **references, int *x, int *y);
+
+   int getAvailWidthOfChild (core::Widget *child, bool forceValue);
+   int getAvailHeightOfChild (core::Widget *child, bool forceValue);
+
+   void containerSizeChangedForChildren ();
+   bool affectsSizeChangeContainerChild (Widget *child);
+   bool usesAvailWidth ();
    void resizeDrawImpl ();
 
    void markSizeChange (int ref);
    void markExtremesChange (int ref);
-   void setWidth (int width);
-   void setAscent (int ascent);
-   void setDescent (int descent);
-   void draw (core::View *view, core::Rectangle *area);
+
+   bool isBlockLevel ();
 
    bool buttonPressImpl (core::EventButton *event);
    bool buttonReleaseImpl (core::EventButton *event);
@@ -666,6 +862,8 @@ protected:
                        int numBreaks, int *breakPos,
                        core::Requisition *wordSize);
 
+   int getGeneratorRest (int oofmIndex);
+
 public:
    static int CLASS_ID;
 
@@ -676,8 +874,12 @@ public:
    static void setPenaltyEmDashRight2 (int penaltyRightEmDash2);
    static void setStretchabilityFactor (int stretchabilityFactor);
 
-   Textblock(bool limitTextWidth);
-   ~Textblock();
+   static inline bool mustAddBreaks (core::style::Style *style)
+   { return !testStyleOutOfFlow (style) ||
+         testStyleRelativelyPositioned (style); }
+
+   Textblock (bool limitTextWidth, bool treatAsInline = false);
+   ~Textblock ();
 
    core::Iterator *iterator (core::Content::Type mask, bool atEnd);
 
@@ -685,9 +887,7 @@ public:
 
    void addText (const char *text, size_t len, core::style::Style *style);
    inline void addText (const char *text, core::style::Style *style)
-   {
-      addText (text, strlen(text), style);
-   }
+   { addText (text, strlen(text), style); }
    void addWidget (core::Widget *widget, core::style::Style *style);
    bool addAnchor (const char *name, core::style::Style *style);
    void addSpace (core::style::Style *style);
@@ -695,12 +895,121 @@ public:
    void addParbreak (int space, core::style::Style *style);
    void addLinebreak (core::style::Style *style);
 
-   core::Widget *getWidgetAtPoint (int x, int y, int level);
    void handOverBreak (core::style::Style *style);
    void changeLinkColor (int link, int newColor);
    void changeWordStyle (int from, int to, core::style::Style *style,
                          bool includeFirstSpace, bool includeLastSpace);
+  
+   void updateReference (int ref);
+   void widgetRefSizeChanged (int externalIndex);
+   void oofSizeChanged (bool extremesChanged);
+   int getGeneratorX (int oofmIndex);
+   int getGeneratorY (int oofmIndex);
+   int getGeneratorWidth ();
+   int getMaxGeneratorWidth ();
+   bool usesMaxGeneratorWidth ();
+   bool isPossibleOOFContainer (int oofmIndex);
+   bool isPossibleOOFContainerParent (int oofmIndex);
 };
+
+#define DBG_SET_WORD_PENALTY(n, i, is) \
+   D_STMT_START { \
+      if (words->getRef(n)->badnessAndPenalty.getPenalty (i) == INT_MIN) \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "penalty." is, "-inf"); \
+      else if (words->getRef(n)->badnessAndPenalty.getPenalty (i) == INT_MAX) \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "penalty." is, "inf"); \
+      else \
+         DBG_OBJ_ARRATTRSET_NUM ("words", n, "penalty." is, \
+                                 words->getRef(n)->badnessAndPenalty \
+                                 .getPenalty (i)); \
+   } D_STMT_END
+
+#ifdef DBG_RTFL
+#define DBG_OBJ_ARRATTRSET_WREF(var, ind, attr, wref) \
+   RTFL_OBJ_PRINT ("set", "p:s.d.s:p (p, d)", this, var, ind, attr, wref, \
+                   wref->widget, wref->parentRef)
+#else
+#define DBG_OBJ_ARRATTRSET_WREF(var, ind, attr, wref) STMT_NOP
+#endif
+   
+#define DBG_SET_WORD(n) \
+   D_STMT_START { \
+      switch (words->getRef(n)->content.type) { \
+      case ::dw::core::Content::TEXT: \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "type", "TEXT"); \
+         DBG_OBJ_ARRATTRSET_STR ("words", n, \
+                                 "text/widget/widgetReference/breakSpace", \
+                                 words->getRef(n)->content.text); \
+         break; \
+      case ::dw::core::Content::WIDGET_IN_FLOW: \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "type", "WIDGET_IN_FLOW"); \
+         DBG_OBJ_ARRATTRSET_PTR ("words", n, \
+                                 "text/widget/widgetReference/breakSpace", \
+                                 words->getRef(n)->content.widget); \
+         break; \
+      case ::dw::core::Content::WIDGET_OOF_REF: \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "type", "WIDGET_OOF_REF"); \
+         DBG_OBJ_ARRATTRSET_WREF ("words", n, \
+                                  "text/widget/widgetReference/breakSpace", \
+                                  words->getRef(n)->content.widgetReference); \
+         break; \
+      case ::dw::core::Content::BREAK: \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "type", "BREAK"); \
+         DBG_OBJ_ARRATTRSET_NUM ("words", n,  \
+                                 "text/widget/widgetReference/breakSpace", \
+                                 words->getRef(n)->content.breakSpace); \
+         break; \
+      default: \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, "type", "???"); \
+         DBG_OBJ_ARRATTRSET_SYM ("words", n, \
+                                 "text/widget/widgetReference/breakSpace", \
+                                 "???"); \
+      } \
+      DBG_SET_WORD_PENALTY (n, 0, "0"); \
+      DBG_SET_WORD_PENALTY (n, 1, "1"); \
+   } D_STMT_END
+
+#define DBG_SET_WORD_SIZE(n) \
+   D_STMT_START { \
+      DBG_OBJ_ARRATTRSET_NUM ("words", n, "size.width", \
+                              words->getRef(n)->size.width); \
+      DBG_OBJ_ARRATTRSET_NUM ("words", n, "size.ascent", \
+                              words->getRef(n)->size.ascent); \
+      DBG_OBJ_ARRATTRSET_NUM ("words", n, "size.descent", \
+                              words->getRef(n)->size.descent); \
+   } D_STMT_END
+
+#define DBG_MSG_WORD(aspect, prio, prefix, n, suffix) \
+   D_STMT_START { \
+      if ((n) < 0 || (n) >= words->size ()) \
+         DBG_OBJ_MSG (aspect, prio, prefix "undefined (wrong index)" suffix); \
+      else { \
+         switch (words->getRef(n)->content.type) { \
+         case ::dw::core::Content::TEXT: \
+            DBG_OBJ_MSGF (aspect, prio, prefix "TEXT / \"%s\"" suffix, \
+                          words->getRef(n)->content.text); \
+            break; \
+         case ::dw::core::Content::WIDGET_IN_FLOW: \
+            DBG_OBJ_MSGF (aspect, prio, prefix "WIDGET_IN_FLOW / %p" suffix, \
+                          words->getRef(n)->content.widget); \
+            break; \
+         case ::dw::core::Content::WIDGET_OOF_REF: \
+            DBG_OBJ_MSGF (aspect, prio, \
+                          prefix "WIDGET_OOF_REF / %p (%p, %d)" suffix,\
+                          words->getRef(n)->content.widgetReference,    \
+                          words->getRef(n)->content.widgetReference->widget, \
+                          words->getRef(n)->content.widgetReference \
+                          ->parentRef); \
+            break; \
+         case ::dw::core::Content::BREAK: \
+            DBG_OBJ_MSGF (aspect, prio, prefix "BREAK / %d" suffix, \
+                          words->getRef(n)->content.breakSpace); \
+            break; \
+         default: \
+            DBG_OBJ_MSG (aspect, prio, prefix "??? / ???" suffix); \
+         } \
+      } \
+   } D_STMT_END
 
 } // namespace dw
 

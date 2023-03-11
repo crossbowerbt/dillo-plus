@@ -5,12 +5,12 @@ html {
 body {
   display: inline-block !important;
   font-size: 19px !important;
-  max-width: 180px !important;
+  max-width: 800px !important;
 }
 
 button, input, div, pre, ul, dl, ol, table, section, header, article, footer, span, em, b, a, form, h1, h2, h3, h4, h5, h6, h7, h8, h9 {
   text-align: left !important;
-  max-width: 180px !important;
+  max-width: 800px !important;
   margin: auto !important;
 }
 
@@ -28,12 +28,13 @@ h1, h2, h3, h4, h5, h6, h7, h8, h9 {
 
 p, blockquote {
   text-align: justify !important;
-  max-width: 180px !important;
+  max-width: 800px !important;
   margin: auto !important;
 }
 
-img {
-  max-width: 610px !important;
+img, figure, figcaption {
+  max-width: 800px !important;
+  max-height: auto !important;
   width: auto !important;
   height: auto !important;
   margin: auto !important;

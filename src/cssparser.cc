@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "lout/debug.hh"
 #include "msg.h"
 #include "colors.h"
 #include "html_common.hh"
@@ -72,6 +71,10 @@ static const char *const Css_border_width_enum_vals[] = {
    "thin", "medium", "thick", NULL
 };
 
+static const char *const Css_clear_enum_vals[] = {
+   "left", "right", "both", "none", NULL
+};
+
 static const char *const Css_cursor_enum_vals[] = {
    "crosshair", "default", "pointer", "move", "e-resize", "ne-resize",
    "nw-resize", "n-resize", "se-resize", "sw-resize", "s-resize",
@@ -82,6 +85,10 @@ static const char *const Css_display_enum_vals[] = {
    "block", "inline", "inline-block", "list-item", "none", "table",
    "table-row-group", "table-header-group", "table-footer-group", "table-row",
    "table-cell", NULL
+};
+
+static const char *const Css_float_enum_vals[] = {
+   "none", "left", "right", NULL
 };
 
 static const char *const Css_font_size_enum_vals[] = {
@@ -119,6 +126,14 @@ static const char *const Css_list_style_type_enum_vals[] = {
    "lower-latin", "upper-alpha", "upper-latin", "hebrew", "armenian",
    "georgian", "cjk-ideographic", "hiragana", "katakana", "hiragana-iroha",
    "katakana-iroha", "none", NULL
+};
+
+static const char *const Css_overflow_enum_vals[] = {
+   "visible", "hidden", "scroll", "auto", NULL
+};
+
+static const char *const Css_position_enum_vals[] = {
+   "static", "relative", "absolute", "fixed", NULL
 };
 
 static const char *const Css_text_align_enum_vals[] = {
@@ -182,9 +197,9 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
     Css_border_style_enum_vals},
    {"border-top-width", {CSS_TYPE_ENUM, CSS_TYPE_LENGTH, CSS_TYPE_UNUSED},
     Css_border_width_enum_vals},
-   {"bottom", {CSS_TYPE_UNUSED}, NULL},
+   {"bottom", {CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"caption-side", {CSS_TYPE_UNUSED}, NULL},
-   {"clear", {CSS_TYPE_UNUSED}, NULL},
+   {"clear", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_clear_enum_vals},
    {"clip", {CSS_TYPE_UNUSED}, NULL},
    {"color", {CSS_TYPE_COLOR, CSS_TYPE_UNUSED}, NULL},
    {"content", {CSS_TYPE_STRING, CSS_TYPE_UNUSED}, NULL},
@@ -194,7 +209,7 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
    {"direction", {CSS_TYPE_UNUSED}, NULL},
    {"display", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_display_enum_vals},
    {"empty-cells", {CSS_TYPE_UNUSED}, NULL},
-   {"float", {CSS_TYPE_UNUSED}, NULL},
+   {"float", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_float_enum_vals},
    {"font-family", {CSS_TYPE_SYMBOL, CSS_TYPE_UNUSED}, NULL},
    {"font-size", {CSS_TYPE_ENUM, CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_UNUSED},
     Css_font_size_enum_vals},
@@ -206,7 +221,7 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
    {"font-weight", {CSS_TYPE_ENUM, CSS_TYPE_FONT_WEIGHT, CSS_TYPE_UNUSED},
     Css_font_weight_enum_vals},
    {"height", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
-   {"left", {CSS_TYPE_UNUSED}, NULL},
+   {"left", {CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"letter-spacing", {CSS_TYPE_ENUM, CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED},
     Css_letter_spacing_enum_vals},
    {"line-height",
@@ -227,21 +242,25 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
     {CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
    {"marker-offset", {CSS_TYPE_UNUSED}, NULL},
    {"marks", {CSS_TYPE_UNUSED}, NULL},
-   {"max-height", {CSS_TYPE_UNUSED}, NULL},
-   {"max-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
-   {"min-height", {CSS_TYPE_UNUSED}, NULL},
-   {"min-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
+   {"max-height", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED},
+    NULL},
+   {"max-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED},
+    NULL},
+   {"min-height", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED},
+    NULL},
+   {"min-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED},
+    NULL},
    {"outline-color", {CSS_TYPE_UNUSED}, NULL},
    {"outline-style", {CSS_TYPE_UNUSED}, NULL},
    {"outline-width", {CSS_TYPE_UNUSED}, NULL},
-   {"overflow", {CSS_TYPE_UNUSED}, NULL},
+   {"overflow", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_overflow_enum_vals},
    {"padding-bottom", {CSS_TYPE_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"padding-left", {CSS_TYPE_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"padding-right", {CSS_TYPE_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"padding-top", {CSS_TYPE_LENGTH, CSS_TYPE_UNUSED}, NULL},
-   {"position", {CSS_TYPE_UNUSED}, NULL},
+   {"position", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_position_enum_vals},
    {"quotes", {CSS_TYPE_UNUSED}, NULL},
-   {"right", {CSS_TYPE_UNUSED}, NULL},
+   {"right", {CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"text-align", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED}, Css_text_align_enum_vals},
    {"text-decoration", {CSS_TYPE_MULTI_ENUM, CSS_TYPE_UNUSED},
     Css_text_decoration_enum_vals},
@@ -249,7 +268,7 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
    {"text-shadow", {CSS_TYPE_UNUSED}, NULL},
    {"text-transform", {CSS_TYPE_ENUM, CSS_TYPE_UNUSED},
     Css_text_transform_enum_vals},
-   {"top", {CSS_TYPE_UNUSED}, NULL},
+   {"top", {CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED}, NULL},
    {"unicode-bidi", {CSS_TYPE_UNUSED}, NULL},
    {"vertical-align",{CSS_TYPE_ENUM, CSS_TYPE_UNUSED},Css_vertical_align_vals},
    {"visibility", {CSS_TYPE_UNUSED}, NULL},
@@ -257,7 +276,7 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
    {"width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
    {"word-spacing", {CSS_TYPE_ENUM, CSS_TYPE_SIGNED_LENGTH, CSS_TYPE_UNUSED},
     Css_word_spacing_enum_vals},
-   {"z-index", {CSS_TYPE_UNUSED}, NULL},
+   {"z-index", {CSS_TYPE_INTEGER, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
 
    /* These are extensions, for internal used, and never parsed. */
    {"x-link", {CSS_TYPE_INTEGER, CSS_TYPE_UNUSED}, NULL},
@@ -277,7 +296,7 @@ typedef struct {
    } type;
    const CssPropertyName *properties; /* CSS_SHORTHAND_MULTIPLE:
                                        *   must be terminated by
-                                       *   CSS_PROPERTY_END 
+                                       *   CSS_PROPERTY_END
                                        * CSS_SHORTHAND_DIRECTIONS:
                                        *   must have length 4
                                        * CSS_SHORTHAND_BORDERS:
@@ -720,7 +739,9 @@ bool CssParser::tokenMatchesProperty(CssPropertyName prop, CssValueType *type)
               dStrAsciiCasecmp(tval, "top") == 0 ||
               dStrAsciiCasecmp(tval, "bottom") == 0))
             return true;
-         // Fall Through (lenght and percentage)
+         if (ttype == CSS_TK_DECINT || ttype == CSS_TK_FLOAT)
+            return true;
+         break;
       case CSS_TYPE_LENGTH_PERCENTAGE:
       case CSS_TYPE_LENGTH_PERCENTAGE_NUMBER:
       case CSS_TYPE_LENGTH:
@@ -766,13 +787,17 @@ bool CssParser::tokenMatchesProperty(CssPropertyName prop, CssValueType *type)
 
       case CSS_TYPE_URI:
          if (ttype == CSS_TK_SYMBOL &&
-             dStrAsciiCasecmp(tval, "url") == 0)
+             (dStrAsciiCasecmp(tval, "url") == 0 ||
+              dStrAsciiCasecmp(tval, "none") == 0))
+            return true;
+         break;
+
+      case CSS_TYPE_INTEGER:
+         if (ttype == CSS_TK_DECINT)
             return true;
          break;
 
       case CSS_TYPE_UNUSED:
-      case CSS_TYPE_INTEGER:
-         /* Not used for parser values. */
       default:
          assert(false);
          break;
@@ -942,7 +967,7 @@ bool CssParser::parseValue(CssPropertyName prop,
                lentype = CSS_LENGTH_TYPE_EX;
                nextToken();
             } else if (dStrAsciiCasecmp(tval, "ch") == 0) {
-               lentype = CSS_LENGTH_TYPE_EM; /* and not CSS_LENGTH_TYPE_CH to remain in the 3bits space (see css.hh) */
+               lentype = CSS_LENGTH_TYPE_EM;
                nextToken();
             } else {
                ret = false;
@@ -1047,12 +1072,16 @@ bool CssParser::parseValue(CssPropertyName prop,
       break;
 
    case CSS_TYPE_URI:
-      if (ttype == CSS_TK_SYMBOL &&
-          dStrAsciiCasecmp(tval, "url") == 0) {
-         val->strVal = parseUrl();
-         nextToken();
-         if (val->strVal)
+      if (ttype == CSS_TK_SYMBOL) {
+         if (dStrAsciiCasecmp(tval, "url") == 0) {
+            val->strVal = parseUrl();
+            if (val->strVal)
+               ret = true;
+         } else if (dStrAsciiCasecmp(tval, "none") == 0) {
+            val->strVal = NULL;
             ret = true;
+         }
+         nextToken();
       }
       break;
 
@@ -1109,6 +1138,9 @@ bool CssParser::parseValue(CssPropertyName prop,
                if (parseValue(prop, CSS_TYPE_LENGTH_PERCENTAGE, &valTmp)) {
                   pos[i] = valTmp.intVal;
                   ret = true;
+               } else if (parseValue(prop, CSS_TYPE_SIGNED_LENGTH, &valTmp)) {
+                  pos[i] = valTmp.intVal;
+                  ret = true;
                } else
                   // ... but something may still fail.
                   h[i] = v[i] = false;
@@ -1147,12 +1179,18 @@ bool CssParser::parseValue(CssPropertyName prop,
       }
       break;
 
+   case CSS_TYPE_INTEGER:
+      if (ttype == CSS_TK_DECINT) {
+         val->intVal = strtol(tval, NULL, 10);
+         ret = true;
+         nextToken();
+      }
+      break;
+
    case CSS_TYPE_UNUSED:
       /* nothing */
       break;
 
-   case CSS_TYPE_INTEGER:
-      /* Not used for parser values. */
    default:
       assert(false);            /* not reached */
    }

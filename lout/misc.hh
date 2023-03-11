@@ -12,7 +12,7 @@ namespace lout {
 /**
  * \brief Miscellaneous stuff, which does not fit anywhere else.
  *
- * Actually, the other parts, beginning with ::object, depend on this.
+ * Actually, the other parts, beginning with \ref object, depend on this.
  */
 namespace misc {
 
@@ -35,6 +35,26 @@ void init (int argc, char *argv[]);
 inline void assertNotReached ()
 {
    fprintf (stderr, "*** [%s] This should not happen! ***\n", prgName);
+   abort ();
+}
+
+inline void assertNotReached (const char *fmt, ...)
+{
+   va_list argp;
+   va_start(argp, fmt);
+
+   fprintf (stderr, "*** [%s] This should not happen: ", prgName);
+   vfprintf(stderr, fmt, argp);
+   fprintf (stderr, "! ***\n");
+
+   va_end(argp);
+
+   abort ();
+}
+
+inline void notImplemented (const char *name)
+{
+   fprintf (stderr, "*** [%s] Not implemented: %s ***\n", prgName, name);
    abort ();
 }
 
@@ -63,6 +83,8 @@ inline int AsciiStrcasecmp(const char *s1, const char *s2)
    }
    return ret;
 }
+
+inline const char *boolToStr (bool b) { return b ? "true" : "false"; }
 
 /**
  * \brief Simple (simpler than container::untyped::Vector and
@@ -117,6 +139,8 @@ public:
     * \brief Return the number of elements put into this vector.
     */
    inline int size() const { return this->num; }
+
+   inline bool empty() const { return size() == 0; }
 
    inline T* getArray() const { return array; }
 
@@ -222,6 +246,30 @@ public:
    inline void set (int i, T t) {
       assert (i >= 0 && this->num - i > 0);
       this->array[i] = t;
+   }
+
+   /**
+    * \brief Store an object at the end of the vector.
+    */
+   inline void setLast (T t) {
+      assert (this->num > 0);
+      this->array[this->num - 1] = t;
+   }
+
+   /**
+    * \brief Copies some elements into another vector of the same
+    *    type.
+    *
+    * Cannot be used to copy elements within one vector. (For this,
+    * it would have to be extended to copy backwards in some cases.)
+    */
+   inline void copyTo(SimpleVector<T> *dest, int thisStart = 0,
+                      int thisLast = -1, int destStart = 0) {
+      assert (dest != this);
+      if (thisLast == -1)
+         thisLast = this->size () - 1;
+      for (int i = thisStart; i <= thisLast; i++)
+         dest->set (i - thisStart + destStart, get (i));
    }
 };
 
@@ -354,6 +402,8 @@ public:
 
    inline int size() const { return this->numMain + this->numExtra; }
 
+   inline bool empty() const { return size() == 0; }
+
    inline void increase() { setSize(size() + 1); }
 
    inline void setSize(int newSize)
@@ -379,7 +429,7 @@ public:
          this->startExtra = index;
          resizeExtra ();
       } else {
-         if (index < startExtra)  {
+         if (index < startExtra) {
             consolidate ();
             insert (index, numInsert);
          } else if (index < startExtra + numExtra) {
@@ -421,14 +471,29 @@ public:
     */
    inline T* getRef (int i) const
    {
-      if (this->startExtra == -1)
+      if (this->startExtra == -1) {
+         assert (i >= 0 && i < this->numMain);
          return this->arrayMain + i;
-      else {
-         if (i < this->startExtra)
+      } else {
+         if (i < this->startExtra) {
+            assert (i >= 0);
             return this->arrayMain + i;
-         else if (i >= this->startExtra + this->numExtra)
+         } else if (i >= this->startExtra + this->numExtra) {
+            // The original assertion
+            ///
+            //    "assert (i < this->numMain + this->numExtra)"
+            //
+            // causes this warnung in dw::Textblock::breakAdded:
+            //
+            //    "assuming signed overflow does not occur when assuming that
+            //     (X - c) > X is always false [-Wstrict-overflow]"
+            //
+            // Subtracting numExtra from both sides solves this,
+            // interrestingly.
+
+            assert (i - this->numExtra < this->numMain);
             return this->arrayMain + i - this->numExtra;
-         else
+         } else
             return this->arrayExtra1 + i - this->startExtra;
       }
    }
@@ -485,6 +550,13 @@ public:
    inline void set (int i, T t) {
       *(this->getRef(i)) = t;
    }
+
+   /**
+    * \brief Store an object at the end of the vector.
+    */
+   inline void setLast (T t) {
+      *(this->getLastRef()) = t;
+   }
 };
 
 /**
@@ -515,6 +587,11 @@ public:
     * about memory management.
     */
    inline void append(const char *str) { appendNoCopy(strdup(str)); }
+   inline void appendInt(int n)
+   { char buf[32]; sprintf (buf, "%d", n); append (buf); }
+   inline void appendPointer(void *p)
+   { char buf[32]; sprintf (buf, "%p", p); append (buf); }
+   inline void appendBool(bool b) { append (b ? "true" : "false"); }
    void appendNoCopy(char *str);
    const char *getChars();
    void clear ();
@@ -528,7 +605,7 @@ class BitSet
 {
 private:
    unsigned char *bits;
-   int numBytes;
+   int numBits, numBytes;
 
    inline int bytesForBits(int bits) { return bits == 0 ? 1 : (bits + 7) / 8; }
 

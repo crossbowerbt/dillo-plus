@@ -16,7 +16,9 @@
  */
 
 #include <string.h>
+#include <errno.h>
 
+#include "config.h"
 #include "msg.h"
 #include "capi.h"
 #include "IO/IO.h"    /* for IORead &friends */
@@ -268,6 +270,7 @@ static int Capi_url_uses_dpi(DilloUrl *url, char **server_ptr)
    Dstr *tmp;
 
    if ((dStrnAsciiCasecmp(url_str, "http:", 5) == 0) ||
+       (dStrnAsciiCasecmp(url_str, "https:", 6) == 0) ||
        (dStrnAsciiCasecmp(url_str, "about:", 6) == 0)) {
       /* URL doesn't use dpi (server = NULL) */
    } else if (dStrnAsciiCasecmp(url_str, "dpi:/", 5) == 0) {
@@ -298,39 +301,7 @@ static char *Capi_dpi_build_cmd(DilloWeb *web, char *server)
 {
    char *cmd;
 
-   if (strcmp(server, "proto.https") == 0) {
-      /* Let's be kind and make the HTTP query string for the dpi */
-      char *proxy_connect = a_Http_make_connect_str(web->url);
-      Dstr *http_query = a_Http_make_query_str(web->url, web->requester,
-                                               web->flags, FALSE);
-
-      if ((uint_t) http_query->len > strlen(http_query->str)) {
-         /* Can't handle NULLs embedded in query data */
-         MSG_ERR("HTTPS query truncated!\n");
-      }
-
-      /* BUG: WORKAROUND: request to only check the root URL's certificate.
-       *  This avoids the dialog bombing that stems from loading multiple
-       * https images/resources in a single page. A proper fix would take
-       * either to implement the https-dpi as a server (with state),
-       * or to move back https handling into dillo. */
-      if (proxy_connect) {
-         const char *proxy_urlstr = a_Http_get_proxy_urlstr();
-         cmd = a_Dpip_build_cmd("cmd=%s proxy_url=%s proxy_connect=%s "
-                                "url=%s query=%s check_cert=%s",
-                                "open_url", proxy_urlstr,
-                                proxy_connect, URL_STR(web->url),
-                                http_query->str,
-                                (web->flags & WEB_RootUrl) ? "true" : "false");
-      } else {
-         cmd = a_Dpip_build_cmd("cmd=%s url=%s query=%s check_cert=%s",
-                                "open_url", URL_STR(web->url),http_query->str,
-                                (web->flags & WEB_RootUrl) ? "true" : "false");
-      }
-      dFree(proxy_connect);
-      dStr_free(http_query, 1);
-
-   } else if (strcmp(server, "downloads") == 0) {
+   if (strcmp(server, "downloads") == 0) {
       /* let the downloads server get it */
       cmd = a_Dpip_build_cmd("cmd=%s url=%s destination=%s",
                              "download", URL_STR(web->url), web->filename);
@@ -345,7 +316,7 @@ static char *Capi_dpi_build_cmd(DilloWeb *web, char *server)
 /*
  * Send the requested URL's source to the "view source" dpi
  */
-static void Capi_dpi_send_source(BrowserWindow *bw,  DilloUrl *url)
+static void Capi_dpi_send_source(BrowserWindow *bw, DilloUrl *url)
 {
    char *p, *buf, *cmd, size_str[32], *server="vsource";
    int buf_size;
@@ -369,6 +340,46 @@ static void Capi_dpi_send_source(BrowserWindow *bw,  DilloUrl *url)
 }
 
 /*
+ * Shall we permit this request to open a URL?
+ */
+static bool_t Capi_request_permitted(DilloWeb *web)
+{
+   bool_t permit = FALSE;
+
+   /* web->requester is NULL if the action is initiated by user */
+   if (!web->requester)
+      return TRUE;
+
+   if (web->flags & ~WEB_RootUrl &&
+       !dStrAsciiCasecmp(URL_SCHEME(web->requester), "https")) {
+      const char *s = URL_SCHEME(web->url);
+
+      /* As of 2015, blocking of "active" mixed content is widespread
+       * (style sheets, javascript, fonts, etc.), but the big browsers aren't
+       * quite in a position to block "passive" mixed content (images) yet.
+       * (Not clear whether there's consensus on which category to place
+       * background images in.)
+       *
+       * We are blocking both, and only permitting secure->insecure page
+       * redirection for now (e.g., duckduckgo has been seen providing links
+       * to https URLs that redirect to http). As the web security landscape
+       * evolves, we may be able to remove that permission.
+       */
+      if (dStrAsciiCasecmp(s, "https") && dStrAsciiCasecmp(s, "data")) {
+         MSG("capi: Blocked mixed content: %s -> %s\n",
+             URL_STR(web->requester), URL_STR(web->url));
+         return FALSE;
+      }
+   }
+
+   if (a_Capi_get_flags(web->url) & CAPI_IsCached ||
+       a_Domain_permit(web->requester, web->url)) {
+      permit = TRUE;
+   }
+   return permit;
+}
+
+/*
  * Most used function for requesting a URL.
  * TODO: clean up the ad-hoc bindings with an API that allows dynamic
  *       addition of new plugins.
@@ -384,82 +395,89 @@ int a_Capi_open_url(DilloWeb *web, CA_Callback_t Call, void *CbData)
    const char *scheme = URL_SCHEME(web->url);
    int safe = 0, ret = 0, use_cache = 0;
 
-   /* web->requester is NULL if the action is initiated by user */
-   if (!(a_Capi_get_flags(web->url) & CAPI_IsCached ||
-         web->requester == NULL ||
-         a_Domain_permit(web->requester, web->url))) {
-      return 0;
-   }
+   if (Capi_request_permitted(web)) {
+      /* reload test */
+      reload = (!(a_Capi_get_flags(web->url) & CAPI_IsCached) ||
+                (URL_FLAGS(web->url) & URL_E2EQuery));
 
-   /* reload test */
-   reload = (!(a_Capi_get_flags(web->url) & CAPI_IsCached) ||
-             (URL_FLAGS(web->url) & URL_E2EQuery));
-
-   if (web->flags & WEB_Download) {
-     /* download request: if cached save from cache, else
-      * for http, ftp or https, use the downloads dpi */
-     if (a_Capi_get_flags_with_redirection(web->url) & CAPI_IsCached) {
-        if (web->filename) {
-           if ((web->stream = fopen(web->filename, "w"))) {
-              use_cache = 1;
-           } else {
-              MSG_WARN("Cannot open \"%s\" for writing.\n", web->filename);
+      if (web->flags & WEB_Download) {
+         /* download request: if cached save from cache, else
+          * for http, ftp or https, use the downloads dpi */
+        if (a_Capi_get_flags_with_redirection(web->url) & CAPI_IsCached) {
+           if (web->filename) {
+              if ((web->stream = fopen(web->filename, "w"))) {
+                 use_cache = 1;
+              } else {
+                 MSG_WARN("Cannot open \"%s\" for writing: %s.\n",
+                          web->filename, dStrerror(errno));
+              }
            }
+        } else if (a_Cache_download_enabled(web->url)) {
+           server = "downloads";
+           cmd = Capi_dpi_build_cmd(web, server);
+           a_Capi_dpi_send_cmd(web->url, web->bw, cmd, server, 1);
+           dFree(cmd);
+        } else {
+           MSG_WARN("Ignoring download request for '%s': "
+                    "not in cache and not downloadable.\n",
+                    URL_STR(web->url));
         }
-     } else if (a_Cache_download_enabled(web->url)) {
-        server = "downloads";
-        cmd = Capi_dpi_build_cmd(web, server);
-        a_Capi_dpi_send_cmd(web->url, web->bw, cmd, server, 1);
-        dFree(cmd);
-     } else {
-        MSG_WARN("Ignoring download request for '%s': "
-                 "not in cache and not downloadable.\n",
-                 URL_STR(web->url));
-     }
 
-   } else if (Capi_url_uses_dpi(web->url, &server)) {
-      /* dpi request */
-      if ((safe = a_Capi_dpi_verify_request(web->bw, web->url))) {
-         if (dStrAsciiCasecmp(scheme, "dpi") == 0) {
-            if (strcmp(server, "vsource") == 0) {
-               /* allow "view source" reload upon user request */
-            } else {
-               /* make the other "dpi:/" prefixed urls always reload. */
-               a_Url_set_flags(web->url, URL_FLAGS(web->url) | URL_E2EQuery);
-               reload = 1;
+      } else if (Capi_url_uses_dpi(web->url, &server)) {
+         /* dpi request */
+         if ((safe = a_Capi_dpi_verify_request(web->bw, web->url))) {
+            if (dStrAsciiCasecmp(scheme, "dpi") == 0) {
+               if (strcmp(server, "vsource") == 0) {
+                  /* allow "view source" reload upon user request */
+               } else {
+                  /* make the other "dpi:/" prefixed urls always reload. */
+                  a_Url_set_flags(web->url, URL_FLAGS(web->url) |URL_E2EQuery);
+                  reload = 1;
+               }
             }
+            if (reload) {
+               a_Capi_conn_abort_by_url(web->url);
+               /* Send dpip command */
+               _MSG("a_Capi_open_url, reload url='%s'\n", URL_STR(web->url));
+               cmd = Capi_dpi_build_cmd(web, server);
+               a_Capi_dpi_send_cmd(web->url, web->bw, cmd, server, 1);
+               dFree(cmd);
+               if (strcmp(server, "vsource") == 0) {
+                  Capi_dpi_send_source(web->bw, web->url);
+               }
+            }
+            use_cache = 1;
          }
+         dFree(server);
+
+      } else if (!dStrAsciiCasecmp(scheme, "http") ||
+                 !dStrAsciiCasecmp(scheme, "https")) {
+         /* http request */
+
+#ifndef ENABLE_SSL
+         if (!dStrAsciiCasecmp(scheme, "https")) {
+            if (web->flags & WEB_RootUrl)
+               a_UIcmd_set_msg(web->bw,
+                               "HTTPS was disabled at compilation time.");
+            a_Web_free(web);
+            return 0;
+         }
+#endif
          if (reload) {
             a_Capi_conn_abort_by_url(web->url);
-            /* Send dpip command */
-            _MSG("a_Capi_open_url, reload url='%s'\n", URL_STR(web->url));
-            cmd = Capi_dpi_build_cmd(web, server);
-            a_Capi_dpi_send_cmd(web->url, web->bw, cmd, server, 1);
-            dFree(cmd);
-            if (strcmp(server, "vsource") == 0) {
-               Capi_dpi_send_source(web->bw, web->url);
-            }
+            /* create a new connection and start the CCC operations */
+            conn = Capi_conn_new(web->url, web->bw, "http", "none");
+            /* start the reception branch before the query one because the DNS
+             * may callback immediately. This may avoid a race condition. */
+            a_Capi_ccc(OpStart, 2, BCK, a_Chain_new(), conn, "http");
+            a_Capi_ccc(OpStart, 1, BCK, a_Chain_new(), conn, web);
          }
          use_cache = 1;
-      }
-      dFree(server);
 
-   } else if (!dStrAsciiCasecmp(scheme, "http")) {
-      /* http request */
-      if (reload) {
-         a_Capi_conn_abort_by_url(web->url);
-         /* create a new connection and start the CCC operations */
-         conn = Capi_conn_new(web->url, web->bw, "http", "none");
-         /* start the reception branch before the query one because the DNS
-          * may callback immediately. This may avoid a race condition. */
-         a_Capi_ccc(OpStart, 2, BCK, a_Chain_new(), conn, "http");
-         a_Capi_ccc(OpStart, 1, BCK, a_Chain_new(), conn, web);
+      } else if (!dStrAsciiCasecmp(scheme, "about")) {
+         /* internal request */
+         use_cache = 1;
       }
-      use_cache = 1;
-
-   } else if (!dStrAsciiCasecmp(scheme, "about")) {
-      /* internal request */
-      use_cache = 1;
    }
 
    if (use_cache) {
@@ -484,10 +502,10 @@ static int Capi_map_cache_flags(uint_t flags)
       status |= CAPI_IsCached;
       if (flags & CA_IsEmpty)
          status |= CAPI_IsEmpty;
-      if (flags & CA_GotData)
-         status |= CAPI_Completed;
-      else
+      if (flags & CA_InProgress)
          status |= CAPI_InProgress;
+      else
+         status |= CAPI_Completed;
 
       /* CAPI_Aborted is not yet used/defined */
    }
@@ -632,7 +650,8 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             Capi_conn_ref(conn);
             Info->LocalKey = conn;
             conn->InfoSend = Info;
-            if (strcmp(conn->server, "http") == 0) {
+            if (strcmp(conn->server, "http") == 0 ||
+                strcmp(conn->server, "https") == 0) {
                a_Chain_link_new(Info, a_Capi_ccc, BCK, a_Http_ccc, 1, 1);
                a_Chain_bcb(OpStart, Info, Data2, NULL);
             } else {
@@ -659,7 +678,7 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC Capi 1B\n");
             break;
          }
       } else {  /* 1 FWD */
@@ -681,6 +700,7 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
          case OpAbort:
             conn = Info->LocalKey;
             conn->InfoSend = NULL;
+            a_Cache_process_dbuf(IOAbort, NULL, 0, conn->url);
             if (Data2) {
                if (!strcmp(Data2, "DpidERROR")) {
                   a_UIcmd_set_msg(conn->bw,
@@ -699,7 +719,7 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC Capi 1F\n");
             break;
          }
       }
@@ -714,7 +734,10 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             Capi_conn_ref(conn);
             Info->LocalKey = conn;
             conn->InfoRecv = Info;
-            a_Chain_link_new(Info, a_Capi_ccc, BCK, a_Dpi_ccc, 2, 2);
+            if (strcmp(conn->server, "http") == 0)
+               a_Chain_link_new(Info, a_Capi_ccc, BCK, a_Http_ccc, 2, 2);
+            else
+               a_Chain_link_new(Info, a_Capi_ccc, BCK, a_Dpi_ccc, 2, 2);
             a_Chain_bcb(OpStart, Info, NULL, Data2);
             break;
          case OpSend:
@@ -733,7 +756,7 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC Capi 2B\n");
             break;
          }
       } else {  /* 2 FWD */
@@ -744,7 +767,15 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             if (strcmp(Data2, "send_page_2eof") == 0) {
                /* Data1 = dbuf */
                DataBuf *dbuf = Data1;
-               a_Cache_process_dbuf(IORead, dbuf->Buf, dbuf->Size, conn->url);
+               bool_t finished = a_Cache_process_dbuf(IORead, dbuf->Buf,
+                                                      dbuf->Size, conn->url);
+               if (finished && Capi_conn_valid(conn) && conn->InfoRecv) {
+                  /* If we have a persistent connection where cache tells us
+                   * that we've received the full response, and cache didn't
+                   * trigger an abort and tear everything down, tell upstream.
+                   */
+                  a_Chain_bcb(OpSend, conn->InfoRecv, NULL, "reply_complete");
+               }
             } else if (strcmp(Data2, "send_status_message") == 0) {
                a_UIcmd_set_msg(conn->bw, "%s", Data1);
             } else if (strcmp(Data2, "chat") == 0) {
@@ -775,8 +806,24 @@ void a_Capi_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             Capi_conn_unref(conn);
             dFree(Info);
             break;
+         case OpAbort:
+            conn = Info->LocalKey;
+            conn->InfoRecv = NULL;
+            a_Cache_process_dbuf(IOAbort, NULL, 0, conn->url);
+            if (Data2) {
+               if (!strcmp(Data2, "Both") && conn->InfoSend) {
+                  /* abort the other branch too */
+                  a_Capi_ccc(OpAbort, 1, BCK, conn->InfoSend, NULL, NULL);
+               }
+            }
+            /* if URL == expect-url */         
+            a_Nav_cancel_expect_if_eq(conn->bw, conn->url);
+            /* finish conn */
+            Capi_conn_unref(conn);
+            dFree(Info);
+            break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC Capi 2F\n");
             break;
          }
       }

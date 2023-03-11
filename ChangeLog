@@ -6,6 +6,47 @@ Here we list changes that are relatively significant and/or visible to the
 user. For a history of changes in full detail, see our Mercurial repository
 at http://hg.dillo.org/dillo
 
+
+dillo-3.1 [not released yet]
+
++- Floating elements.
+ - Redesign of widget sizes ("GROWS").
+ - Applied CSS attribute 'width' to all elements, 'height' is now also
+   supported.
+ - Suport for 'min-width', 'max-width', 'min-height' and 'max-height'.
+ - Suport for 'display: inline-block'.
+ - <BUTTON>'s are now inline.
+ - Image aspect ratio is preserved when one dimension is specified by a
+   percentage value.
+ - New dillorc options 'adjust_min_width' and 'adjust_table_min_width'.
+ - Make building of test/ files more robust.
+ - Work on collapsing spaces: more cases supported.
+ - Fix crash that's possible searching for text while page still being built.
+   Patches: Sebastian Geerken
++- HTML5 character references.
+ - Give images lower priority when requesting resources (responsiveness).
+ - Reuse of connections for HTTP (disable w/ http_persistent_conns in dillorc).
+ - Abort failed queries.
+ - HTTP Strict Transport Security (disable with http_strict_transport_security
+   preference in dillorc).
+ - Fix bug when closing popup using window manager (bug introduced in 3.0.3).
+ - Block mixed content.
+ - Improve cookies date recognition.
+ - use mbed TLS ( https://tls.mbed.org/ )
+ - Iterate through the IP addrs for a host when trying to connect().
+   Patches: corvid
++- Doxygen fixes.
+   Patch: Jeremy Henty
++- Move HTTPS from dpi into the browser, enable SNI, check more locations for
+   CA bundles and add --with-ca-certs-file and --with-ca-certs-dir to
+   configure, some improvement to security warning popups, etc.
+   Patch: corvid, Benjamin Johnson
++- Fix bookmarks DPI crash.
+ - Fix OSX compilation issue with xembed.
+   Patches: Johannes Hofmann
+
+-----------------------------------------------------------------------------
+
 dillo-3.0.5 [June 30, 2015]
 
 +- Image buffer/cache improvements.

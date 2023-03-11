@@ -1,0 +1,172 @@
+/** \page dw-size-request-pos Size requisitions depending on positions
+
+<div style="border: 2px solid #ffff00; margin: 1em 0;
+  padding: 0.5em 1em; background-color: #ffffe0">The complex "widget
+  sizes" is currently divided into three documents: \ref
+  dw-widget-sizes, \ref dw-grows, and **Size requisitions depending on
+  positions** (this document). Furthermore, there are some notes in
+  \ref dw-miscellaneous.</div>
+
+
+Motivation
+==========
+
+As described in \ref dw-out-of-flow (*The sizeRequest/sizeAllocate
+problem*), the principle that the size of a widget depends only on the
+sizes of its children causes some problems with floats; the current
+solution is a frequent correction by calling
+dw::core::Widget::queueResize. In this document, an alternative
+approach is presented.
+
+<div style="border: 2px solid #ffff00; margin: 1em 0; padding: 0.5em 1em;
+  background-color: #ffffe0">This approach works very well for floats, but not
+  for positioned elements, which means that calling
+  dw::core::Widget::queueResize is still needed for the latter. On the other
+  hand, dw::oof::OOFFloatsMgr (which is much more complex than
+  dw::oof::OOFPositionedMgr) can be simplified quite much.</div>
+
+
+General Idea
+============
+
+A widget size may depend on the position relative to an ancestor
+widget. If a widget wants to get the size of a child widget, it should:
+
+1. call the new methods dw::core::Widget::numSizeRequestReferences and
+   dw::core::Widget::sizeRequestReference, which return all widgets
+   relative to which the child's position must be calculated;
+2. call dw::core::Widget::sizeRequest with the positions relative to
+   these widgets.
+
+<div style="border: 2px solid #ffff00; margin: 1em 0;
+  padding: 0.5em 1em; background-color: #ffffe0">It is not sufficient
+  to work with *absolute* positions, since there may be an
+  interruption passing the positions so that absolute positions are
+  often not known.</div>
+
+All positions passed to dw::core::Widget::sizeRequest must constitute
+the position at which this child will be allocated.
+
+There are situations where the parent widget is unable to determine
+these positions before the size is known. An example: a textblock
+widget cannot determine the positions of an inline widget (like an
+image, or an inline block) before the line is finished; on the other
+hand, finishing the line depends on knowing the sizes of the inline
+widgets.
+
+This may result in a conflict, when the size of an inline widget
+depends on positions. Generally, the only widget whose size depends on
+positions is dw::Textblock (the size will depend on the positions
+within its oof container, see \ref dw-out-of-flow), so this conflict
+occurs with inline blocks.
+
+This conflict is handled in different ways:
+
+1. Fortunately, this case is irrelevat for floats: an inline block
+   constitutes its own floats container, so that there is no dependance
+   on a position within another widget.
+
+2. For positioned elements, this case is relevant, since an inline
+   block is in most cases not a container for positioned elements. In
+   this case, a generator will call the methods
+   dw::oof::OutOfFlowMgr::tellIncompletePosition1 and
+   dw::oof::OutOfFlowMgr::tellIncompletePosition2, instead of
+   dw::oof::OutOfFlowMgr::tellPosition and
+   dw::oof::OutOfFlowMgr::tellPosition2, respectively. (Since this
+   case is irrelevant for floats,
+   dw::oof::OOFFloatsMgr::tellIncompletePosition1 and
+   dw::oof::OOFFloatsMgr::tellIncompletePosition2 are not implemented but
+   simply abort.)
+
+(This is not (yet) considered for borders: borders are only relevant
+for floats, but conflicts do not occur for floats.)
+
+
+Extremes
+--------
+Extremes may depend on the position in an analogue way, see:
+
+- dw::core::Widget::numGetExtremesReferences,
+- dw::core::Widget::getExtremesReference, and
+- dw::core::Widget::getExtremes.
+
+Resizing
+--------
+Currently, the size of a widget has to be recalculated when:
+
+1. it has called dw::core::Widget::queueResize, or
+2. the size of a child widget has to be recalculated.
+
+Since for this new approach, the size does not only depend on the size of the
+children, the second condition must be modified. See beginning of
+dw::core::Widget::sizeRequest.
+
+An implementation may have to consider, this too, especially when implementing
+incremental resizing (see \ref dw-widget-sizes); see
+dw::Textblock::sizeRequestImpl as an example.
+
+Regarding changes of the position is not sufficient. Consider this example,
+where a float size changes as soon as the image is loaded:
+
+\image html dw-size-request-pos-01.png
+
+The second paragraph ("A longer paragraph" ...) stays at the same position, both
+absolute and relative to the float container, but has to be rewrapped because of
+the float. Instead, this is handled by dw::oof::OutOfFlowMgr::markSizeChange
+(and likewise dw::oof::OutOfFlowMgr::markExtremesChange), which is called by the
+implementation of `markSizeChange` (or `markExtremesChange`, respectively) of
+the OOF container. (See also the end of the comment of dw::oof::OOFAwareWidget.)
+
+
+Plan
+====
+
+1. General design (dw::core::Widget::sizeRequestReference, changes to
+   dw::core::Widget::sizeRequest). Completed.
+
+2. Implementation for dw::Textblock. Completed.
+
+3. Change interface of dw::oof::OutOfFlowMgr (this affects mostly only
+   comments). Completed.
+
+   Affects methods dw::oof::OutOfFlowMgr::tellPosition1,
+   dw::oof::OutOfFlowMgr::tellPosition2,
+   dw::oof::OutOfFlowMgr::getLeftBorder,
+   dw::oof::OutOfFlowMgr::getRightBorder,
+   dw::oof::OutOfFlowMgr::hasFloatLeft,
+   dw::oof::OutOfFlowMgr::hasFloatRight,
+   dw::oof::OutOfFlowMgr::getLeftFloatHeight, and
+   dw::oof::OutOfFlowMgr::getRightFloatHeight.
+
+4. Apply step 3 to calls within dw::Textblock. Completed.
+
+   <b>Attention:</b> After this step, and before completing the next steps, the
+   code is inconsistent and so incorrect.
+
+5. Implement step 3 for floats (affects dw::oof::OOFFloatsMgr). **MOSTLY
+   COMPLETED.**
+
+6. Implement step 3 for positioned elements (affects only
+   dw::oof::OOFPositionedMgr). **INCOMPLETE.** (But positioned elements are
+   currently deactivated.)
+
+
+Issues
+======
+
+- Since the signature of dw::core::Widget::sizeRequestImpl changes quite often
+  during the development of *size requisitions depending on positions*, a
+  simpler option dw::core::Widget::sizeRequestSimpl has been added. May be
+  removed again, after the design is stable.
+
+- As an alternative, passing the references may be done in a new method, which
+  is called *before* dw::core::Widget::sizeRequestImpl. This makes even more
+  sense, after dw::core::Widget::calcExtraSpace and
+  dw::core::Widget::calcExtraSpaceImpl have been extended by references.
+
+- There may be inconsistencies for widget styles; see
+  [revision f797436687fe](http://flpsed.org/hgweb/dillo_grows/rev/f797436687fe)
+  as an example for a fix. Perhaps a different approach, where breaks are added,
+  _if `display` has the value `block`_ (or analogue), will work better.
+
+*/

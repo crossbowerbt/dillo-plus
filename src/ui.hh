@@ -24,7 +24,8 @@ typedef enum {
    UI_BOOK,
    UI_TOOLS,
    UI_CLEAR,
-   UI_SEARCH
+   UI_SEARCH,
+   UI_NEW_TAB
 } UIButton;
 
 typedef enum {
@@ -125,7 +126,7 @@ class UI : public CustGroupVertical {
 
    CustGroupVertical *TopGroup;
    CustButton *Back, *Forw, *Home, *Reload, *Save, *Stop, *Bookmarks,
-              *Tools, *Clear, *Search, *Help, *BugMeter, *FileButton;
+              *Tools, *Clear, *Search, *Help, *BugMeter, *FileButton, *NewTab;
    CustGroupHorizontal *LocBar, *NavBar, *StatusBar;
    Fl_Input *Location;
    CustProgressBox *PProg, *IProg;
@@ -146,7 +147,7 @@ class UI : public CustGroupVertical {
    void make_location(int ww);
    void make_progress_bars(int wide, int thin_up);
    void make_menubar(int x, int y, int w, int h);
-   Fl_Widget *make_filemenu_button();
+   void make_filemenu_button();
    void make_panel(int ww);
    void make_status_bar(int ww, int wh);
 

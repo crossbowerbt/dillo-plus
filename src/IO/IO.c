@@ -21,6 +21,7 @@
 #include "../klist.h"
 #include "IO.h"
 #include "iowatch.hh"
+#include "tls.h"
 
 /*
  * Symbolic defines for shutdown() function
@@ -35,8 +36,7 @@ typedef struct {
    int Key;               /* Primary Key (for klist) */
    int Op;                /* IORead | IOWrite */
    int FD;                /* Current File Descriptor */
-   int Flags;             /* Flag array (look definitions above) */
-   int Status;            /* errno code */
+   int Status;            /* nonzero upon IO failure */
    Dstr *Buf;             /* Internal buffer */
 
    void *Info;            /* CCC Info structure for this IO */
@@ -66,7 +66,6 @@ static IOData_t *IO_new(int op)
    IOData_t *io = dNew0(IOData_t, 1);
    io->Op = op;
    io->FD = -1;
-   io->Flags = 0;
    io->Key = 0;
    io->Buf = dStr_sized_new(IOBufLen);
 
@@ -127,13 +126,12 @@ static void IO_close_fd(IOData_t *io, int CloseCode)
 {
    int events = 0;
 
-   _MSG("====> begin IO_close_fd (%d) Key=%d CloseCode=%d Flags=%d ",
-       io->FD, io->Key, CloseCode, io->Flags);
+   _MSG("====> begin IO_close_fd (%d) Key=%d CloseCode=%d ",
+       io->FD, io->Key, CloseCode);
 
    /* With HTTP, if we close the writing part, the reading one also gets
-    * closed! (other clients may set 'IOFlag_ForceClose') */
-   if (((io->Flags & IOFlag_ForceClose) || (CloseCode == IO_StopRdWr)) &&
-       io->FD != -1) {
+    * closed! */
+   if ((CloseCode == IO_StopRdWr) && io->FD != -1) {
       dClose(io->FD);
    } else {
       _MSG(" NOT CLOSING ");
@@ -162,6 +160,7 @@ static bool_t IO_read(IOData_t *io)
    ssize_t St;
    bool_t ret = FALSE;
    int io_key = io->Key;
+   void *conn = a_Tls_connection(io->FD);
 
    _MSG("  IO_read\n");
 
@@ -170,7 +169,8 @@ static bool_t IO_read(IOData_t *io)
    io->Status = 0;
 
    while (1) {
-      St = read(io->FD, Buf, IOBufLen);
+      St = conn ? a_Tls_read(conn, Buf, IOBufLen)
+                : read(io->FD, Buf, IOBufLen);
       if (St > 0) {
          dStr_append_l(io->Buf, Buf, St);
          continue;
@@ -181,8 +181,14 @@ static bool_t IO_read(IOData_t *io)
             ret = TRUE;
             break;
          } else {
-            io->Status = errno;
-            break;
+            if (conn) {
+               io->Status = St;
+               break;
+            } else {
+               io->Status = errno;
+               MSG("READ Failed with %d: %s\n", (int)St, strerror(errno));
+               break;
+            }
          }
       } else { /* St == 0 */
          break;
@@ -214,12 +220,14 @@ static bool_t IO_write(IOData_t *io)
 {
    ssize_t St;
    bool_t ret = FALSE;
+   void *conn = a_Tls_connection(io->FD);
 
    _MSG("  IO_write\n");
    io->Status = 0;
 
    while (1) {
-      St = write(io->FD, io->Buf->str, io->Buf->len);
+      St = conn ? a_Tls_write(conn, io->Buf->str, io->Buf->len)
+                : write(io->FD, io->Buf->str, io->Buf->len);
       if (St < 0) {
          /* Error */
          if (errno == EINTR) {
@@ -228,8 +236,14 @@ static bool_t IO_write(IOData_t *io)
             ret = TRUE;
             break;
          } else {
-            io->Status = errno;
-            break;
+            if (conn) {
+               io->Status = St;
+               break;
+            } else {
+               io->Status = errno;
+               MSG("WRITE Failed with %d: %s\n", (int)St, strerror(errno));
+               break;
+            }
          }
       } else if (St < io->Buf->len) {
          /* Not all data written */
@@ -279,6 +293,10 @@ static void IO_fd_read_cb(int fd, void *data)
    } else {
       if (IO_callback(io) == 0)
          a_IOwatch_remove_fd(fd, DIO_READ);
+      if ((io = IO_get(io_key)) && io->Status) {
+         /* check io because IO_read OpSend could trigger abort */
+         a_IO_ccc(OpAbort, 2, FWD, io->Info, io, NULL);
+      }
    }
 }
 
@@ -298,6 +316,8 @@ static void IO_fd_write_cb(int fd, void *data)
    } else {
       if (IO_callback(io) == 0)
          a_IOwatch_remove_fd(fd, DIO_WRITE);
+      if (io->Status)
+         a_IO_ccc(OpAbort, 1, FWD, io->Info, NULL, NULL);
    }
 }
 
@@ -350,6 +370,7 @@ void a_IO_ccc(int Op, int Branch, int Dir, ChainLink *Info,
          switch (Op) {
          case OpStart:
             io = IO_new(IOWrite);
+            io->Info = Info;
             Info->LocalKey = io;
             break;
          case OpSend:
@@ -369,8 +390,8 @@ void a_IO_ccc(int Op, int Branch, int Dir, ChainLink *Info,
                char *newline = memchr(io->Buf->str, '\n', io->Buf->len);
                int msglen = newline ? newline - io->Buf->str : 2048;
 
-               MSG_WARN("IO_write, closing with pending data not sent: "
-                        "\"%s\"\n", dStr_printable(io->Buf, msglen));
+               MSG("IO_write, closing with pending data not sent: \"%s\"\n",
+                   dStr_printable(io->Buf, msglen));
             }
             /* close FD, remove from ValidIOs and remove its watch */
             IO_close_fd(io, Op == OpEnd ? IO_StopWr : IO_StopRdWr);
@@ -378,14 +399,21 @@ void a_IO_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC IO 1B\n");
             break;
          }
       } else {  /* 1 FWD */
          /* Write-data status */
          switch (Op) {
+         case OpAbort:
+            io = Info->LocalKey;
+            IO_close_fd(io, IO_StopRdWr);
+            IO_free(io);
+            a_Chain_fcb(OpAbort, Info, NULL, NULL);
+            dFree(Info);
+            break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC IO 1F\n");
             break;
          }
       }
@@ -406,14 +434,15 @@ void a_IO_ccc(int Op, int Branch, int Dir, ChainLink *Info,
                IO_submit(io);
             }
             break;
+         case OpEnd:
          case OpAbort:
             io = Info->LocalKey;
-            IO_close_fd(io, IO_StopRdWr);
+            IO_close_fd(io, Op == OpEnd ? IO_StopRd : IO_StopRdWr);
             IO_free(io);
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC IO 2B\n");
             break;
          }
       } else {  /* 2 FWD */
@@ -426,13 +455,14 @@ void a_IO_ccc(int Op, int Branch, int Dir, ChainLink *Info,
             dFree(dbuf);
             break;
          case OpEnd:
-            a_Chain_fcb(OpEnd, Info, NULL, NULL);
+         case OpAbort:
+            a_Chain_fcb(Op, Info, NULL, NULL);
             IO_close_fd(io, IO_StopRdWr); /* IO_StopRd would leak FDs */
             IO_free(io);
             dFree(Info);
             break;
          default:
-            MSG_WARN("Unused CCC\n");
+            MSG_WARN("Unused CCC IO 2F\n");
             break;
          }
       }

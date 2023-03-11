@@ -24,6 +24,7 @@
 #define PREFS_HTTP_REFERER    "host"
 #define PREFS_HTTP_USER_AGENT "Dillo/" VERSION
 #define PREFS_THEME           "none"
+#define PREFS_MEDIA_PLAYER           "mpv -ytdl-format='bestvideo[height<=?360]+bestaudio/best'"
 
 /*-----------------------------------------------------------------------------
  * Global Data
@@ -38,7 +39,7 @@ void a_Prefs_init(void)
 {
    prefs.allow_white_bg = TRUE;
    prefs.white_bg_replacement = 0xe0e0a3; // 0xdcd1ba;
-   prefs.bg_color = 0xdcd1ba;
+   prefs.bg_color = 0xFFFFFF;
    prefs.buffered_drawing = 1;
    prefs.contrast_visited_color = TRUE;
    prefs.enterpress_forces_submit = FALSE;
@@ -63,10 +64,15 @@ void a_Prefs_init(void)
    prefs.http_language = NULL;
    prefs.http_proxy = NULL;
    prefs.http_max_conns = 6;
+   prefs.http_persistent_conns = TRUE;
    prefs.http_proxyuser = NULL;
    prefs.http_referer = dStrdup(PREFS_HTTP_REFERER);
+   prefs.http_strict_transport_security = TRUE;
    prefs.http_user_agent = dStrdup(PREFS_HTTP_USER_AGENT);
+   prefs.media_player = dStrdup(PREFS_MEDIA_PLAYER);
    prefs.limit_text_width = FALSE;
+   prefs.adjust_min_width = TRUE;
+   prefs.adjust_table_min_width = TRUE;
    prefs.load_images=TRUE;
    prefs.load_background_images=FALSE;
    prefs.load_stylesheets=TRUE;
@@ -112,7 +118,6 @@ void a_Prefs_init(void)
    prefs.ui_tab_active_fg_color = -1;
    prefs.ui_tab_fg_color = -1;
    prefs.ui_text_bg_color = -1;
-   prefs.w3c_plus_heuristics = TRUE;
 
    prefs.penalty_hyphen = 100;
    prefs.penalty_hyphen_2 = 800;
@@ -141,6 +146,7 @@ void a_Prefs_freeall(void)
    dFree(prefs.http_proxyuser);
    dFree(prefs.http_referer);
    dFree(prefs.http_user_agent);
+   dFree(prefs.media_player);
    dFree(prefs.no_proxy);
    dFree(prefs.save_dir);
    for (i = 0; i < dList_length(prefs.search_urls); ++i)

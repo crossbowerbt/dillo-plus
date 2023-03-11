@@ -685,10 +685,15 @@ static char *UIcmd_find_search_str(const char *str)
          if (search && strncasecmp(str, search, len) == 0) {
             prefs.search_url_idx = p;
             url = UIcmd_make_search_str(str + len + 1);
+            return url;
             break;
          }
       }
+
+      prefs.search_url_idx = 0;
+      url = UIcmd_make_search_str(str);
    }
+
    return url;
 }
 
@@ -933,7 +938,7 @@ static int UIcmd_save_file_check(const char *name)
       int ch;
       ds = dStr_sized_new(128);
       dStr_sprintf(ds,
-                  "The file:\n  %s (%d Bytes)\nalready exists. What do we do?",
+                  "The file: %s (%d Bytes) already exists. What do we do?",
                    name, (int)ss.st_size);
       ch = a_Dialog_choice("Dillo Save: File exists!", ds->str,
                            "Abort", "Continue", "Rename", NULL);
@@ -1229,7 +1234,7 @@ void a_UIcmd_view_page_bugs(void *vbw)
    if (bw->num_page_bugs > 0) {
       a_Dialog_text_window("Dillo: Detected HTML errors", bw->page_bugs->str);
    } else {
-      a_Dialog_msg("Dillo: Valid HTML!", "Zero detected HTML errors!");
+      a_Dialog_msg("Dillo: Good HTML!", "No HTML errors found while parsing!");
    }
 }
 

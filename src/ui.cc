@@ -13,6 +13,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <math.h>      /* rint */
 
 #include "keys.hh"
 #include "ui.hh"
@@ -55,7 +56,6 @@ static struct iconset standard_icons = {
    new Fl_Pixmap(right_xpm),
    NULL,
    new Fl_Pixmap(stop_xpm),
-   NULL,
 };
 
 static struct iconset small_icons = {
@@ -74,7 +74,6 @@ static struct iconset small_icons = {
    new Fl_Pixmap(right_s_xpm),
    NULL,
    new Fl_Pixmap(stop_s_xpm),
-   NULL,
 };
 
 
@@ -272,7 +271,7 @@ static void clear_cb(Fl_Widget *w, void *data)
    if (b == FL_LEFT_MOUSE) {
       ui->set_location("");
       ui->focus_location();
-   } if (b == FL_MIDDLE_MOUSE) {
+   } else if (b == FL_MIDDLE_MOUSE) {
       ui->paste_url();
    }
 }
@@ -352,6 +351,11 @@ static void b1_cb(Fl_Widget *wid, void *cb_data)
                        wid->y() + wid->h());
       }
       break;
+   case UI_NEW_TAB:
+      if (b == FL_LEFT_MOUSE || b == FL_RIGHT_MOUSE) {
+		   a_UIcmd_open_url_nt(a_UIcmd_get_bw_by_widget(wid), NULL, 1);
+      }
+      break;
    default:
       break;
    }
@@ -425,8 +429,8 @@ void UI::make_toolbar(int tw, int th)
    Forw = make_button("Forw", icons->ImgRight, icons->ImgRightIn, UI_FORW);
    Home = make_button("Home", icons->ImgHome, NULL, UI_HOME);
    Reload = make_button("Reload", icons->ImgReload, NULL, UI_RELOAD);
-   Save = make_button("Save", icons->ImgSave, NULL, UI_SAVE);
    Stop = make_button("Stop", icons->ImgStop, icons->ImgStopIn, UI_STOP);
+   Save = make_button("Save", icons->ImgSave, NULL, UI_SAVE);
    Bookmarks = make_button("Book", icons->ImgBook, NULL, UI_BOOK);
    Tools = make_button("Tools", icons->ImgTools, NULL, UI_TOOLS);
 
@@ -462,6 +466,7 @@ void UI::make_location(int ww)
      i->when(FL_WHEN_ENTER_KEY);
      i->callback(location_cb, this);
      i->set_tooltip("Location");
+     i->textsize((int) rint(14.0 * prefs.font_factor));
      p_xpos += i->w();
     LocationGroup->box(FL_THIN_UP_BOX);   // or FL_FLAT_BOX
     LocationGroup->end();
@@ -506,7 +511,7 @@ void UI::make_progress_bars(int wide, int thin_up)
  * Create the "File" menu
  * Static function for File menu callbacks.
  */
-Fl_Widget *UI::make_filemenu_button()
+void UI::make_filemenu_button()
 {
    CustButton *btn;
    int w = 0, h = 0, padding;
@@ -527,7 +532,6 @@ Fl_Widget *UI::make_filemenu_button()
    btn->clear_visible_focus();
    if (!prefs.show_filemenu)
       btn->hide();
-   return btn;
 }
 
 
@@ -568,8 +572,8 @@ void UI::make_panel(int ww)
       NavBar = new CustGroupHorizontal(0,0,ww,nh);
       NavBar->box(FL_NO_BOX);
       NavBar->begin();
-       make_toolbar(ww,bh);
        make_filemenu_button();
+       make_toolbar(ww,bh);
        make_location(ww);
        NavBar->resizable(LocationGroup);
        make_progress_bars(0,1);
