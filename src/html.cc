@@ -4404,6 +4404,10 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    /* Restore flags */
    in_pre = html->in_pre;
 
+   /* Open a body tag at the beginning */
+   if (html->CurrOfs == 0)
+      Html_process_tag(html, "<body>", strlen("<body>"));
+
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
    buf_index = 0;
@@ -4645,6 +4649,10 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    /* Restore flags */
    in_pre = html->in_pre;
    list_level = html->list_level;
+
+   /* Open a body tag at the beginning */
+   if (html->CurrOfs == 0)
+      Html_process_tag(html, "<body>", strlen("<body>"));
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
