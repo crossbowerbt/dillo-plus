@@ -22,10 +22,10 @@ typedef struct {
 /*
  *  Local data
  */
-static int MimeMinItemsSize = 0, MimeMinItemsMax = 12;
+static int MimeMinItemsSize = 0, MimeMinItemsMax = 13;
 static MimeItem_t *MimeMinItems = NULL;
 
-static int MimeMajItemsSize = 0, MimeMajItemsMax = 12;
+static int MimeMajItemsSize = 0, MimeMajItemsMax = 13;
 static MimeItem_t *MimeMajItems = NULL;
 
 
@@ -111,6 +111,7 @@ void a_Mime_init()
    Mime_add_minor_type("application/xhtml+xml", a_Html_text);
 
    Mime_add_minor_type("text/gemini", a_Html_text);
+   Mime_add_minor_type("text/gopher", a_Html_text);
    Mime_add_minor_type("text/markdown", a_Html_text);
 
    Mime_add_minor_type("application/rss+xml", a_Html_text);

@@ -201,11 +201,12 @@ public:  //BUG: for now everything is public
    dw::ImageMapsList maps;
 
    /* -------------------------------------------------------------------*/
-   /* Variables used by Gemini and Markdown parsers                      */
+   /* Variables used by Gemini, Gopher and Markdown parsers                      */
    /* -------------------------------------------------------------------*/
    bool in_pre;    /* currently in a preformatted section */
    bool in_link;   /* currently in a link content */
    int list_level; /* nesting level of current list */
+   char last_partial_line[1024]; /* last partial line, when broken in the middle */
 
 private:
    void freeParseData();

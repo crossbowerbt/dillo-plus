@@ -100,6 +100,7 @@ void *a_Html_text(const char *type, void *P, CA_Callback_t *Call,void **Data);
  *---------------------------------------------------------------------------*/
 static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
+static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static bool Html_load_image(BrowserWindow *bw, DilloUrl *url,
                             const DilloUrl *requester, DilloImage *image);
@@ -178,7 +179,7 @@ DilloUrl *a_Html_url_new(DilloHtml *html,
 
 /*
  * Set callback function and callback data for the
- * "text/html", "text/gemini" or "text/markdown" MIME type.
+ * "text/html", "text/gemini", "text/gopher" or "text/markdown" MIME type.
  */
 void *a_Html_text(const char *Type, void *P, CA_Callback_t *Call, void **Data)
 {
@@ -454,10 +455,11 @@ DilloHtml::DilloHtml(BrowserWindow *p_bw, const DilloUrl *url,
    links = new misc::SimpleVector <DilloUrl*> (64);
    images = new misc::SimpleVector <DilloHtmlImage*> (16);
 
-   /* Init Gemini and Markdown parsers stuff */
+   /* Init Gemini, Gopher and Markdown parsers stuff */
    in_pre = false;
    in_link = false;
    list_level = -1;
+   last_partial_line[0] = '\0';
 
    /* Initialize the main widget */
    initDw();
@@ -545,6 +547,8 @@ void DilloHtml::write(char *Buf, int BufSize, int Eof)
 
    if(!strncmp(this->content_type, "text/gemini", 11)) {
       token_start = Gemini_write_raw(this, buf, bufsize, Eof);
+   } else if(!strncmp(this->content_type, "text/gopher", 11)) {
+      token_start = Gopher_write_raw(this, buf, bufsize, Eof);
    } else if(!strncmp(this->content_type, "text/markdown", 13)) {
       token_start = Markdown_write_raw(this, buf, bufsize, Eof);
    } else {
@@ -3780,6 +3784,7 @@ static void Html_test_section(DilloHtml *html, int new_idx, int IsCloseTag)
 
    if (!(html->InFlags & IN_HTML) && html->DocType == DT_NONE &&
        strncmp(html->content_type, "text/gemini", 11) &&
+       strncmp(html->content_type, "text/gopher", 11) &&
        strncmp(html->content_type, "text/markdown", 13))
       BUG_MSG("The required DOCTYPE declaration is missing. "
               "Handling as HTML4.");
@@ -4390,6 +4395,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char ch = 0;
    int token_start, buf_index;
 
+   char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
    char heading_open[] = "<hX>", heading_close[] = "</hX>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
@@ -4407,7 +4413,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
    /* Open a body tag at the beginning */
    if (html->CurrOfs == 0)
-      Html_process_tag(html, "<body>", strlen("<body>"));
+      Html_process_tag(html, body_open, strlen(body_open));
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
@@ -4612,6 +4618,240 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 }
 
 /*
+ * Here's where we parse the gopher code and put it into the Textblock structure.
+ * Return value: number of bytes parsed
+ */
+static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
+{
+   char ch_str[2] = { 0 };
+   int token_start, buf_index;
+
+   char body_open[] = "<body>";
+   char pre_open[] = "<pre>", pre_close[] = "</pre>";
+   char link_open[2048] = "", link_close[] = "</a>";
+   char input_tag[] = "<input name=\"q\" placeholder=\"search text\" />";
+   char submit_tag[] = "<input type=\"submit\" />";
+   char form_open[2048] = "", form_open_template[] = "<form action=\"gopher://1::%s:%s%s\">", form_close[] = "</form>";
+
+   char line_type = 'i'; /* gophermap line type */
+
+   /* Open a body tag at the beginning */
+   if (html->CurrOfs == 0) {
+      Html_process_tag(html, body_open, strlen(body_open));
+      Html_process_tag(html, pre_open, strlen(pre_open));
+   }
+   
+   /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
+    * boundary. Iterate through tokens until end of buffer is reached. */
+   buf_index = 0;
+   token_start = buf_index;
+   while ((buf_index < bufsize) && !html->stop_parser) {
+      /* invariant: buf_index == bufsize || token_start == buf_index */
+      
+      char *text, *resource, *host, *port, *end_of_line = NULL;
+
+      if(html->last_partial_line[0]) {
+         /* restore last partial line */
+
+         end_of_line = buf + strcspn(buf, "\n");
+      
+         if(!end_of_line)
+            end_of_line = buf + bufsize;
+
+         if(*(end_of_line - 1) == '\r')
+            *(end_of_line - 1) = '\0';
+         else
+            *end_of_line = '\0';
+
+         strncat(html->last_partial_line, buf, sizeof(html->last_partial_line) - 1);
+
+         /* get line type */
+         line_type = html->last_partial_line[0];
+
+         if(line_type == '.') {
+            /* end of gopher menu */
+            buf_index = end_of_line - buf + 1;
+            token_start = buf_index;
+            goto END_OF_CYCLE_GOPHER;
+         }
+
+         /* get text part */
+         text = html->last_partial_line + 1;
+
+      }
+
+      else {
+         /* line is new*/
+
+         /* get line type */
+         line_type = buf[buf_index];
+
+         if(line_type == '.') {
+            /* end of gopher menu */
+            buf_index += 3;
+            token_start = buf_index;
+            goto END_OF_CYCLE_GOPHER;
+         }
+
+         /* get text part */
+         text = buf + buf_index + 1;
+
+      }
+      
+      /* get resource */
+      resource = text + strcspn(text, "\t");
+      resource++;
+
+      /* get host */
+      host = resource + strcspn(resource, "\t");
+      host++;
+
+      /* get port */
+      port = host + strcspn(host, "\t");
+      port++;
+
+      if (!html->last_partial_line[0]) {
+
+         /* get end of line */
+         end_of_line = port + strcspn(port, "\n");
+      
+         if(*end_of_line != '\n')
+            end_of_line = buf + bufsize;
+         else
+            *(end_of_line - 1) = '\0';
+
+      }
+      
+      if(end_of_line - (buf + buf_index) >= (long) sizeof(html->last_partial_line)) {
+         printf("Long line: %ld\n", end_of_line - (buf + buf_index));
+         BUG_MSG("Line too long: skipping.");
+         goto CLEANUP_GOPHER;
+      }
+
+      if(*end_of_line != '\n' && !html->last_partial_line[0]) {
+
+         strcpy(html->last_partial_line, buf + buf_index);
+         goto CLEANUP_GOPHER;
+         
+      } else if (*end_of_line != '\n') {
+
+         printf("Double broken line detected!\n");
+         BUG_MSG("Double broken line: skipping.");
+         
+         goto CLEANUP_GOPHER;
+
+      }
+
+      *(resource - 1) = '\0';
+      *(host - 1) = '\0';
+      *(port - 1) = '\0';
+
+      /* interpret line */
+
+      switch(line_type) {
+
+      case '7':
+         /* Gopher full-text search */
+         ch_str[0] = line_type;
+         Html_process_word(html, "[", strlen("["));
+         Html_process_word(html, ch_str, strlen(ch_str));
+         Html_process_word(html, "] ", strlen("] "));
+         Html_process_word(html, text, strlen(text));
+         Html_process_word(html, "\n", strlen("\n"));
+         Html_process_tag(html, pre_close, strlen(pre_close));
+         snprintf(form_open, sizeof(form_open)-1, form_open_template,
+                  host, port, resource);
+         Html_process_tag(html, form_open, strlen(form_open));
+         Html_process_tag(html, input_tag, strlen(input_tag));
+         Html_process_tag(html, submit_tag, strlen(submit_tag));
+         Html_process_tag(html, form_close, strlen(form_close));
+         Html_process_tag(html, pre_open, strlen(pre_open));
+         break;
+         
+      case 'i':
+         /* Informational message */
+         Html_process_word(html, text, strlen(text));
+         break;
+
+      case '0': /* Text file */
+      case '1': /* Gopher submenu */
+      case '2': /* CCSO Nameserver */
+      case '3': /* Error code returned by a Gopher server to indicate failure */
+      case '4': /* BinHex-encoded file (primarily for Macintosh computers) */
+      case '5': /* DOS file */
+      case '6': /* uuencoded file */
+      case '9': /* Binary file */
+      case '+': /* Mirror or alternate server (for load balancing) */
+      case 'g': /* GIF file */
+      case 'I': /* Image file */
+      case 'T': /* Telnet 3270 */
+      case ':': /* Bitmap image */
+      case ';': /* Movie file */
+      case '<': /* Sound file */
+      case 'd': /* Doc. Seen used alongside PDF's and .DOC's */
+      case 'h': /* HTML file */
+      case 'p': /* image file "(especially the png format)" */
+      case 'r': /* document rtf file (Rich Text Format) */
+      case 's': /* Sound file (especially the WAV format) */
+      case 'P': /* document pdf file (Portable Document Format) */
+      case 'X': /* document xml file (eXtensive Markup Language) */
+      default:
+         ch_str[0] = line_type;
+         Html_process_word(html, "[", strlen("["));
+         Html_process_word(html, ch_str, strlen(ch_str));
+         Html_process_word(html, "] ", strlen("] "));
+         strcpy(link_open, "<a href=\"");
+
+         if(!strncmp(resource, "URL:", 4)) {
+            strncat(link_open, resource + 4, sizeof(link_open) - 21);
+         } else {
+            strcat(link_open, "gopher://");
+            strncat(link_open, ch_str, sizeof(link_open) - 21);
+            strncat(link_open, "::", sizeof(link_open) - 21);
+            strncat(link_open, host, sizeof(link_open) - 21);
+            strcat(link_open, ":");
+            strncat(link_open, port, sizeof(link_open) - 21);
+            strncat(link_open, resource, sizeof(link_open) - 21);
+         }
+         
+         strcat(link_open, "\">");
+         Html_process_tag(html, link_open, strlen(link_open));
+         Html_process_word(html, text, strlen(text));
+         Html_process_tag(html, link_close, strlen(link_close));
+         break;
+      }
+
+      Html_process_word(html, "\n", 1);
+
+      /* cleanup */
+
+   CLEANUP_GOPHER:
+      
+      *(resource - 1) = '\t';
+      *(host - 1) = '\t';
+      *(port - 1) = '\t';
+
+      if(*end_of_line == '\n')
+         *(end_of_line - 1) = '\r';
+      
+      buf_index = end_of_line - buf;
+      if(*end_of_line == '\n') buf_index++;
+      token_start = buf_index;
+
+   END_OF_CYCLE_GOPHER:
+
+      if(end_of_line && *end_of_line == '\n')
+        html->last_partial_line[0] = '\0'; /* reset last partial line */
+      
+      html->CurrOfs = html->Start_Ofs + token_start;
+   }/*while*/
+
+   HT2TB(html)->flush ();
+
+   return token_start;
+}
+
+/*
  * Here's where we parse the markdown code and put it into the Textblock structure.
  * Return value: number of bytes parsed
  */
@@ -4654,6 +4894,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char ch = 0;
    int token_start, buf_index, tmp;
 
+   char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
    char heading_open[] = "<hX>", heading_close[] = "</hX>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
@@ -4684,7 +4925,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
    /* Open a body tag at the beginning */
    if (html->CurrOfs == 0 && !in_link)
-      Html_process_tag(html, "<body>", strlen("<body>"));
+      Html_process_tag(html, body_open, strlen(body_open));
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */

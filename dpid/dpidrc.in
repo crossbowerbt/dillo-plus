@@ -5,4 +5,5 @@ proto.ftp=ftp/ftp.filter.dpi
 proto.https=https/https.filter.dpi
 proto.dls=dls/dls.filter.dpi
 proto.gemini=gemini/gemini.filter.dpi
+proto.gopher=gopher/gopher.filter.dpi
 proto.data=datauri/datauri.filter.dpi

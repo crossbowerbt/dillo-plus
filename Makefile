@@ -14,7 +14,7 @@ all: config.h
 	@echo Making all in doc
 	@(cd doc; make all)
 	@echo Making all in dpid
-	@(cd dpip; make all)
+	@(cd dpid; make all)
 	@echo Making all in dpi
 	@(cd dpi; make all)
 	@echo Making all in dls
@@ -36,7 +36,7 @@ clean:
 	@echo Cleaning in doc
 	@(cd doc; make clean)
 	@echo Cleaning in dpid
-	@(cd dpip; make clean)
+	@(cd dpid; make clean)
 	@echo Cleaning in dpi
 	@(cd dpi; make clean)
 	@echo Cleaning in dls
@@ -58,7 +58,7 @@ install: all
 	@echo Making install in doc
 	@(cd doc; make install)
 	@echo Making install in dpid
-	@(cd dpip; make install)
+	@(cd dpid; make install)
 	@echo Making install in dpi
 	@(cd dpi; make install)
 	@echo Making install in dls
@@ -86,7 +86,7 @@ uninstall:
 	@echo Making uninstall in doc
 	@(cd doc; make uninstall)
 	@echo Making uninstall in dpid
-	@(cd dpip; make uninstall)
+	@(cd dpid; make uninstall)
 	@echo Making uninstall in dpi
 	@(cd dpi; make uninstall)
 	@echo Making uninstall in dls

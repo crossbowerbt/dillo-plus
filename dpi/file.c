@@ -519,6 +519,8 @@ static const char *File_ext(const char *filename)
       return "application/rss+xml";
    } else if (!dStrAsciiCasecmp(e, "gmi")) {
       return "text/gemini";
+   } else if (!dStrAsciiCasecmp(e, "gophermap")) {
+      return "text/gopher";
    } else if (!dStrAsciiCasecmp(e, "md")) {
       return "text/markdown";
    } else if (!dStrAsciiCasecmp(e, "txt")) {
