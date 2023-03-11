@@ -4006,6 +4006,7 @@ static void Html_process_tag(DilloHtml *html, char *tag, int tagsize)
 
       if (! S_TOP(html)->display_none) {
          switch (html->style ()->display) {
+            case DISPLAY_INLINE_BLOCK: // TODO: implement inline-block
             case DISPLAY_BLOCK:
                Html_display_block(html);
                break;
@@ -4016,7 +4017,6 @@ static void Html_process_tag(DilloHtml *html, char *tag, int tagsize)
                S_TOP(html)->display_none = true;
                break;
             case DISPLAY_INLINE:
-            case DISPLAY_INLINE_BLOCK: // TODO: implement inline-block
             default:
                break;
          }
@@ -4388,6 +4388,10 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    /* Restore flags */
    in_pre = S_TOP(html)->parse_mode == DILLO_HTML_PARSE_MODE_PRE;
 
+   /* Open body */
+   if (S_TOP(html)->parse_mode == DILLO_HTML_PARSE_MODE_INIT)
+      Html_process_tag(html, "<body>", strlen("<body>"));
+   
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
    buf_index = 0;

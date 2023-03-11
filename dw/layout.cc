@@ -790,7 +790,7 @@ void Layout::resizeIdle ()
       Allocation allocation;
 
       topLevel->sizeRequest (&requisition);
-
+      
       allocation.x = allocation.y = 0;
       allocation.width = requisition.width;
       allocation.ascent = requisition.ascent;

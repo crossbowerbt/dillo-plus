@@ -893,6 +893,14 @@ void Textblock::calcWidgetSize (core::Widget *widget, core::Requisition *size)
    availAscent = this->availAscent - getStyle()->boxDiffHeight ();
    availDescent = this->availDescent;
 
+   /* Calculate width using CSS (0 == LENGTH_AUTO) */
+   if(getStyle()->minWidth != 0 && getStyle()->minWidth > availWidth)
+      availWidth = getStyle()->minWidth;
+   if(getStyle()->maxWidth != 0 && getStyle()->maxWidth < availWidth)
+      availWidth = getStyle()->maxWidth;
+   if(getStyle()->width != 0)
+      widget->setWidth (getStyle()->width);
+
    if (widget->usesHints ()) {
       widget->setWidth (availWidth);
       widget->setAscent (availAscent);

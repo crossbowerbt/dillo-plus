@@ -74,7 +74,7 @@ void StyleAttrs::initValues ()
    backgroundAttachment = BACKGROUND_ATTACHMENT_SCROLL;
    backgroundPositionX = createPerLength (0);
    backgroundPositionY = createPerLength (0);
-   width = height = lineHeight = LENGTH_AUTO;
+   width = minWidth = maxWidth = height = lineHeight = LENGTH_AUTO;
    textIndent = 0;
    margin.setVal (0);
    borderWidth.setVal (0);
@@ -107,7 +107,7 @@ void StyleAttrs::resetValues ()
    backgroundAttachment = BACKGROUND_ATTACHMENT_SCROLL;
    backgroundPositionX = createPerLength (0);
    backgroundPositionY = createPerLength (0);
-   width = LENGTH_AUTO;
+   width = minWidth = maxWidth = LENGTH_AUTO;
    height = LENGTH_AUTO;
 
    margin.setVal (0);
@@ -160,6 +160,8 @@ bool StyleAttrs::equals (object::Object *other) {
        vBorderSpacing == otherAttrs->vBorderSpacing &&
        wordSpacing == otherAttrs->wordSpacing &&
        width == otherAttrs->width &&
+       minWidth == otherAttrs->minWidth &&
+       maxWidth == otherAttrs->maxWidth &&
        height == otherAttrs->height &&
        lineHeight == otherAttrs->lineHeight &&
        textIndent == otherAttrs->textIndent &&
@@ -205,6 +207,8 @@ int StyleAttrs::hashValue () {
       vBorderSpacing +
       wordSpacing +
       width +
+      minWidth +
+      maxWidth +
       height +
       lineHeight +
       textIndent +
@@ -320,6 +324,8 @@ void Style::copyAttrs (StyleAttrs *attrs)
    vBorderSpacing = attrs->vBorderSpacing;
    wordSpacing = attrs->wordSpacing;
    width = attrs->width;
+   minWidth = attrs->minWidth;
+   maxWidth = attrs->maxWidth;
    height = attrs->height;
    lineHeight = attrs->lineHeight;
    textIndent = attrs->textIndent;

@@ -674,6 +674,12 @@ void StyleEngine::apply (int i, StyleAttrs *attrs, CssPropertyList *props,
          case CSS_PROPERTY_WIDTH:
             computeLength (&attrs->width, p->value.intVal, attrs->font);
             break;
+         case CSS_PROPERTY_MIN_WIDTH:
+            computeLength (&attrs->minWidth, p->value.intVal, attrs->font);
+            break;
+        case CSS_PROPERTY_MAX_WIDTH:
+            computeLength (&attrs->maxWidth, p->value.intVal, attrs->font);
+            break;
          case CSS_PROPERTY_HEIGHT:
             computeLength (&attrs->height, p->value.intVal, attrs->font);
             break;
@@ -758,7 +764,7 @@ bool StyleEngine::computeValue (int *dest, CssLength value, Font *font) {
       case CSS_LENGTH_TYPE_MM:
          *dest = roundInt (CSS_LENGTH_VALUE (value) * dpmm);
          return true;
-      case CSS_LENGTH_TYPE_CH:
+/*    case CSS_LENGTH_TYPE_CH: */
       case CSS_LENGTH_TYPE_EM:
          *dest = roundInt (CSS_LENGTH_VALUE (value) * font->size);
          return true;

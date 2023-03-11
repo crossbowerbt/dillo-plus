@@ -228,9 +228,9 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
    {"marker-offset", {CSS_TYPE_UNUSED}, NULL},
    {"marks", {CSS_TYPE_UNUSED}, NULL},
    {"max-height", {CSS_TYPE_UNUSED}, NULL},
-   {"max-width", {CSS_TYPE_UNUSED}, NULL},
+   {"max-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
    {"min-height", {CSS_TYPE_UNUSED}, NULL},
-   {"min-width", {CSS_TYPE_UNUSED}, NULL},
+   {"min-width", {CSS_TYPE_LENGTH_PERCENTAGE, CSS_TYPE_AUTO, CSS_TYPE_UNUSED}, NULL},
    {"outline-color", {CSS_TYPE_UNUSED}, NULL},
    {"outline-style", {CSS_TYPE_UNUSED}, NULL},
    {"outline-width", {CSS_TYPE_UNUSED}, NULL},
@@ -942,7 +942,7 @@ bool CssParser::parseValue(CssPropertyName prop,
                lentype = CSS_LENGTH_TYPE_EX;
                nextToken();
             } else if (dStrAsciiCasecmp(tval, "ch") == 0) {
-               lentype = CSS_LENGTH_TYPE_CH;
+               lentype = CSS_LENGTH_TYPE_EM; /* and not CSS_LENGTH_TYPE_CH to remain in the 3bits space (see css.hh) */
                nextToken();
             } else {
                ret = false;

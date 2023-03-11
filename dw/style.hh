@@ -505,7 +505,7 @@ public:
    TextTransform textTransform;
 
    int hBorderSpacing, vBorderSpacing, wordSpacing;
-   Length width, height, lineHeight, textIndent;
+   Length width, minWidth, maxWidth, height, lineHeight, textIndent;
 
    Box margin, borderWidth, padding;
    BorderCollapse borderCollapse;

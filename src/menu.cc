@@ -650,7 +650,7 @@ static void Menu_embedded_css_cb(Fl_Widget *wid, void*)
 }
 
 /*
- * Toggle use of reade mode CSS style
+ * Toggle use of reader mode CSS style
  */
 static void Menu_reader_mode_css_cb(Fl_Widget *wid, void*)
 {

@@ -1,8 +1,17 @@
-body {
-  font-size: 19px !important;
-  margin: 0 400px 0 400px !important;
+html {
+  text-align: center !important;
 }
 
-p {
+body {
+  display: inline-block !important;
+  font-size: 19px !important;
+  max-width: 10em !important;
+}
+
+div, pre, ul, dl, ol, table, section, header, article, footer, h1, h2, h3, h4, h5, h6, h7, h8, h9 {
+  text-align: left !important;
+}
+
+p, blockquote {
   text-align: justify !important;
 }
