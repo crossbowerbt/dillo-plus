@@ -200,6 +200,12 @@ public:  //BUG: for now everything is public
    lout::misc::SimpleVector<DilloHtmlImage*> *images;
    dw::ImageMapsList maps;
 
+   /* -------------------------------------------------------------------*/
+   /* Variables used by Gemini and Markdown parsers                      */
+   /* -------------------------------------------------------------------*/
+   bool in_pre;    /* currently in a preformatted section */
+   int list_level; /* nesting level of current list */
+
 private:
    void freeParseData();
    void initDw();  /* Used by the constructor */
