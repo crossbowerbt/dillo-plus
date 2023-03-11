@@ -148,7 +148,11 @@ Textblock::DivChar Textblock::divChars[NUM_DIV_CHARS] = {
    { "\xe2\x80\x90", false, true, true, -1, PENALTY_HYPHEN },
    // em dash (U+2014): breaks on both sides are allowed (but see below).
    { "\xe2\x80\x94", false, true, false,
-     PENALTY_EM_DASH_LEFT, PENALTY_EM_DASH_RIGHT }
+     PENALTY_EM_DASH_LEFT, PENALTY_EM_DASH_RIGHT },
+   // simple dot: same penalties like automatic or soft hyphens
+   { ".", false, true, true, -1, PENALTY_HYPHEN },
+   // simple slash: same penalties like automatic or soft hyphens
+   { "/", false, true, true, -1, PENALTY_HYPHEN }
 };
 
 // Standard values are defined here. The values are already multiplied
