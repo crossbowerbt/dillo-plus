@@ -204,6 +204,7 @@ public:  //BUG: for now everything is public
    /* Variables used by Gemini and Markdown parsers                      */
    /* -------------------------------------------------------------------*/
    bool in_pre;    /* currently in a preformatted section */
+   bool in_link;   /* currently in a link content */
    int list_level; /* nesting level of current list */
 
 private:

@@ -216,11 +216,17 @@ search_url="pb The Pirate Bay https://thepiratebay.party/search/%s"
 # and bugs of that other browser -- or even disallow access in cases like
 # wget or googlebot. Remember this before submitting bug reports.
 #
-# See http://zytrax.com/tech/web/browser_ids.htm for a compilation of strings.
+# See http://zytrax.com/tech/web/browser_ids.htm for a compilation of strings
+# or https://www.useragents.me/.
 #
 # http_user_agent="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0"
 # http_user_agent="Wget/1.13.4 (linux-gnu)"
-#The default is "Dillo/"+current_version_number
+#
+# If not set "Dillo/"+current_version_number is used
+#
+# To prevent some browser fingerprinting and avoid some filters the default
+# string is set to a common user agent (in this case: Windows 10, Chrome 108):
+http_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 
 #-------------------------------------------------------------------------
 #                            COLORS SECTION

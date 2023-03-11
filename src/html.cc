@@ -456,6 +456,7 @@ DilloHtml::DilloHtml(BrowserWindow *p_bw, const DilloUrl *url,
 
    /* Init Gemini and Markdown parsers stuff */
    in_pre = false;
+   in_link = false;
    list_level = -1;
 
    /* Initialize the main widget */
@@ -4415,128 +4416,156 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    while ((buf_index < bufsize) && !html->stop_parser) {
       /* invariant: buf_index == bufsize || token_start == buf_index */
 
-      if (!in_middle_line && in_list && NEXT1CH('*')) {
-         /* close multiline list */
-         Html_process_tag(html, list_close, strlen(list_close));
-         in_list = false;
-      }
+      if(!in_middle_line) {
+         /* we are at the beginning of a line */
 
-      if (!in_middle_line && NEXT1CH('#')) {
-         /* open heading: determine the heading level (max level = 9) */
-         while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
-         in_heading = true;
-         in_middle_line = true;
-         if(in_par) { /* close par if needed */
-            in_par = false;
-            Html_process_tag(html, par_close, strlen(par_close));
+         if (in_list && NEXT1CH('*')) {
+            /* close multiline list */
+            Html_process_tag(html, list_close, strlen(list_close));
+            in_list = false;
          }
-         snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
-         snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
-         Html_process_tag(html, heading_open, strlen(heading_open));
-         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
-         token_start = buf_index;
-      }
 
-      else if (!in_middle_line && NEXT3CH('`', '`', '`')) {
-         /* open/close pre */
-         buf_index += 3;
-         if(in_pre) {
-            in_pre = false;
-            Html_process_tag(html, pre_close, strlen(pre_close));
-         } else {
-            in_pre = true;
-            Html_process_tag(html, pre_open, strlen(pre_open));
+         if (NEXT1CH('#')) {
+            /* open heading: determine the heading level (max level = 9) */
+            while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
+            in_heading = true;
+            in_middle_line = true;
+            if(in_par) { /* close par if needed */
+               in_par = false;
+               Html_process_tag(html, par_close, strlen(par_close));
+            }
+            snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
+            snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
+            Html_process_tag(html, heading_open, strlen(heading_open));
+            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            token_start = buf_index;
          }
-         while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
-            buf_index++; /* skip to next line */
-         if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
-         token_start = buf_index;
-      }
+
+         else if (NEXT3CH('`', '`', '`')) {
+            /* open/close pre */
+            buf_index += 3;
+            if(in_pre) {
+               in_pre = false;
+               Html_process_tag(html, pre_close, strlen(pre_close));
+            } else {
+               in_pre = true;
+               Html_process_tag(html, pre_open, strlen(pre_open));
+            }
+            while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
+               buf_index++; /* skip to next line */
+            if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
+            token_start = buf_index;
+         }
         
-      else if (!in_middle_line && NEXT1CH('>')) {
-         /* open quoted par */
-         buf_index++;
-         Html_process_tag(html, quote_open, strlen(quote_open));
-         in_quote = true;
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-      
-      else if (!in_middle_line && NEXT1CH('*')) {
-         /* open list or list element */
-         buf_index ++;
-         if(!in_list) { /* beginning of multiline list */
-            in_list = true;
-            Html_process_tag(html, list_open, strlen(list_open));
+         else if (NEXT1CH('>')) {
+            /* open quoted par */
+            buf_index++;
+            Html_process_tag(html, quote_open, strlen(quote_open));
+            in_quote = true;
+            in_middle_line = true;
+            token_start = buf_index;
          }
-         in_middle_line = true;
-         in_list_elem = true;
-         Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
-         token_start = buf_index;
-      }
       
-      else if (!in_middle_line && NEXT2CH('=', '>')) {
-         /* open link: determine href and text */
-         buf_index += 2;
-         in_link = true;
-         in_middle_line = true;
-         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
-         token_start = buf_index;
-         while (buf_index < bufsize && !isspace(buf[buf_index]) && buf[buf_index] != '\n')
-            buf_index++; /* read href */
-         ch = buf[buf_index]; buf[buf_index] = '\0'; /* null-terminate temporarily the href */
-         strcpy(link_open, "<a href=\"");
-         strncat(link_open, buf + token_start, sizeof(link_open) - 12);
-         strcat(link_open, "\">");
-         buf[buf_index] = ch; /* restore the correct char */
-         Html_process_tag(html, par_open, strlen(par_open));
-         Html_process_tag(html, link_open, strlen(link_open));
-         token_start = buf_index;
-      }
-
-      else if (in_middle_line && (NEXT1CH('\n') || NEXT1CH('\0'))) {
-         /* close line (and maybe section) */
-         if (in_par) {
-            Html_process_tag(html, par_close, strlen(par_close));
-            in_par = false;
-         } else if (in_heading) {
-            Html_process_tag(html, heading_close, strlen(heading_close));
-            in_heading = false;
-         } else if (in_pre) {
-            Html_process_word(html, "\n", 1);
-         } else if (in_quote) {
-            Html_process_tag(html, quote_close, strlen(quote_close));
-            in_quote = false;
-         } else if (in_link) {
-            Html_process_tag(html, link_close, strlen(link_close));
-            Html_process_tag(html, par_close, strlen(par_close));
-            in_link = false;
-         } else if (in_list_elem) {
-            Html_process_tag(html, list_elem_close, strlen(list_elem_close));
-            in_list_elem = false;
-         } else {
-           BUG_MSG("End of line but not in gemini section.\n");
+         else if (NEXT1CH('*')) {
+            /* open list or list element */
+            buf_index ++;
+            if(!in_list) { /* beginning of multiline list */
+               in_list = true;
+               Html_process_tag(html, list_open, strlen(list_open));
+            }
+            in_middle_line = true;
+            in_list_elem = true;
+            Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
+            token_start = buf_index;
          }
-         in_middle_line = false;
-         if (buf[buf_index] == '\n') buf_index++;
-         token_start = buf_index;
+      
+         else if (NEXT2CH('=', '>')) {
+            /* open link: determine href and text */
+            buf_index += 2;
+            in_link = true;
+            in_middle_line = true;
+            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            token_start = buf_index;
+            while (buf_index < bufsize && !isspace(buf[buf_index]) && buf[buf_index] != '\n')
+               buf_index++; /* read href */
+            ch = buf[buf_index]; buf[buf_index] = '\0'; /* null-terminate temporarily the href */
+            strcpy(link_open, "<a href=\"");
+            strncat(link_open, buf + token_start, sizeof(link_open) - 12);
+            strcat(link_open, "\">");
+            buf[buf_index] = ch; /* restore the correct char */
+            Html_process_tag(html, par_open, strlen(par_open));
+            Html_process_tag(html, link_open, strlen(link_open));
+            token_start = buf_index;
+         }
+
+         else if (NEXT1CH('\n')) {
+            /* empty line */
+            buf_index++;
+            Html_process_tag(html, br_tag, strlen(br_tag));
+            token_start = buf_index;
+         }
+
+         else {
+            /* no match in this section: continue to generic markup */
+            goto GENERIC_GEMINI_MARKUP;
+         }
+
+         /* a match occurred: continue with main while loop */
+         goto END_OF_CYCLE_GEMINI;
+
       }
 
-      else if (!in_middle_line && NEXT1CH('\n')) {
-         /* empty line */
-         buf_index++;
-         Html_process_tag(html, br_tag, strlen(br_tag));
-         token_start = buf_index;
+      else {
+         /* we are in the middle of a line */
+
+         if (NEXT1CH('\n') || NEXT1CH('\0')) {
+            /* close line (and maybe section) */
+            if (in_par) {
+               Html_process_tag(html, par_close, strlen(par_close));
+               in_par = false;
+            } else if (in_heading) {
+               Html_process_tag(html, heading_close, strlen(heading_close));
+               in_heading = false;
+            } else if (in_pre) {
+               Html_process_word(html, "\n", 1);
+            } else if (in_quote) {
+               Html_process_tag(html, quote_close, strlen(quote_close));
+               in_quote = false;
+            } else if (in_link) {
+               Html_process_tag(html, link_close, strlen(link_close));
+               Html_process_tag(html, par_close, strlen(par_close));
+               in_link = false;
+            } else if (in_list_elem) {
+               Html_process_tag(html, list_elem_close, strlen(list_elem_close));
+               in_list_elem = false;
+            } else {
+               BUG_MSG("End of line but not in gemini section.\n");
+            }
+            in_middle_line = false;
+            if (buf[buf_index] == '\n') buf_index++;
+            token_start = buf_index;
+         }
+
+         else {
+            /* no match in this section: continue to generic markup */
+            goto GENERIC_GEMINI_MARKUP;
+         }
+
+         /* a match occurred: continue with main while loop */
+         goto END_OF_CYCLE_GEMINI;
+
       }
 
-      else if (isspace(buf[buf_index])) {
+   GENERIC_GEMINI_MARKUP:
+
+      if (isspace(buf[buf_index])) {
          /* whitespace: group all available whitespace */
          if (!in_middle_line && !in_par && !in_pre) {
             /* start new paragraph */
             in_par = true;
             Html_process_tag(html, par_open, strlen(par_open));
          }
-         while (++buf_index < bufsize && isspace(buf[buf_index])) ;
+         while (++buf_index < bufsize && isspace(buf[buf_index]) && buf[buf_index] != '\n') ;
          Html_process_space(html, buf + token_start, buf_index - token_start);
          in_middle_line = true;
          token_start = buf_index;
@@ -4570,6 +4599,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          }
       }
 
+   END_OF_CYCLE_GEMINI:
       html->CurrOfs = html->Start_Ofs + token_start;
    }/*while*/
 
@@ -4629,6 +4659,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
    char pre_single_open[] = "<tt>", pre_single_close[] = "</tt>";
    char quote_open[] = "<blockquote>", quote_close[] = "</blockquote>";
+   char img_tag[2048] = "", img_start_tag[] = "<img src=\"", img_middle_tag[] = "\" alt=\"", img_end_tag[] = "\" />";
    char link_open[2048] = "", link_close[] = "</a>";
    char list_open[] = "<ul>", list_close[] = "</ul>";
    char list_elem_open[] = "<li>", list_elem_close[] = "</li>";
@@ -4637,8 +4668,8 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char strike_open[] = "<strike>", strike_close[] = "</strike>";
    char hor_line[] = "<hr/>";
 
-   bool in_par, in_heading, in_pre, in_pre_single, in_quote, in_list_elem, in_middle_line, in_bold, in_em, in_strike;
-   in_par = in_heading = in_pre = in_pre_single = in_quote = in_list_elem = in_middle_line = in_bold = in_em = in_strike = false;
+   bool in_par, in_link, in_heading, in_pre, in_pre_single, in_quote, in_list_elem, in_middle_line, in_bold, in_em, in_strike;
+   in_par = in_link = in_heading = in_pre = in_pre_single = in_quote = in_list_elem = in_middle_line = in_bold = in_em = in_strike = false;
 
    bool no_output = false;
    
@@ -4648,10 +4679,11 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
    /* Restore flags */
    in_pre = html->in_pre;
+   in_link = html->in_link;
    list_level = html->list_level;
 
    /* Open a body tag at the beginning */
-   if (html->CurrOfs == 0)
+   if (html->CurrOfs == 0 && !in_link)
       Html_process_tag(html, "<body>", strlen("<body>"));
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
@@ -4660,16 +4692,6 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    token_start = buf_index;
    while ((buf_index < bufsize) && !html->stop_parser) {
       /* invariant: buf_index == bufsize || token_start == buf_index */
-      
-      if(!in_middle_line && !in_pre) {
-         /* save current indent level (used by lists) */
-         curr_indent = 0;
-         if(NEXT1CH(' ') || NEXT1CH('\t')) {
-            while (++buf_index < bufsize && (NEXT1CH(' ') || NEXT1CH('\t'))) ;
-            curr_indent = buf_index - token_start;
-            token_start = buf_index;
-         }
-      }
 
       if (list_level >= (int) (sizeof(list_indents) / sizeof(list_indents[0]))) {
          /* check max list level */
@@ -4677,319 +4699,426 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          while (list_level-- >= 0) {
             Html_process_tag(html, list_close, strlen(list_close));
          }
-      } 
+      }
 
-      if (!in_middle_line && list_level >= 0 && (!NEXT2CH('-', ' ') && !NEXT2CH('+', ' ') && !NEXT2CH('*', ' '))) {
+      if(!in_middle_line && !in_pre) {
+         /* skip spaces at the beginning of the line and
+            estimate the possible indent level for a sublist */
+         curr_indent = 0;
+         if(NEXT1CH(' ') || NEXT1CH('\t')) {
+            while (++buf_index < bufsize && (NEXT1CH(' ') || NEXT1CH('\t'))) ;
+            curr_indent = buf_index - token_start;
+            token_start = buf_index;
+         }
+      }
+      
+      if (!in_middle_line && list_level >= 0 && !(NEXT2CH('-', ' ') || NEXT2CH('+', ' ') || NEXT2CH('*', ' '))) {
          /* close multiline list and sublists */
          do {
             Html_process_tag(html, list_close, strlen(list_close));
          } while(--list_level >= 0);
       }
 
-      if (!in_middle_line && NEXT1CH('#')) {
-         /* open heading: determine the heading level (max level = 9) */
-         while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
-         in_heading = true;
-         in_middle_line = true;
-         if(in_par) { /* close par if needed */
-            in_par = false;
-            Html_process_tag(html, par_close, strlen(par_close));
-         }
-         snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
-         snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
-         Html_process_tag(html, heading_open, strlen(heading_open));
-         while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
-         token_start = buf_index;
-      }
+      if(!in_middle_line) {
+         /* we are at the beginning of a line */
 
-      else if (!in_middle_line && NEXT3CH('`', '`', '`')) {
-         /* open/close pre */
-         while (++buf_index < bufsize && NEXT1CH('`')) ;
-         if(in_pre) {
-            in_pre = false;
-            Html_process_tag(html, pre_close, strlen(pre_close));
-         } else {
-            in_pre = true;
-            Html_process_tag(html, pre_open, strlen(pre_open));
-         }
-         while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
-            buf_index++; /* skip to next line */
-         if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
-         token_start = buf_index;
-      }
-        
-      else if (!in_middle_line && NEXT1CH('>')) {
-         /* open quoted par */
-         buf_index++;
-         Html_process_tag(html, quote_open, strlen(quote_open));
-         in_quote = true;
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-      
-      else if (!in_middle_line && (NEXT2CH('-', ' ') || NEXT2CH('+', ' ') || NEXT2CH('*', ' '))) {
-         /* open list or list element */
-         while (++buf_index < bufsize && isspace(buf[buf_index])) ;
-         if(list_level < 0) { /* beginning of multiline list */
-            list_indents[++list_level] = curr_indent;
-            Html_process_tag(html, list_open, strlen(list_open));
-         } else if (list_indents[list_level] < curr_indent) { /* beginning of a sublist */
-            list_indents[++list_level] = curr_indent;
-            Html_process_tag(html, list_open, strlen(list_open));
-         } else if (list_indents[list_level] > curr_indent) { /* closing of one or more sublists */
-            while (list_level >= 0 && list_indents[list_level] != curr_indent) {
-              Html_process_tag(html, list_close, strlen(list_close));
-              list_level--;
+         if (NEXT1CH('#')) {
+            /* open heading: determine the heading level (max level = 9) */
+            while (buf_index - token_start < 9 && ++buf_index < bufsize && buf[buf_index] == '#') ;
+            in_heading = true;
+            in_middle_line = true;
+            if(in_par) { /* close par if needed */
+               in_par = false;
+               Html_process_tag(html, par_close, strlen(par_close));
             }
-            if (list_level < 0) {
-               BUG_MSG("Invalid list indentation.");
-               goto SKIP_WITHOUT_ELEMENT;
+            snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
+            snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
+            Html_process_tag(html, heading_open, strlen(heading_open));
+            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            token_start = buf_index;
+         }
+
+         else if (NEXT3CH('`', '`', '`')) {
+            /* open/close pre */
+            while (++buf_index < bufsize && NEXT1CH('`')) ;
+            if(in_pre) {
+               in_pre = false;
+               Html_process_tag(html, pre_close, strlen(pre_close));
+            } else {
+               in_pre = true;
+               Html_process_tag(html, pre_open, strlen(pre_open));
             }
-         } else {
-         }
-         in_list_elem = true;
-         Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
-      SKIP_WITHOUT_ELEMENT:
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-      
-      else if (in_middle_line && (NEXT1CH('\n') || NEXT1CH('\0'))) {
-         /* close line (and maybe section) */
-
-         if (in_pre_single) {
-            Html_process_tag(html, pre_single_close, strlen(pre_single_close));
-            in_pre_single = false;
-         }
-
-         if (in_list_elem) {
-            Html_process_tag(html, list_elem_close, strlen(list_elem_close));
-            in_list_elem = false;
+            while (buf_index < bufsize && (buf[buf_index] && buf[buf_index] != '\n'))
+               buf_index++; /* skip to next line */
+            if (buf_index < bufsize && buf[buf_index] == '\n') buf_index++;
+            token_start = buf_index;
          }
         
-         if (in_par) {
-            Html_process_tag(html, par_close, strlen(par_close));
-            in_par = false;
-         } else if (in_heading) {
-            Html_process_tag(html, heading_close, strlen(heading_close));
-            in_heading = false;
-         } else if (in_pre) {
-            Html_process_word(html, "\n", 1);
-         } else if (in_quote) {
-            Html_process_tag(html, quote_close, strlen(quote_close));
-            in_quote = false;
+         else if (NEXT1CH('>')) {
+            /* open quoted par */
+            buf_index++;
+            Html_process_tag(html, quote_open, strlen(quote_open));
+            in_quote = true;
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+      
+         else if (NEXT2CH('-', ' ') || NEXT2CH('+', ' ') || NEXT2CH('*', ' ')) {
+            /* open/close list and list element */
+            
+            while (++buf_index < bufsize && isspace(buf[buf_index])) ;
+
+            if(list_level < 0 || list_indents[list_level] < curr_indent) {
+               /* beginning of a new multiline list/sublist */
+               list_indents[++list_level] = curr_indent;
+               Html_process_tag(html, list_open, strlen(list_open));
+            }
+
+            else if (list_indents[list_level] > curr_indent) {
+               /* closing of one or more sublists */
+
+               while (list_level >= 0 && list_indents[list_level] != curr_indent) {
+                  Html_process_tag(html, list_close, strlen(list_close));
+                  list_level--;
+               }
+               
+               if (list_level < 0) {
+                  BUG_MSG("Invalid list indentation.");
+                  goto SKIP_WITHOUT_ELEMENT;
+               }
+               
+            }
+
+            /* add a new list element */
+            in_list_elem = true;
+            Html_process_tag(html, list_elem_open, strlen(list_elem_open)); /* new list element */
+            
+         SKIP_WITHOUT_ELEMENT:
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (NEXT1CH('\n')) {
+            /* empty line: skip it */
+            buf_index++;
+            token_start = buf_index;
+         }
+
+         else {
+            /* no match in this section: continue to generic markup */
+            goto GENERIC_MD_MARKUP;
+         }
+
+         /* a match occurred: continue with main while loop */
+         goto END_OF_CYCLE_MD;
+         
+      }
+
+      else {
+         /* we are in the middle of a line */
+      
+         if (NEXT1CH('\n') || NEXT1CH('\0')) {
+            /* close line (and maybe section) */
+
+            if (in_pre_single) {
+               Html_process_tag(html, pre_single_close, strlen(pre_single_close));
+               in_pre_single = false;
+            }
+
+            if (in_list_elem) {
+               Html_process_tag(html, list_elem_close, strlen(list_elem_close));
+               in_list_elem = false;
+            }
+        
+            if (in_par) {
+               Html_process_tag(html, par_close, strlen(par_close));
+               in_par = false;
+            } else if (in_heading) {
+               Html_process_tag(html, heading_close, strlen(heading_close));
+               in_heading = false;
+            } else if (in_pre) {
+               Html_process_word(html, "\n", 1);
+            } else if (in_quote) {
+               Html_process_tag(html, quote_close, strlen(quote_close));
+               in_quote = false;
+            }
+         
+            in_middle_line = false;
+            if (buf[buf_index] == '\n') buf_index++;
+            token_start = buf_index;
+         }
+
+         else {
+            /* no match in this section: continue to generic markup */
+            goto GENERIC_MD_MARKUP;
+         }
+
+         /* a match occurred: continue with main while loop */
+         goto END_OF_CYCLE_MD;
+
+      }
+
+   GENERIC_MD_MARKUP:
+      /* markup that doesn't depend on its position in a line */
+      
+      if(!in_pre) {
+         /* we are not in a preformatted section */
+
+         if (NEXT3CH('-', '-', '-')) {
+            /* horizontal line */
+            while (++buf_index < bufsize && NEXT1CH('-')) ;
+            Html_process_tag(html, hor_line, strlen(hor_line));
+            token_start = buf_index;
          }
          
-         in_middle_line = false;
-         if (buf[buf_index] == '\n') buf_index++;
-         token_start = buf_index;
-      }
-
-      else if (!in_middle_line && NEXT1CH('\n')) {
-         /* empty line: skip it */
-         buf_index++;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && (NEXT3CH('-', '-', '-'))) {
-         /* horizontal line */
-         while (++buf_index < bufsize && NEXT1CH('-')) ;
-         Html_process_tag(html, hor_line, strlen(hor_line));
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && NEXT1CH('`')) {
-         /* open/close pre single line */
-         buf_index++;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         if(in_pre_single) {
-            in_pre_single = false;
-            Html_process_tag(html, pre_single_close, strlen(pre_single_close));
-         } else {
-            in_pre_single = true;
-            Html_process_tag(html, pre_single_open, strlen(pre_single_open));
-         }
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre &&
-               (NEXT3CH('<', 'p', '>') || NEXT3CH('<', 'p', ' ') || NEXT4CH('<', '/', 'p', '>')     || /* P tag */
-                NEXT5CH('<', 'i', 'm', 'g', ' ') || NEXT6CH('<', '/', 'i', 'm', 'g', '>')           || /* IMG tag */
-                NEXT3CH('<', 'a', ' ') || NEXT4CH('<', '/', 'a', '>')                               || /* A tag */
-                NEXT6CH('<', 's', 'p', 'a', 'n', ' ') || NEXT7CH('<', '/', 's', 'p', 'a', 'n', '>') || /* SPAN tag */
-                NEXT5CH('<', 's', 'u', 'b', '>') || NEXT6CH('<', '/', 's', 'u', 'b', '>')           || /* SUB tag */
-                NEXT5CH('<', 's', 'u', 'p', '>') || NEXT6CH('<', '/', 's', 'u', 'p', '>')           || /* SUP tag */
-                NEXT4CH('<', '!', '-', '-')                                                         || /* HTML comment */
-                0)) {
-         /* supported html tags */
-         if (!in_middle_line && !in_par && !buf[buf_index+1] &&
-             !(NEXT3CH('<', 'p', '>') || NEXT3CH('<', 'p', ' '))) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         if (in_par && NEXT4CH('<', '/', 'p', '>')) {
-            in_par = false;
-         }
-         if (NEXT6CH('<', '/', 'i', 'm', 'g', '>') || NEXT4CH('<', '!', '-', '-')) /* some tags do not require output */
-            no_output = true;
-         while (++buf_index < bufsize && buf[buf_index] != '>') ;
-         buf_index++;
-         if(!no_output)
-           Html_process_tag(html, buf + token_start, buf_index - token_start);
-         no_output = false;
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && (NEXT1CH('<') || NEXT1CH('~'))) {
-         /* just characters: process as word */
-         buf_index++;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         ch = buf[buf_index];
-         buf[buf_index] = '\0';
-         Html_process_word(html, buf + token_start, buf_index - token_start);
-         buf[buf_index] = ch;
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (isspace(buf[buf_index])) {
-         /* whitespace: group all available whitespace */
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         while (++buf_index < bufsize && isspace(buf[buf_index])) ;
-         Html_process_space(html, buf + token_start, buf_index - token_start);
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && !in_pre_single && NEXT2CH('~', '~')) {
-         /* strikethrough text */
-         buf_index += 2;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         if(in_strike) {
-           in_strike = false;
-           Html_process_tag(html, strike_close, strlen(strike_close));
-         } else {
-           in_strike = true;
-           Html_process_tag(html, strike_open, strlen(strike_open));
-         }
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && !in_pre_single && (NEXT2CH('*', '*') || NEXT2CH('_', '_'))) {
-         /* bold text */
-         buf_index += 2;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         if(in_bold) {
-           in_bold = false;
-           Html_process_tag(html, bold_close, strlen(bold_close));
-         } else {
-           in_bold = true;
-           Html_process_tag(html, bold_open, strlen(bold_open));
-         }
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && !in_pre_single && (NEXT1CH('*') || NEXT1CH('_'))) {
-         /* italic text */
-         buf_index++;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         if (buf_index > 1 && buf[buf_index-2] == '\\') {
-           ch = buf[buf_index];
-           buf[buf_index] = '\0';
-           Html_process_word(html, buf + token_start, buf_index - token_start);
-           buf[buf_index] = ch;
-         } else if(in_em) {
-           in_em = false;
-           Html_process_tag(html, em_close, strlen(em_close));
-         } else {
-           in_em = true;
-           Html_process_tag(html, em_open, strlen(em_open));
-         }
-         in_middle_line = true;
-         token_start = buf_index;
-      }
-
-      else if (!in_pre && NEXT1CH('[') && validate_md_link(buf + buf_index, bufsize - buf_index)) {
-         /* link: determine href and text */
-         buf_index++;
-         if (!in_middle_line && !in_par && !in_pre) {
-            /* start new paragraph */
-            in_par = true;
-            Html_process_tag(html, par_open, strlen(par_open));
-         }
-         link_level=1;
-         while (buf_index < bufsize) { /* find end of text */
-            if(buf[buf_index] == '[')
-               link_level++;
-            else if(buf[buf_index] == ']')
-               link_level--;
-            else if(buf[buf_index] == '\n' || buf[buf_index] == '\0')
-               break;
-            if(link_level == 0)
-               break;
+         else if (NEXT1CH('`')) {
+            /* open/close pre single line */
             buf_index++;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            if(in_pre_single) {
+               in_pre_single = false;
+               Html_process_tag(html, pre_single_close, strlen(pre_single_close));
+            } else {
+               in_pre_single = true;
+               Html_process_tag(html, pre_single_open, strlen(pre_single_open));
+            }
+            in_middle_line = true;
+            token_start = buf_index;
          }
-         if(!(buf_index+1 < bufsize) || buf[++buf_index] != '(') {
-            /* not a link */
-            Html_process_word(html, buf + token_start,
-                              buf_index - token_start);
-         } else {
-            tmp = buf_index++;
-            while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of href */
+
+         else if (NEXT3CH('<', 'p', '>') || NEXT3CH('<', 'p', ' ') || NEXT4CH('<', '/', 'p', '>')     || /* P tag */
+                  NEXT5CH('<', 'i', 'm', 'g', ' ') || NEXT6CH('<', '/', 'i', 'm', 'g', '>')           || /* IMG tag */
+                  NEXT3CH('<', 'a', ' ') || NEXT4CH('<', '/', 'a', '>')                               || /* A tag */
+                  NEXT6CH('<', 's', 'p', 'a', 'n', ' ') || NEXT7CH('<', '/', 's', 'p', 'a', 'n', '>') || /* SPAN tag */
+                  NEXT5CH('<', 's', 'u', 'b', '>') || NEXT6CH('<', '/', 's', 'u', 'b', '>')           || /* SUB tag */
+                  NEXT5CH('<', 's', 'u', 'p', '>') || NEXT6CH('<', '/', 's', 'u', 'p', '>')           || /* SUP tag */
+                  NEXT4CH('<', '!', '-', '-')                                                         || /* HTML comment */
+                  0) {
+            /* supported html tags */
+
+            if (!in_middle_line && !in_par && !in_link && !buf[buf_index+1] &&
+                !(NEXT3CH('<', 'p', '>') || NEXT3CH('<', 'p', ' '))) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            
+            if (in_par && NEXT4CH('<', '/', 'p', '>')) {
+               in_par = false;
+            }
+            
+            if (NEXT6CH('<', '/', 'i', 'm', 'g', '>') || NEXT4CH('<', '!', '-', '-')) /* some tags do not require output */
+               no_output = true;
+
+            while (++buf_index < bufsize && buf[buf_index] != '>') ;
+            buf_index++;
+
+            if(!no_output)
+               Html_process_tag(html, buf + token_start, buf_index - token_start);
+
+            no_output = false;
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (!in_pre_single && NEXT2CH('~', '~')) {
+            /* strikethrough text */
+            buf_index += 2;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            if(in_strike) {
+               in_strike = false;
+               Html_process_tag(html, strike_close, strlen(strike_close));
+            } else {
+               in_strike = true;
+               Html_process_tag(html, strike_open, strlen(strike_open));
+            }
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (!in_pre_single && (NEXT2CH('*', '*') || NEXT2CH('_', '_'))) {
+            /* bold text */
+            buf_index += 2;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            if(in_bold) {
+               in_bold = false;
+               Html_process_tag(html, bold_close, strlen(bold_close));
+            } else {
+               in_bold = true;
+               Html_process_tag(html, bold_open, strlen(bold_open));
+            }
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (!in_pre_single && (NEXT1CH('*') || NEXT1CH('_'))) {
+            /* italic text */
+            buf_index++;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            if (buf_index > 1 && buf[buf_index-2] == '\\') {
+               ch = buf[buf_index];
+               buf[buf_index] = '\0';
+               Html_process_word(html, buf + token_start, buf_index - token_start);
+               buf[buf_index] = ch;
+            } else if(in_em) {
+               in_em = false;
+               Html_process_tag(html, em_close, strlen(em_close));
+            } else {
+               in_em = true;
+               Html_process_tag(html, em_open, strlen(em_open));
+            }
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (NEXT2CH('!', '[') && validate_md_link(buf + buf_index + 1, bufsize - buf_index - 1)) {
+            /* image: determine src and text */
+            buf_index += 2;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            link_level=1;
+            while (buf_index < bufsize) { /* find end of alt text */
+               if(buf[buf_index] == '[')
+                  link_level++;
+               else if(buf[buf_index] == ']')
+                  link_level--;
+               else if(buf[buf_index] == '\n' || buf[buf_index] == '\0')
+                  break;
+               if(link_level == 0)
+                  break;
+               buf_index++;
+            }
+            if(!(buf_index+1 < bufsize) || buf[++buf_index] != '(') {
+               /* not a link */
+               Html_process_word(html, buf + token_start,
+                                 buf_index - token_start);
+            } else {
+               tmp = buf_index++;
+               while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of src */
+               buf[buf_index] = '\0';
+               strcpy(img_tag, img_start_tag);
+               if (strlen(buf + tmp + 1) < ((sizeof(img_tag) - 200) / 2)) /* note: we keep a larger margin than necessary */
+                  strcat(img_tag, buf + tmp + 1);
+               else
+                  BUG_MSG("Image src attribute too long");
+               strcat(img_tag, img_middle_tag);
+               buf[buf_index] = ')';
+               buf_index++;
+               buf[tmp-1] = '\0';
+               if (strlen(buf + token_start + 2) < ((sizeof(img_tag) - 200) / 2)) /* note: we keep a larger margin than necessary */
+                  strcat(img_tag, buf + token_start + 2);
+               else
+                  BUG_MSG("Image alt text attribute too long");
+               strcat(img_tag, img_end_tag);
+               buf[tmp-1] = ']';
+               Html_process_tag(html, img_tag, strlen(img_tag)); /* send img tag */
+            }
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+         
+         else if (NEXT1CH('[') && validate_md_link(buf + buf_index, bufsize - buf_index)) {
+            /* link: determine href and text */
+            buf_index++;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            link_level=1;
+            while (buf_index < bufsize) { /* find end of text */
+               if(buf[buf_index] == '[')
+                  link_level++;
+               else if(buf[buf_index] == ']')
+                  link_level--;
+               else if(buf[buf_index] == '\n' || buf[buf_index] == '\0')
+                  break;
+               if(link_level == 0)
+                  break;
+               buf_index++;
+            }
+            if(!(buf_index+1 < bufsize) || buf[++buf_index] != '(') {
+               /* not a link */
+               Html_process_word(html, buf + token_start,
+                                 buf_index - token_start);
+            } else {
+               tmp = buf_index++;
+               while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of href */
+               buf[buf_index] = '\0';
+               strcpy(link_open, "<a href=\"");
+               strncat(link_open, buf + tmp + 1, sizeof(link_open) - 12);
+               strcat(link_open, "\">");
+               buf[buf_index] = ')';
+               Html_process_tag(html, link_open, strlen(link_open)); /* send open link tag */
+               buf_index++;
+               buf[tmp-1] = '\0';
+               /* process link content recursively */
+               html->in_link = true;
+               Markdown_write_raw(html, buf + token_start + 1, tmp - token_start - 2, 1);
+               html->in_link = false;
+               buf[tmp-1] = ']';
+               Html_process_tag(html, link_close, strlen(link_close)); /* send link close tag */
+            }
+            in_middle_line = true;
+            token_start = buf_index;
+         }
+
+         else if (NEXT1CH('<') || NEXT1CH('~') || NEXT1CH('[')) {
+            /* just characters: process as word */
+            buf_index++;
+            if (!in_middle_line && !in_par && !in_link && !in_pre) {
+               /* start new paragraph */
+               in_par = true;
+               Html_process_tag(html, par_open, strlen(par_open));
+            }
+            ch = buf[buf_index];
             buf[buf_index] = '\0';
-            strcpy(link_open, "<a href=\"");
-            strncat(link_open, buf + tmp + 1, sizeof(link_open) - 12);
-            strcat(link_open, "\">");
-            buf[buf_index] = ')';
-            Html_process_tag(html, link_open, strlen(link_open)); /* send open link tag */
-            buf_index++;
-            buf[tmp-1] = '\0';
-            Html_process_word(html, buf + token_start + 1, tmp - token_start - 1); /* send link text */
-            buf[tmp-1] = ']';
-            Html_process_tag(html, link_close, strlen(link_close)); /* send link close tag */
+            Html_process_word(html, buf + token_start, buf_index - token_start);
+            buf[buf_index] = ch;
+            in_middle_line = true;
+            token_start = buf_index;
          }
-         in_middle_line = true;
-         token_start = buf_index;
+
+         else {
+            /* no match in this section: continue to preformatted indipendent text */
+            goto GENERIC_MD_MARKUP_PRE_INDIPENDENT;
+         }
+
+         /* a match occurred: continue with main while loop */
+         goto END_OF_CYCLE_MD;
+
       }
 
-      else if (!in_pre && NEXT1CH('[')) {
-         /* not a link, just a character */
-         buf_index++;
-         if (!in_middle_line && !in_par && !in_pre) {
+   GENERIC_MD_MARKUP_PRE_INDIPENDENT:
+
+      if (isspace(buf[buf_index])) {
+         /* whitespace: group all available whitespace */
+         if (!in_middle_line && !in_par && !in_link && !in_pre) {
             /* start new paragraph */
             in_par = true;
             Html_process_tag(html, par_open, strlen(par_open));
          }
-         Html_process_word(html, "[", 1);
+         while (++buf_index < bufsize && isspace(buf[buf_index]) && buf[buf_index] != '\n') ;
+         Html_process_space(html, buf + token_start, buf_index - token_start);
          in_middle_line = true;
          token_start = buf_index;
       }
@@ -4997,12 +5126,12 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
       else {
          /* a word: add to section */
 
-         if (!in_middle_line && !in_par && !in_pre) {
+         if (!in_middle_line && !in_par && !in_link && !in_pre) {
             /* start new paragraph */
             in_par = true;
             in_middle_line = true;
             Html_process_tag(html, par_open, strlen(par_open));
-         } else if (!in_middle_line && in_pre) {
+         } else if (!in_middle_line && (in_pre || in_link)) {
             in_middle_line = true;
          } else if (!in_middle_line) {
             in_middle_line = true;
@@ -5010,16 +5139,16 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          }
 
          if(!in_pre) 
-           while (buf_index < bufsize) {
-              buf_index += strcspn(buf + buf_index, " _~`*<[\n");
-              if (buf[buf_index] == '_' && isalnum(buf[buf_index + 1]) && isalnum(buf[buf_index - 1])) {
-                 buf_index++;
-                 continue;
-              }
-              break;
-           }
+            while (buf_index < bufsize) {
+               buf_index += strcspn(buf + buf_index, " _~`*<[\n");
+               if (buf[buf_index] == '_' && isalnum(buf[buf_index + 1]) && isalnum(buf[buf_index - 1])) {
+                  buf_index++;
+                  continue;
+               }
+               break;
+            }
          else
-           buf_index += strcspn(buf + buf_index, " \n");
+            buf_index += strcspn(buf + buf_index, " \n");
 
          if (buf_index < bufsize || Eof) {
             /* successfully found end of word */
@@ -5032,11 +5161,55 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          }
       }
 
+   END_OF_CYCLE_MD:
+
       html->CurrOfs = html->Start_Ofs + token_start;
    }/*while*/
 
+   if (in_link) {
+      /* close all pending tags if we are inside the content of a link */
+      
+      if (in_pre_single) {
+         Html_process_tag(html, pre_single_close, strlen(pre_single_close));
+      }
+
+      if (in_list_elem) {
+         Html_process_tag(html, list_elem_close, strlen(list_elem_close));
+      }
+        
+      if (in_par) {
+         Html_process_tag(html, par_close, strlen(par_close));
+      }
+
+      if (in_heading) {
+         Html_process_tag(html, heading_close, strlen(heading_close));
+      }
+
+      if (in_pre) {
+         Html_process_tag(html, pre_close, strlen(pre_close));
+      }
+
+      if (in_quote) {
+         Html_process_tag(html, quote_close, strlen(quote_close));
+      }
+
+      if (in_bold) {
+         Html_process_tag(html, bold_close, strlen(bold_close));
+      }
+
+      if (in_em) {
+         Html_process_tag(html, em_close, strlen(em_close));
+      }
+
+      if (in_strike) {
+         Html_process_tag(html, strike_close, strlen(strike_close));
+      }
+
+   }
+
    /* save status */
    html->in_pre = in_pre;
+   html->in_link = in_link;
    html->list_level = list_level;
 
    HT2TB(html)->flush ();

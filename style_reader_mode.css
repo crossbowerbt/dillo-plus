@@ -11,11 +11,17 @@ body {
 button, input, div, pre, ul, dl, ol, table, section, header, article, footer, span, em, b, a, form, h1, h2, h3, h4, h5, h6, h7, h8, h9 {
   text-align: left !important;
   max-width: 180px !important;
+  margin: auto !important;
+}
+
+h1, h2, h3, h4, h5, h6, h7, h8, h9 {
+  padding: 16px 0 16px 0;
 }
 
 p, blockquote {
   text-align: justify !important;
   max-width: 180px !important;
+  margin: auto !important;
 }
 
 img {
@@ -23,4 +29,5 @@ img {
   max-width: 610px !important;
   width: auto !important;
   height: auto !important;
+  margin: auto !important;
 }

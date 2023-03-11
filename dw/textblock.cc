@@ -1682,8 +1682,9 @@ void Textblock::calcTextSize (const char *text, size_t len,
 }
 
 /**
- * Add a word to the page structure. If it contains dividing
- * characters (hard or soft hyphens, em-dashes, etc.), it is divided.
+ * Add a word to the page structure and (eventually) divide it.
+ * If the word contains dividing characters (hard or soft hyphens, em-dashes, etc.),
+ * it is divided. If the word is longer than MAX_UNBROKEN_WORD_LENGTH it is also divided.
  */
 void Textblock::addText (const char *text, size_t len,
                          core::style::Style *style)
@@ -1692,8 +1693,9 @@ void Textblock::addText (const char *text, size_t len,
 
    // Count dividing characters.
    int numParts = 1;
+   int utf8_char_count = 0;
 
-   for (const char *s = text; s; s = nextUtf8Char (s, text + len - s)) {
+   for (const char *s = text; s; s = nextUtf8Char (s, text + len - s), utf8_char_count++) {
       int foundDiv = -1;
       for (int j = 0; foundDiv == -1 && j < NUM_DIV_CHARS; j++) {
          int lDiv = strlen (divChars[j].s);
@@ -1701,6 +1703,11 @@ void Textblock::addText (const char *text, size_t len,
             if (memcmp (s, divChars[j].s, lDiv * sizeof (char)) == 0)
                foundDiv = j;
          }
+      }
+
+      if (foundDiv == -1 && utf8_char_count > MAX_UNBROKEN_WORD_LENGTH) {
+         numParts ++;
+         utf8_char_count = 0;
       }
 
       if (foundDiv != -1) {
@@ -1739,7 +1746,8 @@ void Textblock::addText (const char *text, size_t len,
       partStart[0] = 0;
       partEnd[numParts - 1] = len;
 
-      for (const char *s = text; s; s = nextUtf8Char (s, text + len - s)) {
+      utf8_char_count = 0;
+      for (const char *s = text; s; s = nextUtf8Char (s, text + len - s), utf8_char_count++) {
          int foundDiv = -1;
          for (int j = 0; foundDiv == -1 && j < NUM_DIV_CHARS; j++) {
             int lDiv = strlen (divChars[j].s);
@@ -1747,6 +1755,18 @@ void Textblock::addText (const char *text, size_t len,
                if (memcmp (s, divChars[j].s, lDiv * sizeof (char)) == 0)
                   foundDiv = j;
             }
+         }
+
+         if (foundDiv == -1 && utf8_char_count > MAX_UNBROKEN_WORD_LENGTH) {
+            utf8_char_count = 0;
+	    partPenaltyIndex[n] = PENALTY_HYPHEN;
+	    charRemoved[n] = false;
+	    permDivChar[n] = false;
+	    unbreakableForMinWidth[n] = false;
+	    canBeHyphenated[n + 1] = false;
+	    partEnd[n] = s - text;
+	    partStart[n + 1] = s - text;
+	    n++;
          }
          
          if (foundDiv != -1) {
