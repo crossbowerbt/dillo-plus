@@ -87,7 +87,7 @@ class EpubDls(zip.ZipDls):
                 
 		rootfiles = parser.getElementsByTagName('rootfile')
 		for rootfile in rootfiles:
-			if rootfile.getAttribute('full-path').endswith('content.opf'):
+			if rootfile.getAttribute('full-path').endswith('.opf'):
 				content_opf_fullpath = rootfile.getAttribute('full-path')
 
                 # read table of content from content.opf

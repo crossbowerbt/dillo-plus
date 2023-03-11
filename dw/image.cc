@@ -175,7 +175,12 @@ void Image::sizeRequestImpl (core::Requisition *requisition)
           core::style::isAbsLength (getStyle ()->width) &&
           buffer->getRootWidth () > 0) {
          // preserve aspect ratio when only width is given
-         requisition->width = core::style::absLengthVal (getStyle ()->width);
+         if (core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
+             core::style::absLengthVal (getStyle ()->maxWidth) < core::style::absLengthVal (getStyle ()->width))
+            // take max-width into account
+            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
+         else
+            requisition->width = core::style::absLengthVal (getStyle ()->width);
          requisition->ascent = buffer->getRootHeight () *
                                requisition->width / buffer->getRootWidth ();
       } else if (getStyle ()->width == core::style::LENGTH_AUTO &&
@@ -185,9 +190,23 @@ void Image::sizeRequestImpl (core::Requisition *requisition)
          requisition->ascent = core::style::absLengthVal (getStyle ()->height);
          requisition->width = buffer->getRootWidth () *
                                requisition->ascent / buffer->getRootHeight ();
+         // adjust for max-width
+         if(core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
+            core::style::absLengthVal (getStyle ()->maxWidth) < requisition->width) {
+            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
+            requisition->ascent = buffer->getRootHeight () *
+                                  requisition->width / buffer->getRootWidth ();
+         }
       } else {
          requisition->width = buffer->getRootWidth ();
          requisition->ascent = buffer->getRootHeight ();
+         // adjust for max-width
+         if(core::style::absLengthVal (getStyle ()->maxWidth) > 0 &&
+            core::style::absLengthVal (getStyle ()->maxWidth) < requisition->width) {
+            requisition->width = core::style::absLengthVal (getStyle ()->maxWidth);
+            requisition->ascent = buffer->getRootHeight () *
+                                  requisition->width / buffer->getRootWidth ();
+         }
       }
       requisition->descent = 0;
    } else {
