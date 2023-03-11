@@ -35,8 +35,6 @@
  * TODO: a lot of things, this is just a bare bones example.
  *
  * For instance:
- * - Handle cookies (now that they arrive with the dpip tag, it needs
- *   testing).
  * - Certificate authentication (asking the user in case it can't be verified)
  * - Certificate management.
  * - Session caching ...

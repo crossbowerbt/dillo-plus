@@ -158,6 +158,8 @@ dillo: dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.
 
 clean:
 	rm -f *.o *.a dillo
+	@echo "Making clean in IO"
+	@(cd IO; make clean)
 
 install: all
 	$(INSTALL_SH) -c -d "$(DILLO_BINDIR)"

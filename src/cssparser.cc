@@ -941,6 +941,9 @@ bool CssParser::parseValue(CssPropertyName prop,
             } else if (dStrAsciiCasecmp(tval, "ex") == 0) {
                lentype = CSS_LENGTH_TYPE_EX;
                nextToken();
+            } else if (dStrAsciiCasecmp(tval, "ch") == 0) {
+               lentype = CSS_LENGTH_TYPE_CH;
+               nextToken();
             } else {
                ret = false;
             }

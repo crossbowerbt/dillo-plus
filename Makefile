@@ -63,6 +63,8 @@ install: all
 	$(INSTALL) -c dillo-install-hyphenation "$(DILLO_BINDIR)"
 	./install-sh -c -d "$(DILLO_ETCDIR)"
 	$(INSTALL) -c -m 644 dillorc "$(DILLO_ETCDIR)"
+	$(INSTALL) -c -m 644 style.css "$(DILLO_ETCDIR)"
+	$(INSTALL) -c -m 644 style_reader_mode.css "$(DILLO_ETCDIR)"
 
 uninstall:
 	@echo Making uninstall in lout
@@ -85,3 +87,5 @@ uninstall:
 	@(cd test; make uninstall)
 	rm -f "$(DILLO_BINDIR)/dillo-install-hyphenation"
 	rm -f "$(DILLO_ETCDIR)/dillorc"
+	rm -f "$(DILLO_ETCDIR)/style.css"
+	rm -f "$(DILLO_ETCDIR)/style_reader_mode.css"

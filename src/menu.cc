@@ -649,6 +649,18 @@ static void Menu_embedded_css_cb(Fl_Widget *wid, void*)
    a_UIcmd_repush(popup_bw);
 }
 
+/*
+ * Toggle use of reade mode CSS style
+ */
+static void Menu_reader_mode_css_cb(Fl_Widget *wid, void*)
+{
+   Fl_Menu_Item *item = (Fl_Menu_Item*) wid;
+
+   item->flags ^= FL_MENU_VALUE;
+   prefs.load_reader_mode_css = item->flags & FL_MENU_VALUE ? 1 : 0;
+   a_UIcmd_repush(popup_bw);
+}
+
 static void Menu_panel_change_cb(Fl_Widget*, void *user_data)
 {
    UI *ui = (UI*)popup_bw->ui;
@@ -700,7 +712,8 @@ void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
 
    static Fl_Menu_Item pm[] = {
       {"Use remote CSS", 0, Menu_remote_css_cb, 0, FL_MENU_TOGGLE,0,0,0,0},
-      {"Use embedded CSS", 0, Menu_embedded_css_cb, 0,
+      {"Use embedded CSS", 0, Menu_embedded_css_cb, 0, FL_MENU_TOGGLE,0,0,0,0},
+      {"Use reader mode CSS", 0, Menu_reader_mode_css_cb, 0,
        FL_MENU_TOGGLE|FL_MENU_DIVIDER,0,0,0,0},
       {"Load images", 0, Menu_imgload_toggle_cb, 0,
        FL_MENU_TOGGLE,0,0,0,0},
@@ -725,12 +738,14 @@ void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
       pm[0].set();
    if (prefs.parse_embedded_css)
       pm[1].set();
-   if (prefs.load_images)
+   if (prefs.load_reader_mode_css)
       pm[2].set();
-   if (prefs.load_background_images)
+   if (prefs.load_images)
       pm[3].set();
-   pm[5+cur_panelsize].setonly();
-   cur_smallicons ? pm[8].set() : pm[8].clear();
+   if (prefs.load_background_images)
+      pm[4].set();
+   pm[6+cur_panelsize].setonly();
+   cur_smallicons ? pm[9].set() : pm[9].clear();
 
    item = pm->popup(x, y);
    if (item) {

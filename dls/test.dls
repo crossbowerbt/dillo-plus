@@ -1,0 +1,23 @@
+#!/bin/sh
+
+cat << EOD
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+
+<h1>SYSTEM INFO</h1>
+<em>Time: `date`</em>
+
+<hr/>
+
+<pre>
+DLS args: $0 $1
+
+`uname -a`
+
+`uptime`
+
+`df -h`
+
+`top -b`
+</pre>
+EOD

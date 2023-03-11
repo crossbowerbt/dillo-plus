@@ -1,0 +1,22 @@
+h1, h2, h3, h4, h5, h6, h7, h8, h9 {
+  color: black;
+  line-height:1.2
+}
+
+a {
+  color: #004b6b;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #6d4100;
+}
+
+body {
+  font-family: 'Garamond', 'Georgia', serif;
+  font-size: 17px;
+  background-color: #fff;
+  color: #3e4349;
+  margin: 0 15px 0 15px;
+  padding: 0;
+}

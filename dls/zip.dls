@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+
+import sys
+import zipfile
+import urllib.parse
+
+MAIN_PAGE_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>DLS ZIP</TITLE>
+</HEAD>
+<BODY><H1>DLS ZIP Main Page</H1>
+<em>This DLS is a viewer for ZIP files (and EPUB too...)</em>
+<p>Choose a file to start:</p>
+<form>
+<input name="path" placeholder="zip file path" />
+<input type=submit />
+</form>
+</table>
+</BODY></HTML>
+"""
+
+DIRECTORY_LISTING_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <BASE href='{url}'>
+ <TITLE>{url}</TITLE>
+</HEAD>
+<BODY><H1>Directory listing of {url}</H1>
+<br><br>
+<table border=0 cellpadding=1 cellspacing=0 bgcolor=#E0E0E0 width=100%>
+<tr align=center><td><td width=60%><b>Filename</b><td><b>Type</b><td><b>Size</b><td><b>Modified&nbsp;at</b>
+{rows}
+</table>
+</BODY></HTML>
+"""
+
+ROW_TEMPLATE = """
+<tr align=center bgcolor={bgcolor}><td>{dirsym}<td align=left><a href='{href}'>{name}</a><td>{type}<td>{size}&nbsp;bytes<td>{date}
+"""
+
+ROW_COLORS = [ "#dcdcdc", "" ]
+
+def get_mime_type(filename):
+	"""Get mime type based on filename"""
+
+	if filename.endswith('.html') or filename.endswith('.xhtml'):
+		return 'text/html'
+
+	if filename.endswith('.xml') or filename.endswith('.ncx') or filename.endswith('.opf'):
+		return 'text/xml'
+
+	elif filename.endswith('.txt'):
+		return 'text/plain'
+
+	elif filename.endswith('.css'):
+		return 'text/css'
+
+	elif filename.endswith('.png'):
+		return 'image/png'
+
+	elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
+		return 'image/jpeg'
+
+	elif filename.endswith('.gif'):
+		return 'image/gif'
+
+	return 'application/octet-stream'
+
+def get_file_info():
+	"""Get zip file info"""
+
+	rows = []
+	i = 0
+
+	base_url = "dls://" + sys.argv[0]
+	path = ""
+	subpath = ""
+
+	if len(sys.argv) > 1:
+
+		if "&" in sys.argv[1]:
+			path, subpath = sys.argv[1].split("&")
+		else:
+			path = sys.argv[1]
+
+		path = path.replace('path=', '')
+		path = urllib.parse.unquote(path)
+		path = path.replace('+',' ')
+
+		subpath = subpath.replace('subpath=', '')
+		subpath = urllib.parse.unquote(subpath)
+		subpath = subpath.replace('+',' ')
+
+	if len(path) == 0:
+		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+		print(MAIN_PAGE_TEMPLATE, end="")
+		return
+
+	with zipfile.ZipFile(path) as file:
+
+		if len(subpath) > 0:
+			# extract archive file
+
+			type = get_mime_type(subpath)
+
+			with file.open(subpath) as subfile:
+				buffer = subfile.read()
+				print("HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n".format(type, len(buffer)), end="")
+				sys.stdout.flush()
+				sys.stdout.buffer.write(buffer)
+
+		else:
+			# list archive content
+
+			archive = file.infolist()
+
+			for inner_file in archive:
+
+				dirsym = ""
+				type = get_mime_type(inner_file.filename)
+
+				if inner_file.is_dir():
+					dirsym = ">"
+					type = "Directory"
+
+				rows.append(ROW_TEMPLATE.format(
+					bgcolor=ROW_COLORS[i],
+					dirsym=dirsym,
+					href=base_url + "?" + path + "&" + inner_file.filename,
+					name=inner_file.filename,
+					type=type,
+					size=inner_file.file_size,
+					date="{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
+						inner_file.date_time[0], inner_file.date_time[1],
+						inner_file.date_time[2], inner_file.date_time[3],
+						inner_file.date_time[4], inner_file.date_time[5]
+					)
+				))
+
+				i = (i + 1) % len(ROW_COLORS)
+
+			print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
+			print(DIRECTORY_LISTING_TEMPLATE.format(url=path, rows='\n'.join(rows)), end="")
+
+def main():
+	try:
+		get_file_info()
+	except Exception as e:
+		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
+		print("<b>Execution error:</b> ", end="")
+		print(e, end="")
+
+if __name__ == "__main__":
+	main()

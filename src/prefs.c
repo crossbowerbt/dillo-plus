@@ -76,6 +76,7 @@ void a_Prefs_init(void)
    prefs.no_proxy = dStrdup(PREFS_NO_PROXY);
    prefs.panel_size = P_medium;
    prefs.parse_embedded_css=TRUE;
+   prefs.load_reader_mode_css=FALSE;
    prefs.save_dir = dStrdup(PREFS_SAVE_DIR);
    prefs.search_urls = dList_new(16);
    dList_append(prefs.search_urls, dStrdup(PREFS_SEARCH_URL));

@@ -2630,8 +2630,21 @@ static void Html_tag_open_source(DilloHtml *html, const char *tag,
 static void Html_tag_content_source(DilloHtml *html, const char *tag,
                                     int tagsize)
 {
-   if ((html->InFlags & IN_MEDIA) && a_Html_get_attr(html, tag, tagsize,"src"))
+   if ((html->InFlags & IN_MEDIA) && a_Html_get_attr(html, tag, tagsize, "src")) {
       HT2TB(html)->addText("[MEDIA SOURCE]", html->wordStyle ());
+      if(a_Html_get_attr(html, tag, tagsize, "label")) {
+         HT2TB(html)->addText(" ", html->wordStyle ());
+         HT2TB(html)->addText(a_Html_get_attr(html, tag, tagsize, "label"),
+                              html->wordStyle ());
+      }
+      if(a_Html_get_attr(html, tag, tagsize, "type")) {
+         HT2TB(html)->addText(" [", html->wordStyle ());
+         HT2TB(html)->addText(a_Html_get_attr(html, tag, tagsize, "type"),
+                              html->wordStyle ());
+         HT2TB(html)->addText("]", html->wordStyle ());
+      }
+      HT2TB(html)->addLinebreak (html->wordStyle ());
+   }
 }
 
 /*

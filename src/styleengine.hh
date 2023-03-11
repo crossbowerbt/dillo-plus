@@ -41,6 +41,7 @@ class StyleEngine {
       void stackPush ();
       void stackPop ();
       void buildUserStyle ();
+      void buildReaderModeStyle ();
       dw::core::style::Style *style0 (int i, BrowserWindow *bw);
       dw::core::style::Style *wordStyle0 (BrowserWindow *bw);
       inline void setNonCssHint(CssPropertyName name, CssValueType type,

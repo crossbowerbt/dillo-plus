@@ -67,6 +67,9 @@ StyleEngine::StyleEngine (dw::core::Layout *layout,
    stack = new lout::misc::SimpleVector <Node> (1);
    cssContext = new CssContext ();
    buildUserStyle ();
+   if(prefs.load_reader_mode_css) {
+      buildReaderModeStyle ();
+   }
    this->layout = layout;
    this->pageUrl = pageUrl ? a_Url_dup(pageUrl) : NULL;
    this->baseUrl = baseUrl ? a_Url_dup(baseUrl) : NULL;
@@ -755,6 +758,7 @@ bool StyleEngine::computeValue (int *dest, CssLength value, Font *font) {
       case CSS_LENGTH_TYPE_MM:
          *dest = roundInt (CSS_LENGTH_VALUE (value) * dpmm);
          return true;
+      case CSS_LENGTH_TYPE_CH:
       case CSS_LENGTH_TYPE_EM:
          *dest = roundInt (CSS_LENGTH_VALUE (value) * font->size);
          return true;
@@ -1013,10 +1017,24 @@ void StyleEngine::init () {
 void StyleEngine::buildUserStyle () {
    Dstr *style;
    char *filename = dStrconcat(dGethomedir(), "/.dillo/style.css", NULL);
+   char *sys_filename = DILLO_SYSCONF "style.css";
 
    if ((style = a_Misc_file2dstr(filename))) {
       CssParser::parse (NULL,NULL,cssContext,style->str, style->len,CSS_ORIGIN_USER);
       dStr_free (style, 1);
+   } else if ((style = a_Misc_file2dstr(sys_filename))) {
+      CssParser::parse (NULL,NULL,cssContext,style->str, style->len,CSS_ORIGIN_USER);
+      dStr_free (style, 1);
    }
    dFree (filename);
+}
+
+void StyleEngine::buildReaderModeStyle () {
+   Dstr *style;
+   char *sys_reader_mode_filename = DILLO_SYSCONF "style_reader_mode.css";
+
+   if ((style = a_Misc_file2dstr(sys_reader_mode_filename))) {
+      CssParser::parse (NULL,NULL,cssContext,style->str, style->len,CSS_ORIGIN_USER);
+      dStr_free (style, 1);
+   }
 }

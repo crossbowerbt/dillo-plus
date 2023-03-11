@@ -2,7 +2,7 @@ include ../Makefile.options
 
 CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"'
 
-all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi gemini.filter.dpi hello.filter.dpi https.filter.dpi vsource.filter.dpi
+all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi dls.filter.dpi gemini.filter.dpi hello.filter.dpi https.filter.dpi vsource.filter.dpi
 
 bookmarks.o: bookmarks.c
 	$(COMPILE) -c bookmarks.c
@@ -55,6 +55,12 @@ https.o: https.c
 https.filter.dpi: https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o https.filter.dpi https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
+dls.o: dls.c
+	$(COMPILE) -c dls.c
+
+dls.filter.dpi: dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+	$(COMPILE) $(HTTPS_LDFLAGS) -o dls.filter.dpi dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+
 gemini.o: gemini.c
 	$(COMPILE) -c gemini.c
 
@@ -83,6 +89,8 @@ install: all
 	$(INSTALL) -c file.dpi "$(DILLO_LIBDIR)/dpi/file/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/ftp/"
 	$(INSTALL) -c ftp.filter.dpi "$(DILLO_LIBDIR)/dpi/ftp/"
+	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/dls/"
+	$(INSTALL) -c dls.filter.dpi "$(DILLO_LIBDIR)/dpi/dls/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/gemini/"
 	$(INSTALL) -c gemini.filter.dpi "$(DILLO_LIBDIR)/dpi/gemini/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/hello/"
@@ -99,6 +107,7 @@ uninstall:
 	rm -f "$(DILLO_LIBDIR)/dpi/downloads/downloads.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/file/file.pdi"
 	rm -f "$(DILLO_LIBDIR)/dpi/ftp/ftp.filter.dpi"
+	rm -f "$(DILLO_LIBDIR)/dpi/dls/dls.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/gemini/gemini.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/hello/hello.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/https/https.filter.dpi"
