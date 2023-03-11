@@ -2,6 +2,7 @@
 
 import re
 import sys
+import datetime
 import requests
 import traceback
 import urllib.parse
@@ -23,36 +24,77 @@ MAIN_PAGE_TEMPLATE = """
 </BODY></HTML>
 """
 
+STYLE = """
+   body {
+     background-color: #BBBBEE;
+   }
+   div.channel {
+     margin-top: 25px;
+   }
+   div.channel h1 {
+     padding: 0 25px 25px;
+   }
+   div.post {
+     border: 1px solid gray;
+     padding-bottom: 25px;
+     background-color: white;
+   }
+   p {
+     padding: 0 25px 0 25px;
+   }
+   p.title-main {
+     font-size: 26px;
+   }
+   p.title {
+     border-bottom: 1px solid gray;
+     background-color: #DDDDFF; 
+     padding-top: 5px; 
+     padding-bottom: 5px; 
+     margin-top: 0;
+   }
+   p.reply {
+     border-left: 1px solid gray; 
+     padding-left: 25px;
+     margin-left: 25px;
+   }
+   img.post-img {
+     border: 1px solid grey;
+   }
+"""
+
 PAGE_TEMPLATE = """
 <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
 <HTML>
 <HEAD>
  <TITLE>{title}</TITLE>
+ <STYLE>{style}</STYLE>
 </HEAD>
 <BODY>
-<h1>{title}</h1>
+<div class="channel post">
+<p class="title-main title"><b>{title}</b></p>
 <p><b>Source:</b> <a href="{url}">{channel}</a></p>
 <p>{page_img}</p>
 </center>
+</div>
 <br/>
 {posts}
 <br/>
 </BODY></HTML>
 """
 
-POST_TEMPLATE = """
-<div style="border-left: 1px solid gray; padding-left: 1em">
-<p><b>Post:</b> <a href="https://t.me/s/{url}">{url}</a> <b>Date:</b> <em>{date}</em></p>
+TELEGRAM_POST_TEMPLATE = """
+<div class="post">
+<p class="title"><b>Post:</b> <a href="{url}">{title}</a> <b>Date:</b> <em>{date}</em></p>
 {content}
 </div>
 """
 
 REPLY_TEXT_TEMPLATE = """
-<p style="border-left: 1px solid gray; padding-left: 1em">{reply_text}</p>
+<p class="reply">{reply_text}</p>
 """
 
 IMG_TEMPLATE = """
-<p><img width=600 src="{img}" style="border: 1px solid grey"/></p>
+<p><img class="post-img" src="{img}"/></p>
 """
 
 VIDEO_TEMPLATE = """
@@ -76,7 +118,25 @@ def parse_url_params(str_params):
 			 for par in str_params.split('&')
 		 ]}
 
+class TelegramPost(object):
+	"""Class representing a single Telegram post."""
+
+	def __init__(self, url, title, date, content):
+		self.url = url
+		self.title = title
+		self.date = date
+		self.content = content
+
+	def render(self):
+		return TELEGRAM_POST_TEMPLATE.format(
+			title=self.title,
+			date=self.date.strftime("%Y-%m-%d %H:%M:%S"),
+			url=self.url,
+			content=self.content
+		)
+
 class TelegramDls(object):
+	"""DLS to retrieve and format Telegram channels."""
 
 	def __init__(self, url, str_params=""):
 		self.url = url
@@ -96,13 +156,13 @@ class TelegramDls(object):
 		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
 		print(MAIN_PAGE_TEMPLATE, end="")
 
-	def output_channel(self):
-		"""Outputs the content of the channel"""
+	def retrieve_channel(self):
+		"""Retrieves the most recent posts from a Telegram channel"""
 
 		text = requests.get(self.params['url']).text
 
-		title = re.search('<title>([^<]+)</title>', text).groups()[0]
-		page_img = re.search('(<img [^>]+>)', text).groups()[0]
+		self.title = re.search('<title>([^<]+)</title>', text).groups()[0]
+		self.page_img = re.search('(<img [^>]+>)', text).groups()[0]
 
 		posts = []
 
@@ -139,32 +199,41 @@ class TelegramDls(object):
 
 			url = ''
 			if url_s:
-				url = url_s.groups()[0]
+				url = "https://t.me/s/" + url_s.groups()[0]
 
 			date = ''
 			if date_s:
-				date = date_s.groups()[0]
+				date = datetime.datetime.strptime(date_s.groups()[0], "%Y-%m-%dT%H:%M:%S%z")
 
-			posts.append(POST_TEMPLATE.format(
+			posts.append(TelegramPost(
+				title=url.replace("https://t.me/s/", ""),
 				url=url,
-				date=date.split('+')[0].replace('T', ' '),
+				date=date,
 				content='\n'.join(contents)
 			))
-			
+
+		posts.reverse()
+
+		return posts
+
+	def render_posts(self, posts):
+		"""Renders the list of Telegram posts"""
+		
 		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
 		      end="")
 
 		sys.stdout.flush()
 
-		posts.reverse()
-
 		posts_text = "<p>No posts found</p>"
 		if posts:
-			posts_text = '\n<br/>\n'.join(posts)
+			posts_text = '\n<br/>\n'.join([
+				post.render() for post in posts
+			])
                 
 		print(PAGE_TEMPLATE.format(
-                        title=title,
-                        page_img=page_img,
+                        title=self.title,
+                        style=STYLE,
+                        page_img=self.page_img,
                         url=self.params['url'],
                         channel=self.params['url'].split('/s/')[1].replace('/',''),
                         posts=posts_text
@@ -177,7 +246,11 @@ class TelegramDls(object):
 			self.output_main_page()
 
 		else:
-                        self.output_channel()
+			posts = self.retrieve_channel()
+			self.render_posts(posts)
+
+def retrieve_posts(params):
+	return TelegramDls("dls:telegram", params).retrieve_channel()
 
 def main():
 	

@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import sys
+import datetime
+import traceback
+
+import imp
+
+PAGE_TEMPLATE = """
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>Aggregator DLS</TITLE>
+ <STYLE>{style}</STYLE>
+</HEAD>
+<BODY>
+<DIV>
+<h1>Aggregator DLS</h1>
+{posts}
+</DIV>
+</BODY></HTML>
+"""
+
+STYLE = """
+body {
+  background-color: #DDDDFF;
+}
+
+body > div {
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-bottom: 1em;
+  border-left: 1px solid gray;
+  border-right: 1px solid gray;
+  background-color: white;
+}
+"""
+
+POST_TEMPLATE = """
+<h2>{title}</h2>
+<p><em>{date}</em></p>
+<p><a href="{url}">Link to article</a></p>
+<p>
+{content}
+</p>
+"""
+
+DLS_MODULES = {}
+URLS = []
+
+URL_FILE = os.path.expanduser('~/.dillo/aggregator.urls')
+
+def load_dls_module(name):
+	DLS_MODULES[name] = imp.load_source(name, os.path.join(os.path.dirname(sys.argv[0]), name + '.dls'))
+
+def load_urls():
+	lines = []
+    
+	with open(URL_FILE, 'r') as input:
+		lines = input.readlines()
+
+	for line in lines:
+
+		line = line.replace('\n', '')
+
+		# skip comments
+		if line.startswith('#') or line.replace(' ', '') == '':
+			continue
+
+		# parse line
+		dls_name, params = line.split('?')
+		dls_name = dls_name.replace('dls:', '')
+
+		# load module for the URL (when needed)
+		if dls_name not in DLS_MODULES:
+			load_dls_module(dls_name)
+
+		# save tuple
+		URLS.append((dls_name, params))
+
+def retrieve_sorted_posts():
+	posts = []
+	
+	for dls_name, params in URLS:
+		posts += DLS_MODULES[dls_name].retrieve_posts(params)
+
+	posts = sorted(posts, key=lambda post: post.date)
+	posts.reverse()
+
+	return posts
+
+def filter_posts(params, posts):
+
+	if params == "today":
+		posts = [
+			post
+			for post in posts
+			if datetime.datetime.now(datetime.timezone.utc) - post.date < datetime.timedelta(days=1)
+		]
+		
+	return posts
+
+def render_posts(posts):
+	rendered_posts = [
+		POST_TEMPLATE.format(
+			url=post.url,
+			title=post.title,
+			date=post.date.strftime("%Y-%m-%d %H:%M:%S"),
+			content=post.content
+		)
+		for post in posts
+	]
+		
+	print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
+	      end="")
+
+	sys.stdout.flush()
+	print(PAGE_TEMPLATE.format(
+		style=STYLE,
+		posts='\n<hr/>\n'.join(rendered_posts)
+	))
+
+def main():
+	
+	try:
+
+		url = "dls:aggregator"
+		params = ""
+
+		if len(sys.argv) > 1:
+			params = sys.argv[1]
+
+		if os.path.exists(URL_FILE):
+
+			load_urls()
+			posts = retrieve_sorted_posts()
+			posts = filter_posts(params, posts)
+			render_posts(posts)
+
+		else:
+
+			print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
+			      end="")
+
+			sys.stdout.flush()
+			print(PAGE_TEMPLATE.format(
+				style=STYLE,
+				posts=('\n<p>You need to create a <tt>{url_file}</tt> to use this DLS.' +
+				       '\nThe file should contain a list of DLS urls for the posts you want to retrieve, for example:' +
+				       '<ul><li><tt>dls:telegram?url=YOUR_URL</tt></li><li><tt>dls:rss?feed=YOUR_FEED</tt></li></ul></p>' +
+				       '<p>Line beginning with "#" are skipped.</p>' +
+				       '\n<p>For only daily posts use this link: <a href="{today_url}">today posts</a>.\n').format(
+					       url_file=URL_FILE,
+					       today_url=url + "?today"
+				       )
+			))
+
+	except Exception as e:
+		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
+		print("<b>Execution error:</b> ", end="")
+		print(e)
+		print("<br/><pre>")
+		traceback.print_exc(file=sys.stdout)
+		print("</pre>")
+
+if __name__ == "__main__":
+	main()

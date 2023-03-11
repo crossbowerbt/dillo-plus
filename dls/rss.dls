@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import sys
+import time
+import datetime
 import traceback
 import feedparser
 import urllib.parse
@@ -37,7 +39,7 @@ FEED_PAGE_TEMPLATE = """
 FEED_POST_TEMPLATE = """
 <h2>{title}</h2>
 <p><em>{date}</em></p>
-<p><a href="{link}">Link</a></p>
+<p><a href="{url}">Link to article</a></p>
 <p>
 {content}
 </p>
@@ -56,7 +58,25 @@ def parse_url_params(str_params):
 			 for par in str_params.split('&')
 		 ]}
 
+class RssPost(object):
+	"""Class representing a single RSS post."""
+
+	def __init__(self, url, title, date, content):
+		self.url = url
+		self.title = title
+		self.date = date
+		self.content = content
+
+	def render(self):
+		return FEED_POST_TEMPLATE.format(
+			title=self.title,
+			date=self.date.strftime("%Y-%m-%d %H:%M:%S"),
+			url=self.url,
+			content=self.content
+		)
+
 class RssDls(object):
+	"""DLS to retrieve and format RSS feeds."""
 
 	def __init__(self, url, str_params=""):
 		self.url = url
@@ -69,40 +89,54 @@ class RssDls(object):
 		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
 		print(MAIN_PAGE_TEMPLATE, end="")
 
-	def output_feed(self):
-		"""Outputs the content of the feed"""
+	def retrieve_feed(self):
+		"""Retrieves all RSS posts from a feed"""
 
-		feed = feedparser.parse(self.params['feed'])
+		self.feed = feedparser.parse(self.params['feed'])
 
 		posts = []
 
-		for post in feed.entries:
+		for post in self.feed.entries:
 			content = post.summary
 
 			if (post.get('content')):
 				content=post.content[0].value
 
-			posts.append(FEED_POST_TEMPLATE.format(
+			posts.append(RssPost(
 				title=post.title,
-				date=post.published.split('+')[0].replace('T', ' '),
-				link=post.link,
+				date=datetime.datetime.fromtimestamp(time.mktime(post.published_parsed)),
+				url=post.link,
 				content=content
 			))
-			
+
+		return posts
+
+	def render_posts(self, posts):
+		"""Renders the list of RSS posts"""
+
+		rendered_posts = [post.render() for post in posts]
+		
 		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n",
 		      end="")
 
 		sys.stdout.flush()
-		print(FEED_PAGE_TEMPLATE.format(title=feed.channel.title, posts='\n<hr/>\n'.join(posts)))
+		print(FEED_PAGE_TEMPLATE.format(
+			title=self.feed.channel.title,
+			posts='\n<hr/>\n'.join(rendered_posts)
+		))
 
-	def get_feed(self):
+	def run_dls(self):
 		"""Main feed reader method"""
 
 		if len(self.params.get('feed','')) == 0:
 			self.output_main_page()
 
 		else:
-                        self.output_feed()
+                        posts = self.retrieve_feed()
+                        self.render_posts(posts)
+
+def retrieve_posts(params):
+	return RssDls("dls:rss", params).retrieve_feed()
 
 def main():
 	
@@ -115,7 +149,7 @@ def main():
 			params = sys.argv[1]
 
 		rss_dls = RssDls(url, params)
-		rss_dls.get_feed()
+		rss_dls.run_dls()
 
 	except Exception as e:
 		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")

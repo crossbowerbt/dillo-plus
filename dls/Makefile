@@ -17,6 +17,7 @@ install: all
 	$(INSTALL) -c epub.dls "$(DILLO_LIBDIR)/dls/"
 	$(INSTALL) -c rss.dls "$(DILLO_LIBDIR)/dls/"
 	$(INSTALL) -c telegram.dls "$(DILLO_LIBDIR)/dls/"
+	$(INSTALL) -c aggregator.dls "$(DILLO_LIBDIR)/dls/"
 
 uninstall:
 	rm -f "$(DILLO_LIBDIR)/dls/default.dls"
@@ -26,3 +27,4 @@ uninstall:
 	rm -f "$(DILLO_LIBDIR)/dls/epub.dls"
 	rm -f "$(DILLO_LIBDIR)/dls/rss.dls"
 	rm -f "$(DILLO_LIBDIR)/dls/telegram.dls"
+	rm -f "$(DILLO_LIBDIR)/dls/aggregator.dls"

@@ -167,6 +167,7 @@ search_url="gg Google https://www.google.com/search?ie=UTF-8&oe=UTF-8&q=%s"
 search_url="ge GeminiSpace gemini://geminispace.info/search?q=%s"
 search_url="lg LibGen http://libgen.is/search.php?req=%s"
 search_url="gr GoodReads https://www.goodreads.com/search?query=%s"
+search_url="pb The Pirate Bay https://thepiratebay.party/search/%s"
 
 # If set, dillo will ask web servers to send pages in this language.
 # This setting does NOT change dillo's user interface.
