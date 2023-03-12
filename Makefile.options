@@ -27,7 +27,6 @@ LIBFLTK_CXXFLAGS = $(LIBFLTK_CFLAGS) -fvisibility-inlines-hidden
 LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau
 
 HTTPS_LDFLAGS = -lcrypto -lssl
-MBED_TLS_LDFLAGS = -lmbedtls -lmbedx509 -lmbedcrypto
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
 

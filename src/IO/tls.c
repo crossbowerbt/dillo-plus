@@ -1,6 +1,9 @@
 /*
  * File: tls.c
  *
+ * Update: Modified to use OpenSSL directly, without the mbed SSL dependency.
+ * Original source copyright was (used as a template for the current code):
+ *
  * Copyright (C) 2011 Benjamin Johnson <obeythepenguin@users.sourceforge.net>
  * (for the https code offered from dplus browser that formed the basis...)
  * Copyright 2016 corvid
@@ -42,14 +45,9 @@ void a_Tls_init()
 #include "tls.h"
 #include "Url.h"
 
-#include <mbedtls/platform.h>  /* WORKAROUND: mbed TLS 2.3.0 ssl.h needs it */
-#include <mbedtls/ssl.h>
-#include <mbedtls/ctr_drbg.h>  /* random number generator */
-#include <mbedtls/entropy.h>
-#include <mbedtls/error.h>
-#include <mbedtls/oid.h>
-#include <mbedtls/x509.h>
-#include <mbedtls/net.h>    /* net_send, net_recv */
+#include <openssl/err.h>
+#include <openssl/rand.h>
+#include <openssl/ssl.h>
 
 #define CERT_STATUS_NONE 0
 #define CERT_STATUS_RECEIVING 1
@@ -79,21 +77,20 @@ typedef struct {
 typedef struct {
    int fd;
    DilloUrl *url;
-   mbedtls_ssl_context *ssl;
+   SSL *ssl;
+   bool_t handshaked;
    bool_t connecting;
 } Conn_t;
 
 /* List of active TLS connections */
 static Klist_t *conn_list = NULL;
 
+/* Shared TLS context */
+SSL_CTX *ssl_context = NULL;
+
 static bool_t ssl_enabled = TRUE;
-static mbedtls_ssl_config ssl_conf;
-static mbedtls_x509_crt cacerts;
-static mbedtls_ctr_drbg_context ctr_drbg;
-static mbedtls_entropy_context entropy;
 
 static Dlist *servers;
-static Dlist *cert_authorities;
 static Dlist *fd_map;
 
 static void Tls_handshake_cb(int fd, void *vconnkey);
@@ -162,12 +159,13 @@ void *a_Tls_connection(int fd)
  * Add a new TLS connection information node.
  */
 static Conn_t *Tls_conn_new(int fd, const DilloUrl *url,
-                            mbedtls_ssl_context *ssl)
+                            SSL *ssl)
 {
    Conn_t *conn = dNew0(Conn_t, 1);
    conn->fd = fd;
    conn->url = a_Url_dup(url);
    conn->ssl = ssl;
+   conn->handshaked = FALSE;
    conn->connecting = TRUE;
    return conn;
 }
@@ -184,74 +182,31 @@ static int Tls_make_conn_key(Conn_t *conn)
 /*
  * Load certificates from a given filename.
  */
-static void Tls_load_certificates_from_file(const char *const filename)
+static void Tls_load_certificates_from_file(SSL_CTX *ssl_context, const char *const filename)
 {
-   int ret = mbedtls_x509_crt_parse_file(&cacerts, filename);
+   int ret = SSL_CTX_load_verify_locations(ssl_context, filename, NULL);
 
-   if (ret < 0) {
-      if (ret == MBEDTLS_ERR_PK_FILE_IO_ERROR) {
-         /* can't read from file */
-      } else {
-         MSG("Failed to parse certificates from %s (returned -0x%04x)\n",
-             filename, -ret);
-      }
+   if (ret == 0) {
+      MSG("Failed to parse certificates from %s\n", filename);
    }
 }
 
 /*
  * Load certificates from a given pathname.
  */
-static void Tls_load_certificates_from_path(const char *const pathname)
+static void Tls_load_certificates_from_path(SSL_CTX *ssl_context, const char *const pathname)
 {
-   int ret = mbedtls_x509_crt_parse_path(&cacerts, pathname);
+   int ret = SSL_CTX_load_verify_locations(ssl_context, NULL, pathname);
 
-   if (ret < 0) {
-      if (ret == MBEDTLS_ERR_X509_FILE_IO_ERROR) {
-         /* can't read from path */
-      } else {
-         MSG("Failed to parse certificates from %s (returned -0x%04x)\n",
-             pathname, -ret);
-      }
-   }
-}
-
-/*
- * Remove duplicate certificates.
- */
-static void Tls_remove_duplicate_certificates()
-{
-   mbedtls_x509_crt *cp, *curr = &cacerts;
-
-   while (curr) {
-      cp = curr;
-      while (cp->next) {
-         if (curr->serial.len == cp->next->serial.len &&
-             !memcmp(curr->serial.p, cp->next->serial.p, curr->serial.len) &&
-             curr->subject_raw.len == cp->next->subject_raw.len &&
-             !memcmp(curr->subject_raw.p, cp->next->subject_raw.p,
-                     curr->subject_raw.len)) {
-            mbedtls_x509_crt *duplicate = cp->next;
-
-            cp->next = duplicate->next;
-
-            /* clearing the next field prevents it from freeing the whole
-             * chain of certificates
-             */
-            duplicate->next = NULL;
-            mbedtls_x509_crt_free(duplicate);
-            dFree(duplicate);
-         } else {
-            cp = cp->next;
-         }
-      }
-      curr = curr->next;
+   if (ret == 0) {
+      MSG("Failed to parse certificates from %s\n", pathname);
    }
 }
 
 /*
  * Load trusted certificates.
  */
-static void Tls_load_certificates()
+static void Tls_load_certificates(SSL_CTX *ssl_context)
 {
    /* curl-7.37.1 says that the following bundle locations are used on "Debian
     * systems", "Redhat and Mandriva", "old(er) Redhat", "FreeBSD", and
@@ -261,7 +216,7 @@ static void Tls_load_certificates()
     */
    uint_t u;
    char *userpath;
-   mbedtls_x509_crt *curr;
+   //X509 *curr;
 
    static const char *const ca_files[] = {
       "/etc/ssl/certs/ca-certificates.crt",
@@ -279,140 +234,104 @@ static void Tls_load_certificates()
 
    for (u = 0; u < sizeof(ca_files)/sizeof(ca_files[0]); u++) {
       if (*ca_files[u])
-         Tls_load_certificates_from_file(ca_files[u]);
+         Tls_load_certificates_from_file(ssl_context, ca_files[u]);
    }
 
    for (u = 0; u < sizeof(ca_paths)/sizeof(ca_paths[0]); u++) {
       if (*ca_paths[u]) {
-         Tls_load_certificates_from_path(ca_paths[u]);
+         Tls_load_certificates_from_path(ssl_context, ca_paths[u]);
       }
    }
 
    userpath = dStrconcat(dGethomedir(), "/.dillo/certs/", NULL);
-   Tls_load_certificates_from_path(userpath);
+   Tls_load_certificates_from_path(ssl_context, userpath);
    dFree(userpath);
 
-   Tls_remove_duplicate_certificates();
-
-   /* Count our trusted certificates */
-   u = 0;
-   if (cacerts.next) {
-      u++;
-      for (curr = cacerts.next; curr; curr = curr->next)
-         u++;
-   } else {
-      mbedtls_x509_crt empty;
-      mbedtls_x509_crt_init(&empty);
-
-      if (memcmp(&cacerts, &empty, sizeof(mbedtls_x509_crt)))
-         u++;
-   }
-     
-   MSG("Trusting %u TLS certificate%s.\n", u, u==1 ? "" : "s");
+   MSG("Loaded TLS certificates.\n");
 }
 
 /*
- * Remove the pre-shared key ciphersuites. There are lots of them,
- * and we aren't making any use of them.
+ * Select safe ciphersuites.
  */
-static void Tls_remove_psk_ciphersuites()
+static void Tls_set_cipher_list(SSL_CTX *ssl_context)
 {
-   const mbedtls_ssl_ciphersuite_t *cs_info;
-   int *our_ciphers, *q;
-   int n = 0;
 
-   const int *default_ciphers = mbedtls_ssl_list_ciphersuites(),
-             *p = default_ciphers;
+#if 0
 
-   /* count how many we will want */
-   while (*p) {
-      cs_info = mbedtls_ssl_ciphersuite_from_id(*p);
-      if (!mbedtls_ssl_ciphersuite_uses_psk(cs_info))
-         n++;
-      p++;
-   }
-   n++;
-   our_ciphers = dNew(int, n);
+   /* Very strict cipher list */
+   
+   const char *cipher_list = "EECDH+AESGCM+AES128:EECDH+AESGCM+AES256:EECDH+CHACHA20:EDH+AESGCM+AES128:EDH+AESGCM+AES256:EDH+CHACHA20:EECDH+SHA256+AES128:EECDH+SHA384+AES256:EDH+SHA256+AES128:EDH+SHA256+AES256:EECDH+SHA1+AES128:EECDH+SHA1+AES256:EDH+SHA1+AES128:EDH+SHA1+AES256:EECDH+HIGH:EDH+HIGH:AESGCM+AES128:AESGCM+AES256:CHACHA20:SHA256+AES128:SHA256+AES256:SHA1+AES128:SHA1+AES256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK:!KRB5:!aECDH";
 
-   /* iterate through again and copy them over */
-   p = default_ciphers;
-   q = our_ciphers;
-   while (*p) {
-      cs_info = mbedtls_ssl_ciphersuite_from_id(*p);
+#else
 
-      if (!mbedtls_ssl_ciphersuite_uses_psk(cs_info))
-         *q++ = *p;
-      p++;
-   }
-   *q = 0;
+   /* Less strict cipher list, just exclude:
+    * eNULL, which has no encryption
+    * aNULL, which has no authentication
+    * LOW, which as of 2014 use 64 or 56-bit encryption
+    * EXPORT40, which uses 40-bit encryption
+    * RC4, for which methods were found in 2013 to defeat it somewhat too easily
+    * 3DES, not very secure nowadays
+    * MD5, broken hash function
+    * PSK, shared key algorithms
+    * KRB5, kerberos is not needed
+    * aECDH, anonymous Elliptic Curve Diffie Hellman cipher suites
+    */
+   
+   const char *cipher_list = "ALL:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK:!KRB5:!aECDH";
 
-   mbedtls_ssl_conf_ciphersuites(&ssl_conf, our_ciphers);
+#endif
+
+ SSL_CTX_set_cipher_list(ssl_context, cipher_list);
 }
 
 /*
- * Initialize the mbed TLS library.
+ * Initialize a new TLS context.
+ */
+static SSL_CTX * Tls_context_new(void)
+{
+   SSL_CTX *ssl_context;
+   
+   /* Create TLS context */
+   ssl_context = SSL_CTX_new(SSLv23_client_method());
+   if (ssl_context == NULL){
+      MSG("Error creating SSL context\n");
+      return NULL;
+   }
+   
+   /* SSL2 has been known to be insecure forever, disabling SSL3 is in response
+    * to POODLE, and disabling compression is in response to CRIME. */
+   SSL_CTX_set_options(ssl_context, SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_NO_COMPRESSION);
+
+   /* Load trusted certificates */
+   Tls_load_certificates(ssl_context);
+
+   /* Set safe ciphersuites */
+   Tls_set_cipher_list(ssl_context);
+
+   return ssl_context;
+}
+
+/*
+ * Initialize the TLS library.
  */
 void a_Tls_init(void)
 {
-   int ret;
+   /* Initialize library */
+   SSL_load_error_strings();
+   SSL_library_init();
 
-    /* As of 2.3.0 in 2016, the 'default' profile allows SHA1, RIPEMD160,
-     * and SHA224 (in addition to the stronger ones), and the 'next' profile
-     * doesn't allow anything below SHA256. Since we're never going to hear
-     * when/if RIPEMD160 and SHA224 are deprecated, and they're obscure enough
-     * not to encounter, let's not allow those.
-     * These profiles are for certificates, and mbed tls points out that these
-     * have nothing to do with hashes during handshakes.
-     * Their 'next' profile only allows "Curves at or above 128-bit security
-     * level". For now, we follow 'default' and allow all curves.
-     */
-   static const mbedtls_x509_crt_profile prof = {
-    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
-    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
-    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
-    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
-    0xFFFFFFF, /* Any PK alg    */
-    0xFFFFFFF, /* Any curve     */
-    2048,
-   };
-
-   mbedtls_ssl_config_init(&ssl_conf);
-
-   mbedtls_ssl_config_defaults(&ssl_conf, MBEDTLS_SSL_IS_CLIENT,
-                               MBEDTLS_SSL_TRANSPORT_STREAM,
-                               MBEDTLS_SSL_PRESET_DEFAULT);
-   mbedtls_ssl_conf_cert_profile(&ssl_conf, &prof);
-
-   /*
-    * There are security concerns surrounding session tickets --
-    * wrecking forward security, for instance.
-    */
-   mbedtls_ssl_conf_session_tickets(&ssl_conf,
-                                    MBEDTLS_SSL_SESSION_TICKETS_DISABLED);
-
-   Tls_remove_psk_ciphersuites();
-
-   mbedtls_x509_crt_init(&cacerts);   /* trusted root certificates */
-   mbedtls_ctr_drbg_init(&ctr_drbg);  /* Counter mode Deterministic Random Byte
-                                       * Generator */
-   mbedtls_entropy_init(&entropy);
-
-   if((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                                   (unsigned char*)"dillo tls", 9))) {
-      ssl_enabled = FALSE;
-      MSG_ERR("tls: mbedtls_ctr_drbg_seed() failed. TLS disabled.\n");
-      return;
+   /* Initialize entropy */
+   if (RAND_status() != 1){
+      /*Insufficient entropy.  Deal with it?*/
+      MSG("Insufficient random entropy.\n");
    }
 
-   mbedtls_ssl_conf_authmode(&ssl_conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-   mbedtls_ssl_conf_ca_chain(&ssl_conf, &cacerts, NULL);
-   mbedtls_ssl_conf_rng(&ssl_conf, mbedtls_ctr_drbg_random, &ctr_drbg);
+   /* Initialize global TLS context */
+   ssl_context = Tls_context_new();
 
+   /* Initialize global lists */
    fd_map = dList_new(20);
    servers = dList_new(8);
-   cert_authorities = dList_new(12);
-
-   Tls_load_certificates();
 }
 
 /*
@@ -500,135 +419,91 @@ int a_Tls_certificate_is_clean(const DilloUrl *url)
    return Tls_cert_status(url) == CERT_STATUS_CLEAN;
 }
 
-#if 0
-/*
- * Print certificate and its chain of issuer certificates.
- */
-static void Tls_print_cert_chain(const mbedtls_x509_crt *cert)
-{
-   /* print for first connection to server */
-   const mbedtls_x509_crt *last_cert;
-   const uint_t buflen = 2048;
-   char buf[buflen];
-   int key_bits;
-   const char *sigalg;
-
-   while (cert) {
-      if (cert->sig_md == MBEDTLS_MD_SHA1) {
-         MSG_WARN("In 2015, browsers have begun to deprecate SHA1 "
-                  "certificates.\n");
-      }
-
-      if (mbedtls_oid_get_sig_alg_desc(&cert->sig_oid, &sigalg))
-         sigalg = "(??" ")";
-
-      key_bits = mbedtls_pk_get_bitlen(&cert->pk);
-      mbedtls_x509_dn_gets(buf, buflen, &cert->subject);
-      MSG("%d-bit %s: %s\n", key_bits, sigalg, buf);
-
-      last_cert = cert;
-      cert = cert->next;
-   }
-   if (last_cert) {
-      mbedtls_x509_dn_gets(buf, buflen, &last_cert->issuer);
-      MSG("root: %s\n", buf);
-   }
-}
-#endif
-
 /*
  * Generate dialog msg for expired cert.
  */
-static void Tls_cert_expired(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_expired(const X509 *cert, Dstr *ds)
 {
-   const mbedtls_x509_time *date = &cert->valid_to;
+   const ASN1_TIME *notAfter = X509_get_notAfter(cert);
 
+   int year = (notAfter->data[ 0] - '0') * 10 + (notAfter->data[ 1] - '0') + 100;
+   int mon  = (notAfter->data[ 2] - '0') * 10 + (notAfter->data[ 3] - '0') - 1;
+   int mday = (notAfter->data[ 4] - '0') * 10 + (notAfter->data[ 5] - '0');
+   int hour = (notAfter->data[ 6] - '0') * 10 + (notAfter->data[ 7] - '0');
+   int min  = (notAfter->data[ 8] - '0') * 10 + (notAfter->data[ 9] - '0');
+   int sec  = (notAfter->data[10] - '0') * 10 + (notAfter->data[11] - '0');
+   
    dStr_sprintfa(ds,"Certificate expired at: %04d/%02d/%02d %02d:%02d:%02d.\n",
-                 date->year, date->mon, date->day, date->hour, date->min,
-                 date->sec);
+                 year, mon, mday, hour, min, sec);
 }
 
 /*
  * Generate dialog msg when certificate is not for this host.
  */
-static void Tls_cert_cn_mismatch(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_cn_mismatch(const X509 *cert, Dstr *ds)
 {
-   const uint_t buflen = 2048;
-   char cert_info_buf[buflen];
-   char *san, *s;
+   char *subj;
 
    dStr_append(ds, "This host is not one of the hostnames listed on the TLS "
-                   "certificate that it sent");
-   /*
-    *
-    * Taking the human-readable certificate info and scraping it is brittle
-    * and horrible, but the alternative is to mimic
-    * x509_info_subject_alt_name(), an option that seems equally brittle and
-    * horrible.
-    *
-    * Once I find a case where SAN isn't used, I can add code to work with
-    * the subject field as well.
-    *
-    */
-   mbedtls_x509_crt_info(cert_info_buf, buflen, "", cert);
+                   "certificate that it sent:\n");
 
-   if ((san = strstr(cert_info_buf, "subject alt name  : "))) {
-      san += 20;
-      s = strchr(san, '\n');
-      if (s) {
-         *s = '\0';
-         dStr_sprintfa(ds, " (%s)", san);
-      }
-   }
-   dStr_append(ds, ".\n");
+   subj = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+
+   dStr_append(ds, subj);
+   dStr_append(ds, "\n");
+
+   OPENSSL_free(subj);
 }
 
 /*
  * Generate dialog msg when certificate is not trusted.
  */
-static void Tls_cert_trust_chain_failed(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_trust_chain_failed(const X509 *cert, Dstr *ds)
 {
-   const uint_t buflen = 2048;
-   char buf[buflen];
+   char *issuer;
 
-   while (cert->next)
-      cert = cert->next;
-   mbedtls_x509_dn_gets(buf, buflen, &cert->issuer);
+   issuer = X509_NAME_oneline(X509_get_issuer_name(cert), NULL, 0);
 
    dStr_sprintfa(ds, "Couldn't reach any trusted root certificate from "
-                     "supplied certificate. The issuer at the end of the "
-                     "chain was: \"%s\"\n", buf);
+                     "supplied certificate. The issuer of the certificate was:\n"
+                     "%s\n", issuer);
+
+   OPENSSL_free(issuer);
 }
 
 /*
  * Generate dialog msg when certificate start date is in the future.
  */
-static void Tls_cert_not_valid_yet(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_not_valid_yet(const X509 *cert, Dstr *ds)
 {
-   const mbedtls_x509_time *date = &cert->valid_to;
+   const ASN1_TIME *notBefore = X509_get_notBefore(cert);
+
+   int year = (notBefore->data[ 0] - '0') * 10 + (notBefore->data[ 1] - '0') + 100;
+   int mon  = (notBefore->data[ 2] - '0') * 10 + (notBefore->data[ 3] - '0') - 1;
+   int mday = (notBefore->data[ 4] - '0') * 10 + (notBefore->data[ 5] - '0');
+   int hour = (notBefore->data[ 6] - '0') * 10 + (notBefore->data[ 7] - '0');
+   int min  = (notBefore->data[ 8] - '0') * 10 + (notBefore->data[ 9] - '0');
+   int sec  = (notBefore->data[10] - '0') * 10 + (notBefore->data[11] - '0');
 
    dStr_sprintfa(ds, "Certificate validity begins in the future at: "
                      "%04d/%02d/%02d %02d:%02d:%02d.\n",
-                     date->year, date->mon, date->day, date->hour, date->min,
-                     date->sec);
+                     year, mon, mday, hour, min, sec);
 }
 
 /*
  * Generate dialog msg when certificate hash algorithm is not accepted.
  */
-static void Tls_cert_bad_hash(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_bad_hash(const X509 *cert, Dstr *ds)
 {
-   const char *hash = (cert->sig_md == MBEDTLS_MD_MD5) ? "MD5" :
-                      (cert->sig_md == MBEDTLS_MD_MD4) ? "MD4" :
-                      (cert->sig_md == MBEDTLS_MD_MD2) ? "MD2" :
-                      (cert->sig_md == MBEDTLS_MD_SHA1) ? "SHA1" :
-                      (cert->sig_md == MBEDTLS_MD_SHA224) ? "SHA224" :
-                      (cert->sig_md == MBEDTLS_MD_RIPEMD160) ? "RIPEMD160" :
-                      (cert->sig_md == MBEDTLS_MD_SHA256) ? "SHA256" :
-                      (cert->sig_md == MBEDTLS_MD_SHA384) ? "SHA384" :
-                      (cert->sig_md == MBEDTLS_MD_SHA512) ? "SHA512" :
-                      "Unrecognized";
+   int pkey_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+   const char* hash;
 
+   if (pkey_nid == NID_undef) {
+      hash = "Unrecognized";
+   } else {
+      hash = OBJ_nid2ln(pkey_nid);
+   }
+ 
    dStr_sprintfa(ds, "This certificate's hash algorithm is not accepted "
                      "(%s).\n", hash);
 }
@@ -636,57 +511,117 @@ static void Tls_cert_bad_hash(const mbedtls_x509_crt *cert, Dstr *ds)
 /*
  * Generate dialog msg when public key algorithm (RSA, ECDSA) is not accepted.
  */
-static void Tls_cert_bad_pk_alg(const mbedtls_x509_crt *cert, Dstr *ds)
+static void Tls_cert_bad_pk_alg(const X509 *cert, Dstr *ds)
 {
-   const char *type_str = mbedtls_pk_get_name(&cert->pk);
+   int pubkey_algonid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+
+   const char *algoname;
+
+   if (pubkey_algonid == NID_undef) {
+      algoname = "Unrecognized";
+   } else {
+      algoname = OBJ_nid2ln(pubkey_algonid);
+   }
 
    dStr_sprintfa(ds, "This certificate's public key algorithm is not accepted "
-                     "(%s).\n", type_str);
+                     "(%s).\n", algoname);
 }
 
 /*
  * Generate dialog msg when the public key is not acceptable. As of 2016,
  * this was triggered by RSA keys below 2048 bits, if I recall correctly.
  */
-static void Tls_cert_bad_key(const mbedtls_x509_crt *cert, Dstr *ds) {
-   int key_bits = mbedtls_pk_get_bitlen(&cert->pk);
-   const char *type_str = mbedtls_pk_get_name(&cert->pk);
+static void Tls_cert_bad_key(const X509 *cert, Dstr *ds)
+{
+   int pubkey_algonid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+
+   const char *algoname;
+
+   if (pubkey_algonid == NID_undef) {
+      algoname = "Unrecognized";
+   } else {
+      algoname = OBJ_nid2ln(pubkey_algonid);
+   }
 
    dStr_sprintfa(ds, "This certificate's key is not accepted, which generally "
-                     "means it's too weak (%d-bit %s).\n", key_bits, type_str);
+                     "means it's too weak (%s).\n", algoname);
 }
 
 /*
  * Make a dialog msg containing warnings about problems with the certificate.
  */
-static char *Tls_make_bad_cert_msg(const mbedtls_x509_crt *cert,uint32_t flags)
+static char *Tls_make_bad_cert_msg(const X509 *cert, uint32_t flags)
 {
-   static const struct certerr {
-      int val;
-      void (*cert_err_fn)(const mbedtls_x509_crt *cert, Dstr *ds);
-   } cert_error [] = {
-      { MBEDTLS_X509_BADCERT_EXPIRED, Tls_cert_expired},
-      { MBEDTLS_X509_BADCERT_CN_MISMATCH, Tls_cert_cn_mismatch},
-      { MBEDTLS_X509_BADCERT_NOT_TRUSTED, Tls_cert_trust_chain_failed},
-      { MBEDTLS_X509_BADCERT_FUTURE, Tls_cert_not_valid_yet},
-      { MBEDTLS_X509_BADCERT_BAD_MD, Tls_cert_bad_hash},
-      { MBEDTLS_X509_BADCERT_BAD_PK, Tls_cert_bad_pk_alg},
-      { MBEDTLS_X509_BADCERT_BAD_KEY, Tls_cert_bad_key}
-   };
-   const uint_t ncert_errors = sizeof(cert_error) /sizeof(cert_error[0]);
-   char *ret;
+   char *ret = NULL;
    Dstr *ds = dStr_new(NULL);
-   uint_t u;
 
-   for (u = 0; u < ncert_errors; u++) {
-      if (flags & cert_error[u].val) {
-         flags &= ~cert_error[u].val;
-         cert_error[u].cert_err_fn(cert, ds);
-      }
+   switch (flags) {
+
+   case X509_V_OK:
+      /* Everything is ok */
+      break;
+
+   case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+      /* Either self signed and untrusted */
+      Tls_cert_cn_mismatch(cert, ds);
+      break;
+
+   case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+   case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+      Tls_cert_trust_chain_failed(cert, ds);
+      break;
+
+   case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+   case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+   case X509_V_ERR_CERT_SIGNATURE_FAILURE:
+   case X509_V_ERR_CRL_SIGNATURE_FAILURE:
+      Tls_cert_bad_hash(cert, ds);
+      break;
+
+   case X509_V_ERR_CERT_NOT_YET_VALID:
+   case X509_V_ERR_CRL_NOT_YET_VALID:
+      Tls_cert_not_valid_yet(cert, ds);
+      break;
+
+   case X509_V_ERR_CERT_HAS_EXPIRED:
+   case X509_V_ERR_CRL_HAS_EXPIRED:
+      Tls_cert_expired(cert, ds);
+      break;
+      
+   case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+   case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+   case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+   case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+      dStr_sprintfa(ds, "Certificate formatting error (%d)\n", flags);
+      break;
+      
+   case X509_V_ERR_INVALID_CA:
+   case X509_V_ERR_INVALID_PURPOSE:
+   case X509_V_ERR_CERT_UNTRUSTED:
+   case X509_V_ERR_CERT_REJECTED:
+   case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
+      Tls_cert_trust_chain_failed(cert, ds);
+      break;
+      
+   case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+   case X509_V_ERR_AKID_SKID_MISMATCH:
+   case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
+      Tls_cert_trust_chain_failed(cert, ds);
+      break;
+      
+   case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+      Tls_cert_trust_chain_failed(cert, ds);
+      break;
+      
+   case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+      Tls_cert_trust_chain_failed(cert, ds);
+      break;
+      
+   default:
+      dStr_sprintfa(ds, "The certificate can not be validated: flag value 0x%04x", flags);
+
    }
-   if (flags)
-      dStr_sprintfa(ds, "Unknown certificate error(s): flag value 0x%04x",
-                    flags);
+   
    ret = ds->str;
    dStr_free(ds, 0);
    return ret;
@@ -708,44 +643,18 @@ static int Tls_cert_auth_cmp_by_name(const void *v1, const void *v2)
 }
 
 /*
- * Keep account of on whose authority we are trusting servers.
- */
-static void Tls_update_cert_authorities_data(const mbedtls_x509_crt *cert,
-                                             Server_t *srv)
-{
-   const uint_t buflen = 512;
-   char buf[buflen];
-   const mbedtls_x509_crt *last = cert;
-
-   while (last->next)
-      last = last->next;
-
-   mbedtls_x509_dn_gets(buf, buflen, &last->issuer);
-
-   CertAuth_t *ca = dList_find_custom(cert_authorities, buf,
-                                      Tls_cert_auth_cmp_by_name);
-   if (!ca) {
-      ca = dNew(CertAuth_t, 1);
-      ca->name = dStrdup(buf);
-      ca->servers = dList_new(8);
-      dList_insert_sorted(cert_authorities, ca, Tls_cert_auth_cmp);
-   }
-   dList_append(ca->servers, srv);
-}
-
-/*
  * Examine the certificate, and, if problems are detected, ask the user what
  * to do.
  * Return: -1 if connection should be canceled, or 0 if it should continue.
  */
-static int Tls_examine_certificate(mbedtls_ssl_context *ssl, Server_t *srv)
+static int Tls_examine_certificate(SSL *ssl_connection, Server_t *srv)
 {
-   const mbedtls_x509_crt *cert;
+   X509 *cert;
    uint32_t st;
    int choice = -1, ret = -1;
    char *title = dStrconcat("Dillo TLS security warning: ",srv->hostname,NULL);
 
-   cert = mbedtls_ssl_get_peer_cert(ssl);
+   cert = SSL_get_peer_certificate(ssl_connection);
    if (cert == NULL){
       /* Inform user that remote system cannot be trusted */
       choice = a_Dialog_choice(title,
@@ -758,23 +667,9 @@ static int Tls_examine_certificate(mbedtls_ssl_context *ssl, Server_t *srv)
       }
    } else {
       /* check the certificate */
-      st = mbedtls_ssl_get_verify_result(ssl);
-      if (st == 0) {
-         if (srv->cert_status == CERT_STATUS_RECEIVING) {
-            /* first connection to server */
-#if 0
-            Tls_print_cert_chain(cert);
-#endif
-            Tls_update_cert_authorities_data(cert, srv);
-         }
-         ret = 0;
-      } else if (st == 0xFFFFFFFF) {
-         /* "result is not available (eg because the handshake was aborted too
-          * early)" is what the documentation says. Maybe it's only what
-          * happens if you call get_verify_result() too early or when the
-          * handshake failed. But just in case...
-          */
-         MSG_ERR("mbedtls_ssl_get_verify_result: result is not available");
+      st = SSL_get_verify_result(ssl_connection);
+      if (st == X509_V_OK) {
+	 ret = 0;
       } else {
          char *dialog_warning_msg = Tls_make_bad_cert_msg(cert, st);
 
@@ -787,6 +682,8 @@ static int Tls_examine_certificate(mbedtls_ssl_context *ssl, Server_t *srv)
       }
    }
    dFree(title);
+
+   X509_free(cert);
 
    if (choice == -1) {
       srv->cert_status = CERT_STATUS_CLEAN;          /* no warning popups */
@@ -826,97 +723,17 @@ static void Tls_close_by_key(int connkey)
          a_IOwatch_remove_fd(c->fd, -1);
          dClose(c->fd);
       }
-      mbedtls_ssl_close_notify(c->ssl);
-      mbedtls_ssl_free(c->ssl);
-      dFree(c->ssl);
+
+      if(c->ssl != NULL) {
+	 SSL_free(c->ssl);
+	 c->ssl = NULL;
+      }
 
       a_Url_free(c->url);
       Tls_fd_map_remove_entry(c->fd);
       a_Klist_remove(conn_list, connkey);
       dFree(c);
    }
-}
-
-/*
- * Print a message about the fatal alert.
- *
- * The values have gaps, and a few are never fatal error values, and some may
- * never be sent to clients, but let's go ahead and translate every value that
- * we recognize.
- */
-static void Tls_fatal_error_msg(int error_type)
-{
-   const char *errmsg;
-
-   if (error_type == MBEDTLS_SSL_ALERT_MSG_CLOSE_NOTIFY)
-      errmsg = "close notify";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE)
-      errmsg = "unexpected message received";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_BAD_RECORD_MAC)
-      errmsg = "record received with incorrect MAC";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_DECRYPTION_FAILED) {
-      /* last used in TLS 1.1 */
-      errmsg = "decryption failed";
-   } else if (error_type == MBEDTLS_SSL_ALERT_MSG_RECORD_OVERFLOW)
-      errmsg = "\"A TLSCiphertext record was received that had a length more "
-               "than 2^14+2048 bytes, or a record decrypted to a TLSCompressed"
-               " record with more than 2^14+1024 bytes.\"";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_DECOMPRESSION_FAILURE)
-      errmsg = "\"decompression function received improper input\"";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE)
-      errmsg = "\"sender was unable to negotiate an acceptable set of security"
-               " parameters given the options available\"";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_NO_CERT)
-      errmsg = "no cert (an obsolete alert last used in SSL3)";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_BAD_CERT)
-      errmsg = "bad certificate";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_CERT)
-      errmsg = "certificate of unsupported type";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_CERT_REVOKED)
-      errmsg = "certificate revoked by its signer";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_CERT_EXPIRED)
-      errmsg = "certificate expired or not currently valid";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_CERT_UNKNOWN)
-      errmsg = "certificate error of an unknown sort";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER)
-      errmsg = "illegal parameter in handshake";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNKNOWN_CA)
-      errmsg = "unknown CA";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_ACCESS_DENIED)
-      errmsg = "access denied";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR)
-      errmsg = "decode error";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_DECRYPT_ERROR)
-      errmsg = "decrypt error";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_EXPORT_RESTRICTION) {
-      /* last used in TLS 1.0 */
-      errmsg = "export restriction";
-   } else if (error_type == MBEDTLS_SSL_ALERT_MSG_PROTOCOL_VERSION)
-      errmsg = "protocol version is recognized but not supported";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_INSUFFICIENT_SECURITY)
-      errmsg = "server requires ciphers more secure than those supported by "
-               "the client";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_INTERNAL_ERROR)
-      errmsg = "internal error (not the client's fault)";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_INAPROPRIATE_FALLBACK)
-      errmsg = "inappropriate fallback";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_USER_CANCELED)
-      errmsg = "\"handshake is being canceled for some reason unrelated to a "
-               "protocol failure\"";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_NO_RENEGOTIATION)
-      errmsg = "no renegotiation";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNSUPPORTED_EXT)
-      errmsg = "unsupported ext";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNRECOGNIZED_NAME)
-      errmsg = "unrecognized name";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_UNKNOWN_PSK_IDENTITY)
-      errmsg = "unknown psk identity";
-   else if (error_type == MBEDTLS_SSL_ALERT_MSG_NO_APPLICATION_PROTOCOL)
-      errmsg = "no application protocol";
-   else errmsg = "unknown alert value";
-
-   MSG_WARN("mbedtls_ssl_handshake() received TLS fatal alert %d (%s)\n",
-            error_type, errmsg);
 }
 
 /*
@@ -934,28 +751,29 @@ static void Tls_handshake(int fd, int connkey)
       return;
    }
 
-   if (conn->ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER) {
-      ret = mbedtls_ssl_handshake(conn->ssl);
+   if (!conn->handshaked) {
+      ret = SSL_connect(conn->ssl);
 
-      if (ret == MBEDTLS_ERR_SSL_WANT_READ ||
-          ret == MBEDTLS_ERR_SSL_WANT_WRITE) {
-         int want = ret == MBEDTLS_ERR_SSL_WANT_READ ? DIO_READ : DIO_WRITE;
+      if (ret == -1 && (SSL_get_error(conn->ssl, ret) == SSL_ERROR_WANT_READ ||
+			SSL_get_error(conn->ssl, ret) == SSL_ERROR_WANT_WRITE)) {
+	 int err = SSL_get_error(conn->ssl, ret);
+         int want = err == SSL_ERROR_WANT_READ ? DIO_READ : DIO_WRITE;
 
          _MSG("iowatching fd %d for tls -- want %s\n", fd,
-             ret == MBEDTLS_ERR_SSL_WANT_READ ? "read" : "write");
+	      err == SSL_ERROR_WANT_READ ? "read" : "write");
          a_IOwatch_remove_fd(fd, -1);
          a_IOwatch_add_fd(fd, want, Tls_handshake_cb, INT2VOIDP(connkey));
          ongoing = TRUE;
          failed = FALSE;
-      } else if (ret == 0) {
+      } else if (ret == 1) {
+	 conn->handshaked = TRUE;
          Server_t *srv = dList_find_sorted(servers, conn->url,
                                            Tls_servers_by_url_cmp);
-
          if (srv->cert_status == CERT_STATUS_RECEIVING) {
             /* Making first connection with the server. Show cipher used. */
-            mbedtls_ssl_context *ssl = conn->ssl;
-            const char *version = mbedtls_ssl_get_version(ssl),
-                       *cipher = mbedtls_ssl_get_ciphersuite(ssl);
+            SSL *ssl = conn->ssl;
+            const char *version = SSL_get_version(ssl),
+                       *cipher = SSL_get_cipher_list(ssl, 0);
 
             MSG("%s", URL_AUTHORITY(conn->url));
             if (URL_PORT(conn->url) != URL_HTTPS_PORT)
@@ -966,32 +784,11 @@ static void Tls_handshake(int fd, int connkey)
              (Tls_examine_certificate(conn->ssl, srv) != -1)) {
             failed = FALSE;
          }
-      } else if (ret == MBEDTLS_ERR_NET_SEND_FAILED) {
-         MSG("mbedtls_ssl_handshake() send failed. Server may not be accepting"
-             " connections.\n");
-      } else if (ret == MBEDTLS_ERR_NET_CONNECT_FAILED) {
-         MSG("mbedtls_ssl_handshake() connect failed.\n");
-      } else if (ret == MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE) {
-         /* Paul Bakker, the mbed tls guy, says "beware, this might change in
-          * future versions" and "ssl->in_msg[1] is not going to change anytime
-          * soon, unless there are radical changes". It seems to be the best of
-          * the alternatives.
-          */
-         Tls_fatal_error_msg(conn->ssl->in_msg[1]);
-      } else if (ret == MBEDTLS_ERR_SSL_INVALID_RECORD) {
-         MSG("mbedtls_ssl_handshake() failed upon receiving 'an invalid "
-             "record'.\n");
-      } else if (ret == MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE) {
-         MSG("mbedtls_ssl_handshake() failed: 'The requested feature is not "
-             "available.'\n");
-      } else if (ret == MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE) {
-         MSG("mbedtls_ssl_handshake() failed: 'Processing of the "
-             "ServerKeyExchange handshake message failed.'\n");
-      } else if (ret == MBEDTLS_ERR_SSL_CONN_EOF) {
-         MSG("mbedtls_ssl_handshake() failed: Read EOF. Connection closed by "
-             "server.\n");
+      } else if (ret < 0) {
+         int err = SSL_get_error(conn->ssl, ret);
+         MSG("SSL_connect() failed with error %d.\n", err);
       } else {
-         MSG("mbedtls_ssl_handshake() failed with error -0x%04x\n", -ret);
+         MSG("SSL_connect() failed.\n");
       }
    }
 
@@ -1024,11 +821,16 @@ static void Tls_handshake_cb(int fd, void *vconnkey)
  */
 void a_Tls_connect(int fd, const DilloUrl *url)
 {
-   mbedtls_ssl_context *ssl = dNew0(mbedtls_ssl_context, 1);
+   SSL *ssl = SSL_new(ssl_context);
    bool_t success = TRUE;
    int connkey = -1;
    int ret;
 
+   if (ssl == NULL) {
+      MSG("Error creating SSL connection\n");
+      success = FALSE;
+   }
+   
    if (!ssl_enabled)
       success = FALSE;
 
@@ -1036,24 +838,31 @@ void a_Tls_connect(int fd, const DilloUrl *url)
       success = FALSE;
    }
 
-   if (success && (ret = mbedtls_ssl_setup(ssl, &ssl_conf))) {
-      MSG("mbedtls_ssl_setup failed %d\n", ret);
-      success = FALSE;
+   /* Need to do this if we want to have the option of dealing
+    * with self-signed certs */
+   if (success) {
+      SSL_set_verify(ssl, SSL_VERIFY_NONE, 0);
    }
 
-   /* assign TLS connection to this file descriptor */
+   /* Assign TLS connection to this file descriptor */
    if (success) {
       Conn_t *conn = Tls_conn_new(fd, url, ssl);
       connkey = Tls_make_conn_key(conn);
-      mbedtls_ssl_set_bio(ssl, &conn->fd, mbedtls_net_send, mbedtls_net_recv,
-                          NULL);
-   }
 
-   if (success && (ret = mbedtls_ssl_set_hostname(ssl, URL_HOST(url)))) {
-      MSG("mbedtls_ssl_set_hostname failed %d\n", ret);
+      if (SSL_set_fd(ssl, fd) == 0) {
+         MSG("Error connecting network socket to SSL.\n");
+         success = FALSE;
+     }
+   }
+   
+   /* Configure SSL to use the servername */
+   if (success && SSL_set_tlsext_host_name(ssl, URL_HOST(url)) == 0) {
+      MSG("Error setting servername to SSL\n");
       success = FALSE;
    }
 
+   /*MSG("TLS connection initialized, trying to handshake.\n");*/
+   
    if (!success) {
       a_Tls_reset_server_state(url);
       a_Http_connect_done(fd, success);
@@ -1068,20 +877,12 @@ void a_Tls_connect(int fd, const DilloUrl *url)
 int a_Tls_read(void *conn, void *buf, size_t len)
 {
    Conn_t *c = (Conn_t*)conn;
-   int ret = mbedtls_ssl_read(c->ssl, buf, len);
+   int ret = SSL_read(c->ssl, buf, len);
 
    if (ret < 0) {
-      if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-         /* treat it as EOF */
-         ret = 0;
-      } else if (ret == MBEDTLS_ERR_SSL_WANT_READ) {
-         ret = -1;
-         errno = EAGAIN; /* already happens to be set, but let's make sure */
-      } else if (ret == MBEDTLS_ERR_NET_CONN_RESET) {
-         MSG("READ failed: TLS connection reset by server.\n");
-      } else {
-         MSG("READ failed with -0x%04x: an mbed tls error.\n", -ret);
-      }
+      int err = SSL_get_error(c->ssl, ret);
+      if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE)
+	 MSG("READ failed with %d: a TLS error\n", err);
    }
    return ret;
 }
@@ -1092,10 +893,10 @@ int a_Tls_read(void *conn, void *buf, size_t len)
 int a_Tls_write(void *conn, void *buf, size_t len)
 {
    Conn_t *c = (Conn_t*)conn;
-   int ret = mbedtls_ssl_write(c->ssl, buf, len);
+   int ret = SSL_write(c->ssl, buf, len);
 
    if (ret < 0) {
-      MSG("WRITE failed with -0x%04x: an mbed tls error\n", -ret);
+      MSG("WRITE failed with %d: a TLS error\n", SSL_get_error(c->ssl, ret));
    }
    return ret;
 }
@@ -1107,68 +908,6 @@ void a_Tls_close_by_fd(int fd)
 
    if (fme) {
       Tls_close_by_key(fme->connkey);
-   }
-}
-
-static void Tls_cert_authorities_print_summary()
-{
-   const int ca_len = dList_length(cert_authorities);
-   Dstr *ds = dStr_new("");
-   int i, j;
-
-   if (ca_len)
-      dStr_append(ds, "TLS: Certificate chain roots during this session:\n");
-
-   for (i = 0; i < ca_len; i++) {
-      CertAuth_t *ca = (CertAuth_t *)dList_nth_data(cert_authorities, i);
-      const int servers_len = ca->servers ? dList_length(ca->servers) : 0;
-      char *ca_name = strstr(ca->name, "CN=");
-
-      if (!ca_name)
-         ca_name = strstr(ca->name, "OU=");
-
-      if (ca_name)
-         ca_name += 3;
-      else
-         ca_name = ca->name;
-      dStr_sprintfa(ds, "- %s for: ", ca_name);
-
-      for (j = 0; j < servers_len; j++) {
-         Server_t *s = dList_nth_data(ca->servers, j);
-         bool_t ipv6 = a_Url_host_type(s->hostname) == URL_HOST_IPV6;
-
-         dStr_sprintfa(ds, "%s%s%s", ipv6?"[":"", s->hostname, ipv6?"]":"");
-         if (s->port != URL_HTTPS_PORT)
-            dStr_sprintfa(ds, ":%d", s->port);
-         dStr_append_c(ds, ' ');
-      }
-      dStr_append_c(ds, '\n');
-   }
-   MSG("%s", ds->str);
-   dStr_free(ds, 1);
-}
-
-/*
- * Free mbed tls's chain of certificates and free our data on which root
- * certificates caused us to trust which servers.
- */
-static void Tls_cert_authorities_freeall()
-{
-   if (cacerts.next)
-      mbedtls_x509_crt_free(cacerts.next);
-
-   if (cert_authorities) {
-      CertAuth_t *ca;
-      int i, n = dList_length(cert_authorities);
-
-      for (i = 0; i < n; i++) {
-         ca = (CertAuth_t *) dList_nth_data(cert_authorities, i);
-         dFree(ca->name);
-         if (ca->servers)
-            dList_free(ca->servers);
-         dFree(ca);
-      }
-      dList_free(cert_authorities);
    }
 }
 
@@ -1206,11 +945,7 @@ static void Tls_fd_map_remove_all()
  */
 void a_Tls_freeall(void)
 {
-   if (prefs.show_msg)
-      Tls_cert_authorities_print_summary();
-
    Tls_fd_map_remove_all();
-   Tls_cert_authorities_freeall();
    Tls_servers_freeall();
 }
 

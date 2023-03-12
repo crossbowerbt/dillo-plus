@@ -2,7 +2,7 @@ include ../Makefile.options
 
 CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"' -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"'
 
-all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi dls.filter.dpi gemini.filter.dpi gopher.filter.dpi hello.filter.dpi https.filter.dpi vsource.filter.dpi
+all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi dls.filter.dpi gemini.filter.dpi gopher.filter.dpi hello.filter.dpi vsource.filter.dpi
 
 bookmarks.o: bookmarks.c
 	$(COMPILE) -c bookmarks.c
@@ -48,12 +48,6 @@ hello.o: hello.c
 
 hello.filter.dpi: hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o hello.filter.dpi hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-
-https.o: https.c
-	$(COMPILE) -c https.c
-
-https.filter.dpi: https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-	$(COMPILE) $(HTTPS_LDFLAGS) -o https.filter.dpi https.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 dls.o: dls.c
 	$(COMPILE) $(CXXFLAGS_EXTRA) -c dls.c
@@ -103,8 +97,6 @@ install: all
 	$(INSTALL) -c gopher.filter.dpi "$(DILLO_LIBDIR)/dpi/gopher/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/hello/"
 	$(INSTALL) -c hello.filter.dpi "$(DILLO_LIBDIR)/dpi/hello/"
-	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/https/"
-	$(INSTALL) -c https.filter.dpi "$(DILLO_LIBDIR)/dpi/https/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/vsource/"
 	$(INSTALL) -c vsource.filter.dpi "$(DILLO_LIBDIR)/dpi/vsource/"
 
@@ -119,5 +111,4 @@ uninstall:
 	rm -f "$(DILLO_LIBDIR)/dpi/gemini/gemini.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/gopher/gopher.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/hello/hello.filter.dpi"
-	rm -f "$(DILLO_LIBDIR)/dpi/https/https.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/vsource/vsource.filter.dpi"
