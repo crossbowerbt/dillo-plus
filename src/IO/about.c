@@ -103,8 +103,6 @@ const char *const AboutSplash=
 "  Dillo+ supports the lightweight protocols gopher and gemini in addition to http and https. It aims to become your default browser for accessing the <i>smol</i> web.</p>\n"
 " <h4>Reader mode CSS:</h4>\n"
 " <p>To make it easier reading articles from the web, and also to rearrange large pages in a format easier on the eyes, it is possible to activate a reader mode CSS from the 'Tools' menu.</p>\n"
-" <h4>Bookmarks:</h4>\n"
-" <p>For your convenience, your bookmarks were pre-configured with popular lightweight websites.</p>\n"
 " <h4>Additional content types:</h4>\n"
 " <p>Support for rendering pages and local files written in the gemini, gopher and markdown formats has been added.</p>\n"
 " <h4>DLS Scripts:</h4>\n"

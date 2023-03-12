@@ -1,8 +1,8 @@
 ===================
- Dillo web browser
+ Dillo+ web browser
 ===================
 
-Dillo is a multi-platform graphical web browser, known for its
+Dillo+ is a multi-platform graphical web browser, known for its
 speed and small footprint, that is developed with a focus on
 personal security and privacy.
 
@@ -27,8 +27,6 @@ dillorc.
   Here's a list of some old well-known problems of dillo:
 
          * no FRAMES rendering
-         * https code not yet fully trusted
-           (enable it with: ./configure --enable-ssl ).
 
 
 --------
@@ -53,10 +51,11 @@ FLTK-1.3
 Dillo3
 ------
 
-     tar jxvf dillo-3.0.5.tar.bz2
-     cd dillo-3.0.5
-     ./configure; make
-     sudo make install-strip
+  Configure the options in Makefile.options.
+  Then:
+
+     make
+     sudo make install
 
   In order to use the hyphenation feature, pattern files from CTAN need
   to be installed.
@@ -70,40 +69,21 @@ Dpi programs
 ------------
 
   These  are  installed by "make install". If you don't have root
-access,  copy  "dillo"  and "dpid" to some directory in your path
-and  install  the  dpis by running "./install-dpi-local" from the
-top directory (they will be installed under ~/.dillo).
+  access,  copy  "dillo"  and "dpid" to some directory in your path
+  and  install  the  dpis by running "./install-dpi-local" from the
+  top directory (they will be installed under ~/.dillo).
 
+-----------
+Dls scripts
+-----------
 
-----
-*BSD
-----
+  These too  are  installed by "make install".
+  You'll probably need python to run some of those.
 
-  Dillo   compiles on *BSD systems; please report on this anyway,
-and note that you'll need GNU make.
+------------
+OS supported
+------------
 
-  If your dillo crashes or locks at times, just use:
+Linux, *BSD, Solaris are all supported, but be sure to personalize
+the options in Makefile.options according to your OS.
 
-    ./configure --disable-threaded-dns
-
-  so dillo uses a single thread for name resolving.
-
-
--------
-Solaris
--------
-
-  Dillo may compile and run OK on Solaris but (please report):
-
-    * use gmake (a symbolic link make -> gmake works OK)
-
-  Solaris is very inconsistent so you may need to add/remove:
-
-  -lrt -lposix4
-
-  at link time.
-
-
-Jorge.-
-(jcid@dillo.org)
-April, 2014
