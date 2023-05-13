@@ -638,6 +638,12 @@ static int handle_certificate_problem(SSL * ssl_connection)
       case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
          /*Either self signed and untrusted*/
          /*Extract CN from certificate name information*/
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        /*
+         * 'name' field has been removed in openssl-1.1.0 and newer
+         */
+         strcpy(buf, "('name' field removed)");
+#else
          if ((cn = strstr(remote_cert->name, "/CN=")) == NULL) {
             strcpy(buf, "(no CN given)");
          } else {
@@ -651,6 +657,7 @@ static int handle_certificate_problem(SSL * ssl_connection)
             strncpy(buf, cn, (size_t) (cn_end - cn));
             buf[cn_end - cn] = '\0';
          }
+#endif
          msg = dStrconcat("The remote certificate is self-signed and "
                           "untrusted.\nFor address: ", buf, NULL);
          d_cmd = a_Dpip_build_cmd(
