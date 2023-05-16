@@ -490,12 +490,26 @@ static void Tls_cert_not_valid_yet(const X509 *cert, Dstr *ds)
                      year, mon, mday, hour, min, sec);
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+int get_cert_algorithm(const X509 *cert)
+{
+    ASN1_OBJECT *ppkalg;
+    X509_PUBKEY *pubkey = X509_get_X509_PUBKEY(cert);
+    X509_PUBKEY_get0_param(&ppkalg, NULL, NULL, NULL, pubkey);
+    return OBJ_obj2nid(ppkalg);
+}
+#endif
+
 /*
  * Generate dialog msg when certificate hash algorithm is not accepted.
  */
 static void Tls_cert_bad_hash(const X509 *cert, Dstr *ds)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   int pkey_nid = get_cert_algorithm(cert);
+#else
    int pkey_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+#endif
    const char* hash;
 
    if (pkey_nid == NID_undef) {
@@ -513,8 +527,11 @@ static void Tls_cert_bad_hash(const X509 *cert, Dstr *ds)
  */
 static void Tls_cert_bad_pk_alg(const X509 *cert, Dstr *ds)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   int pubkey_algonid = get_cert_algorithm(cert);
+#else
    int pubkey_algonid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
-
+#endif
    const char *algoname;
 
    if (pubkey_algonid == NID_undef) {
@@ -533,8 +550,11 @@ static void Tls_cert_bad_pk_alg(const X509 *cert, Dstr *ds)
  */
 static void Tls_cert_bad_key(const X509 *cert, Dstr *ds)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   int pubkey_algonid = get_cert_algorithm(cert);
+#else
    int pubkey_algonid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
-
+#endif
    const char *algoname;
 
    if (pubkey_algonid == NID_undef) {
