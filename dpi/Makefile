@@ -56,7 +56,7 @@ dls.filter.dpi: dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o dls.filter.dpi dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 gemini.o: gemini.c
-	$(COMPILE) -c gemini.c
+	$(COMPILE) -DCA_CERTS_FILE='"$(CA_CERTS_FILE)"' -c gemini.c
 
 gemini.filter.dpi: gemini.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o gemini.filter.dpi gemini.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a

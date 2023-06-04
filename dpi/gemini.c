@@ -95,6 +95,15 @@ static Dsh *sh;
 
 #ifdef ENABLE_SSL
 
+static const char *const ca_files[] = {
+   "/etc/ssl/certs/ca-certificates.crt",
+   "/etc/pki/tls/certs/ca-bundle.crt",
+   "/usr/share/ssl/certs/ca-bundle.crt",
+   "/usr/local/share/certs/ca-root.crt",
+   "/etc/ssl/cert.pem",
+   CA_CERTS_FILE
+};
+
 /*
  * Read the answer dpip tag for a dialog and return the number for
  * the user-selected alternative.
@@ -171,6 +180,8 @@ static void yes_ssl_support(void)
    int ret = 0;
    int network_socket = -1;
 
+   int u = 0;
+
    MSG("{In gemini.filter.dpi}\n");
 
    /*Initialize library*/
@@ -201,10 +212,11 @@ static void yes_ssl_support(void)
    /*Set directory to load certificates from*/
    /*FIXME - provide for sysconfdir variables and such*/
    if (exit_error == 0){
-      if (SSL_CTX_load_verify_locations(
-         ssl_context, "/etc/ssl/cert.pem", "/etc/ssl/certs/" ) == 0){
-         MSG("Error opening system x509 certificate location\n");
-         exit_error = 1;
+      for (u = 0; u < sizeof(ca_files)/sizeof(ca_files[0]); u++) {
+         if (SSL_CTX_load_verify_locations(
+            ssl_context, ca_files[u], "/etc/ssl/certs/" ) == 0){
+            MSG("Error opening system x509 certificate location: %s\n", ca_files[u]);
+         }
       }
    }
 
