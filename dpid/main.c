@@ -31,6 +31,13 @@
 #include "../dpip/dpip.h"
 
 sigset_t mask_sigchld;
+enum dpi_errno_t dpi_errno;
+struct dp *dpi_attr_list;
+Dlist *services_list;
+int numdpis;
+int numsocks;
+fd_set sock_set;
+int srs_fd;
 
 
 /* Start a dpi filter plugin after accepting the pending connection

@@ -39,10 +39,10 @@ clean:
 
 install: all
 	$(INSTALL_SH) -c -d "$(DILLO_ETCDIR)"
-	$(INSTALL) -c -m 644 dpidrc $(DPIDRC_SYS)"
+	$(INSTALL) -c -m 644 dpidrc "$(DPIDRC_SYS)"
 	$(INSTALL_SH) -c -d "$(DILLO_BINDIR)"
-	$(INSTALL) -c dpid $(DILLO_BINDIR)"
-	$(INSTALL) -c dpidc $(DILLO_BINDIR)"
+	$(INSTALL) -c dpid "$(DILLO_BINDIR)"
+	$(INSTALL) -c dpidc "$(DILLO_BINDIR)"
 
 uninstall:
 	rm -f $(DPIDRC_SYS)"
