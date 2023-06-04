@@ -45,6 +45,6 @@ install: all
 	$(INSTALL) -c dpidc "$(DILLO_BINDIR)"
 
 uninstall:
-	rm -f $(DPIDRC_SYS)"
-	rm -f $(DILLO_BINDIR)/dpid"
-	rm -f $(DILLO_BINDIR)/dpidc"
+	rm -f "$(DPIDRC_SYS)"
+	rm -f "$(DILLO_BINDIR)/dpid"
+	rm -f "$(DILLO_BINDIR)/dpidc"
