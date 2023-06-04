@@ -37,10 +37,12 @@
 
 
 /*! Error codes for dpid */
-enum {
+enum dpi_errno_t {
    no_errors,
    dpid_srs_addrinuse /* dpid service request socket address already in use */
-} dpi_errno;
+};
+
+extern enum dpi_errno_t dpi_errno;
 
 /*! Intended for identifying dillo plugins
  * and related files
