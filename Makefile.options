@@ -15,7 +15,7 @@ INSTALL_SH = ../install-sh
 COMPILE = $(CC) $(INCLUDES) $(CFLAGS)
 LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
 
-CFLAGS = -g -O2 -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return
+CFLAGS = -g -O2 -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
 INCLUDES = -I. -I.. -I/usr/local/include
 LDFLAGS = -L/usr/local/lib
 
