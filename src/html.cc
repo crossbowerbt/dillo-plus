@@ -4464,7 +4464,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
    char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
-   char heading_open[] = "<hX>", heading_close[] = "</hX>";
+   char heading_open[16] = "<hX>", heading_close[16] = "</hX>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
    char quote_open[] = "<blockquote>", quote_close[] = "</blockquote>";
    char link_open[2048] = "", link_close[] = "</a>";
@@ -4790,7 +4790,7 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
       }
       
       if(end_of_line - (buf + buf_index) >= (long) sizeof(html->last_partial_line)) {
-         printf("Long line: %ld\n", end_of_line - (buf + buf_index));
+         printf("Long line: %d\n", end_of_line - (buf + buf_index));
          BUG_MSG("Line too long: skipping.");
          goto CLEANUP_GOPHER;
       }
@@ -4963,7 +4963,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
    char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
-   char heading_open[] = "<hX>", heading_close[] = "</hX>";
+   char heading_open[16] = "<hX>", heading_close[16] = "</hX>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
    char pre_single_open[] = "<tt>", pre_single_close[] = "</tt>";
    char quote_open[] = "<blockquote>", quote_close[] = "</blockquote>";
