@@ -30,6 +30,7 @@ p, blockquote {
   text-align: justify !important;
   max-width: 800px !important;
   margin: auto !important;
+  padding: 10px 0 10px 0;
 }
 
 img, figure, figcaption {
