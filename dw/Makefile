@@ -4,8 +4,8 @@ CXXFLAGS_EXTRA = -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"'
 
 all: libDw-core.a libDw-fltk.a libDw-widgets.a
 
-libDw-core.a: findtext.o imgrenderer.o iterator.o layout.o selection.o style.o types.o ui.o widget.o
-	$(AR) $(ARFLAGS) libDw-core.a findtext.o imgrenderer.o iterator.o layout.o selection.o style.o types.o ui.o widget.o
+libDw-core.a: findtext.o imgrenderer.o iterator.o layout.o selection.o style.o types.o ui.o stackingcontextmgr.o tools.o widget.o
+	$(AR) $(ARFLAGS) libDw-core.a findtext.o imgrenderer.o iterator.o layout.o selection.o style.o types.o ui.o stackingcontextmgr.o tools.o widget.o
 	$(RANLIB) libDw-core.a
 
 findtext.o: findtext.hh findtext.cc
@@ -66,8 +66,8 @@ libDw_fltk_a-fltkviewbase.o: fltkviewbase.cc fltkviewbase.hh
 libDw_fltk_a-fltkviewport.o: fltkviewport.cc fltkviewport.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) -c -o libDw_fltk_a-fltkviewport.o fltkviewport.cc
 
-libDw-widgets.a: alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o
-	$(AR) $(ARFLAGS) libDw-widgets.a alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o
+libDw-widgets.a: alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o widget.o
+	$(AR) $(ARFLAGS) libDw-widgets.a alignedtablecell.o alignedtextblock.o bullet.o hyphenator.o image.o listitem.o oofawarewidget.o ooffloatsmgr.o oofposabslikemgr.o oofposabsmgr.o oofposabslikemgr.o oofposfixedmgr.o oofpositionedmgr.o oofposrelmgr.o oofawarewidget_iterator.o outofflowmgr.o regardingborder.o ruler.o selection.o simpletablecell.o stackingcontextmgr.o table_iterator.o table.o tablecell.o textblock.o textblock_iterator.o textblock_linebreaking.o tools.o widget.o
 	$(RANLIB) libDw-widgets.a
 
 alignedtablecell.o: alignedtablecell.cc alignedtablecell.hh
