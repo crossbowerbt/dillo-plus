@@ -19,6 +19,8 @@ all: config.h
 	@(cd dpi; make all)
 	@echo Making all in dls
 	@(cd dls; make all)
+
+test:
 	@echo Making all in test
 	@(cd test; make all)
 
