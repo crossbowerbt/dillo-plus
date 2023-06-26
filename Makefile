@@ -65,8 +65,8 @@ install: all
 	@(cd dpi; make install)
 	@echo Making install in dls
 	@(cd dls; make install)
-	@echo Making install in test
-	@(cd test; make install)
+	#@echo Making install in test
+	#@(cd test; make install)
 	./install-sh -c -d "$(DILLO_BINDIR)"
 	$(INSTALL) -c dillo-install-hyphenation "$(DILLO_BINDIR)"
 	./install-sh -c -d "$(DILLO_ETCDIR)"
@@ -93,8 +93,8 @@ uninstall:
 	@(cd dpi; make uninstall)
 	@echo Making uninstall in dls
 	@(cd dls; make uninstall)
-	@echo Making uninstall in test
-	@(cd test; make uninstall)
+	#@echo Making uninstall in test
+	#@(cd test; make uninstall)
 	rm -f "$(DILLO_BINDIR)/dillo-install-hyphenation"
 	rm -f "$(DILLO_ETCDIR)/dillorc"
 	rm -f "$(DILLO_ETCDIR)/style.css"
