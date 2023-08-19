@@ -1,3 +1,8 @@
+# Provided by @XDream8 via patch
+# Source: https://github.com/crossbowerbt/dillo-plus/issues/15
+
+# Still not complete, but you can start from this file for a wayland port
+
 # == SYSTEM BINARIES ==
 
 AR ?= ar
@@ -16,22 +21,22 @@ COMPILE = $(CC) $(INCLUDES) $(CFLAGS)
 LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
 
 CFLAGS ?= -g -O2
-CFLAGS += -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
+CFLAGS += -DDISABLE_XEMBED -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
 INCLUDES ?= -I. -I.. -I/usr/local/include
-LDFLAGS ?= -L/usr/local/lib
+LDFLAGS ?= -L/usr/lib -L/usr/local/lib
 
 CXXCOMPILE = $(CXX) $(INCLUDES) $(CXXFLAGS)
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
 
-LIBFLTK_CFLAGS = -I/usr/X11R6/include/freetype2 -pipe -I/usr/X11R6/include -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_THREAD_SAFE -D_REENTRANT
+LIBFLTK_CFLAGS = -pipe -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_THREAD_SAFE -D_REENTRANT
 LIBFLTK_CXXFLAGS = $(LIBFLTK_CFLAGS) -fvisibility-inlines-hidden
-LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau
+LIBFLTK_LDFLAGS = $(LDFLAGS) -lfltk -lfontconfig -lpthread -lm
 
 HTTPS_LDFLAGS = -lcrypto -lssl
 
-LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
+LIBPNG16_CXXFLAGS = -I/usr/include/libpng16 -I/usr/local/include/libpng16
 
-DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz -lX11
+DILLO_LDFLAGS = -ljpeg -L/usr/lib -L/usr/local/lib -lpng -Wl,-rpath,/usr/lib -Wl,-rpath,/usr/local/lib -lfltk -lfontconfig -lpthread -lm -lz
 
 # == HTTPS CERTS ==
 

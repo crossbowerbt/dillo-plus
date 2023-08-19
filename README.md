@@ -96,9 +96,15 @@ Please check under releases
 
 Please see https://www.dillo.org for requirement details.
 
-In brief, these two dependencies are sufficient for the browser:
+In brief, these dependencies are sufficient for the browser:
+* libiconv
 * FLTK 1.3
 * OpenSSL/LibreSSL
+
+To enable image rendering install also:
+* libjpeg
+* libpng
+* libgif
 
 To run some DLS scripts you'll also need *python*.
 
@@ -106,7 +112,15 @@ To run some DLS scripts you'll also need *python*.
 
 The compilation system has been converted from the autotools suite used by the original dillo (see https://www.dillo.org for the old install details) to a plain Makefile system.
 
-Before compiling the code you can personalize some compilation options in the [Makefile.options](Makefile.options) file.
+Before compiling the code you can personalize some compilation options in the [Makefile.options](Makefile.options) files.
+
+Some preconfigured options are provided for common setups:
+* [Makefile.options.Linux](Makefile.options.Linux)
+* [Makefile.options.Linux.Wayland](Makefile.options.Linux) (thanks to @XDream8)
+* [Makefile.options.OpenBSD](Makefile.options.OpenBSD)
+* [Makefile.options.MacOS](Makefile.options.MacOS) (thanks to @bouncepaw)
+
+Replace Makefile.options with the correct config for your system.
 
 After that just run:
 ```

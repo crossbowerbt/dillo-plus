@@ -31,7 +31,7 @@ HTTPS_LDFLAGS = -lcrypto -lssl
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
 
-DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz -lX11
+DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
 
 # == HTTPS CERTS ==
 
