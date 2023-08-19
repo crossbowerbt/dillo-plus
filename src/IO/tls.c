@@ -182,25 +182,29 @@ static int Tls_make_conn_key(Conn_t *conn)
 /*
  * Load certificates from a given filename.
  */
-static void Tls_load_certificates_from_file(SSL_CTX *ssl_context, const char *const filename)
+static int Tls_load_certificates_from_file(SSL_CTX *ssl_context, const char *const filename)
 {
    int ret = SSL_CTX_load_verify_locations(ssl_context, filename, NULL);
 
    if (ret == 0) {
-      MSG("Failed to parse certificates from %s\n", filename);
+      _MSG("Failed to parse certificates from %s\n", filename);
    }
+
+   return ret;
 }
 
 /*
  * Load certificates from a given pathname.
  */
-static void Tls_load_certificates_from_path(SSL_CTX *ssl_context, const char *const pathname)
+static int Tls_load_certificates_from_path(SSL_CTX *ssl_context, const char *const pathname)
 {
    int ret = SSL_CTX_load_verify_locations(ssl_context, NULL, pathname);
 
    if (ret == 0) {
-      MSG("Failed to parse certificates from %s\n", pathname);
+      _MSG("Failed to parse certificates from %s\n", pathname);
    }
+
+   return ret;
 }
 
 /*
@@ -217,6 +221,7 @@ static void Tls_load_certificates(SSL_CTX *ssl_context)
    uint_t u;
    char *userpath;
    //X509 *curr;
+   int loaded = 0;
 
    static const char *const ca_files[] = {
       "/etc/ssl/certs/ca-certificates.crt",
@@ -234,12 +239,12 @@ static void Tls_load_certificates(SSL_CTX *ssl_context)
 
    for (u = 0; u < sizeof(ca_files)/sizeof(ca_files[0]); u++) {
       if (*ca_files[u])
-         Tls_load_certificates_from_file(ssl_context, ca_files[u]);
+         loaded += Tls_load_certificates_from_file(ssl_context, ca_files[u]);
    }
 
    for (u = 0; u < sizeof(ca_paths)/sizeof(ca_paths[0]); u++) {
       if (*ca_paths[u]) {
-         Tls_load_certificates_from_path(ssl_context, ca_paths[u]);
+         loaded += Tls_load_certificates_from_path(ssl_context, ca_paths[u]);
       }
    }
 
@@ -247,7 +252,11 @@ static void Tls_load_certificates(SSL_CTX *ssl_context)
    Tls_load_certificates_from_path(ssl_context, userpath);
    dFree(userpath);
 
-   MSG("Loaded TLS certificates.\n");
+   if (loaded == 0) {
+      MSG("No TLS cert loaded: please check the paths of CA files.\n");
+   } else {
+      MSG("Loaded TLS certificates.\n");
+   }
 }
 
 /*
