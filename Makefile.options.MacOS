@@ -1,3 +1,9 @@
+# Provided by Timur Ismagilov (@bouncepaw)
+# Tested for MacBook Air M1 2020 running Big Sur
+
+# Original code:
+# https://gist.github.com/bouncepaw/0c3744497d1764abf30f6a515498ddb7
+
 # == SYSTEM BINARIES ==
 
 AR ?= ar
@@ -16,9 +22,9 @@ COMPILE = $(CC) $(INCLUDES) $(CFLAGS)
 LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
 
 CFLAGS ?= -g -O2
-CFLAGS += -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
-INCLUDES ?= -I. -I.. -I/usr/local/include
-LDFLAGS ?= -L/usr/local/lib
+CFLAGS += -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return
+INCLUDES ?= -I. -I.. -I/usr/local/include -I/opt/homebrew/Cellar/fltk/1.3.8_1/include -I/opt/homebrew/include/
+LDFLAGS ?= -L/opt/homebrew/opt/libiconv/lib -L/opt/homebrew/opt/openssl@3.1/lib -L/opt/homebrew/opt/jpeg/lib -L/usr/local/lib -L/opt/homebrew/Cellar/fltk/1.3.8_1/lib -lfltk -lpthread -framework Cocoa -v
 
 CXXCOMPILE = $(CXX) $(INCLUDES) $(CXXFLAGS)
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
@@ -27,11 +33,11 @@ LIBFLTK_CFLAGS = -I/usr/X11R6/include/freetype2 -pipe -I/usr/X11R6/include -D_LA
 LIBFLTK_CXXFLAGS = $(LIBFLTK_CFLAGS) -fvisibility-inlines-hidden
 LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau
 
-HTTPS_LDFLAGS = -lcrypto -lssl
+HTTPS_LDFLAGS = -L/opt/homebrew/opt/openssl@3.1/lib -lcrypto -lssl
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
 
-DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz -lX11
+DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
 
 # == HTTPS CERTS ==
 
