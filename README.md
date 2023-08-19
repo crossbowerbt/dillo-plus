@@ -116,7 +116,7 @@ Before compiling the code you can personalize some compilation options in the [M
 
 Some preconfigured options are provided for common setups:
 * [Makefile.options.Linux](Makefile.options.Linux)
-* [Makefile.options.Linux.Wayland](Makefile.options.Linux) (thanks to @XDream8)
+* [Makefile.options.Linux.Wayland](Makefile.options.Linux.Wayland) (thanks to @XDream8)
 * [Makefile.options.OpenBSD](Makefile.options.OpenBSD)
 * [Makefile.options.MacOS](Makefile.options.MacOS) (thanks to @bouncepaw)
 
