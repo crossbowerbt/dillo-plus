@@ -70,7 +70,7 @@ const char *const AboutSplash=
 "    <tr>\n"
 "    <td>&nbsp;&nbsp;\n"
 "    <td>\n"
-"     <a href='http://www.dillo.org/'>Project Home</a>\n"
+"     <a href='https://github.com/crossbowerbt/dillo-plus/'>Project Home</a>\n"
 "    </table>\n"
 "    </table>\n"
 "  </table>\n"
