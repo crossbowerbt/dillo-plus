@@ -128,6 +128,8 @@ make
 make install
 ```
 
+Some additional instructions to compile Dillo+ on MacOs with Homebrew, and a prebuilt package can be found at this link: [dilloformacos](https://sites.google.com/view/dilloformacos/home-page) (thanks to Umberto).
+
 # Quickstart
 
 1. Obtain a release for your OS distribution, or compile Dillo from this repository's source code
