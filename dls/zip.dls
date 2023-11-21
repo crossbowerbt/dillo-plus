@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+#!/bin/sh
 
-import sys
-import zipfile
-import traceback
-import urllib.parse
+function display_main_page {
+    local path="$1"
+    cat << EOF
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
 
-MAIN_PAGE_TEMPLATE = """
 <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
 <HTML>
 <HEAD>
@@ -15,205 +15,127 @@ MAIN_PAGE_TEMPLATE = """
 <em>This DLS is a viewer for ZIP files</em>
 <p>Choose a file to start:</p>
 <form>
-<input name="path" placeholder="ZIP file path" />
+<input name="path" placeholder="ZIP file path" value="$path" />
 <input type=submit />
 </form>
-</table>
+<p>Note: the command <b>unzip</b> must be present on the system</p>
 </BODY></HTML>
-"""
+EOF
+}
 
-DIRECTORY_LISTING_TEMPLATE = """
+function display_directory_listing {
+    local url="$1"
+    local rows="$2"
+    cat << EOF
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+
 <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
 <HTML>
 <HEAD>
- <TITLE>{url}</TITLE>
+ <TITLE>${url}</TITLE>
 </HEAD>
-<BODY><H1>Directory listing of {url}</H1>
+<BODY><H1>Directory listing of ${url}</H1>
 <br><br>
 <table border=0 cellpadding=1 cellspacing=0 bgcolor=#E0E0E0 width=100%>
-<tr align=center><td><td width=60%><b>Filename</b><td><b>Type</b><td><b>Size</b><td><b>Modified&nbsp;at</b>
-{rows}
+<tr align=center><td width=60%><b>Filename</b><td><b>Size</b><td><b>Modified&nbsp;at</b>
+${rows}
 </table>
 </BODY></HTML>
-"""
+EOF
+}
 
-ROW_TEMPLATE = """
-<tr align=center bgcolor={bgcolor}><td>{dirsym}<td align=left><a href="{href}">{name}</a><td>{type}<td>{size}&nbsp;bytes<td>{date}
-"""
+function display_error {
+    local error="$1"
+    cat <<EOF
+HTTP/1.1 500 Execution Error
+Content-Type: text/html
 
-ROW_COLORS = [ "#dcdcdc", "" ]
+${error}
+EOF
+}
 
-def get_mime_type(filename):
-	"""Get mime type based on filename"""
+function get_mime_type {
+    # Get mime type based on filename
+    local filename="$1"
+    case "$filename" in
+	*.html | *.xhtml)
+	    echo 'text/html';;
+	*.xml | *.ncx | *.opf)
+	    echo 'text/xml';;
+	*.txt)
+	    echo 'text/plain';;
+	*.css)
+	    echo 'text/css';;
+	*.js)
+	    echo 'text/javascript';;
+	*.png)
+	    echo 'image/png';;
+	*.jpg | *.jpeg)
+	    echo 'image/jpeg';;
+	*.gif)
+	    echo 'image/gif';;
+	*)
+	    echo 'application/octet-stream';;
+    esac
+}
 
-	if filename.endswith('.html') or filename.endswith('.xhtml'):
-		return 'text/html'
+function url_decode {
+    sed -e 's|+| |g' -e 's|%|\\\\x|g' | xargs printf
+}
 
-	if filename.endswith('.xml') or filename.endswith('.ncx') or filename.endswith('.opf'):
-		return 'text/xml'
+function parse_path_param {
+    # Extract file path from URL params
+    echo "$1" | egrep -o '^path=([^&]+)' | url_decode | cut -d '=' -f 2
+}
 
-	elif filename.endswith('.txt'):
-		return 'text/plain'
+function parse_subpath_param {
+    # Extract file path from URL params
+    echo "$1" | egrep -o '&subpath=([^&]+)' | url_decode | cut -d '=' -f 2
+}
 
-	elif filename.endswith('.css'):
-		return 'text/css'
+function display_subfile {
+    local path="$1"
+    local subpath="$2"
+    local mime=`get_mime_type "$2"`
+    if [ "$mime" = "application/octet-stream" ]; then
+	# second check using file content
+	if unzip -p "$path" "$subpath" | file - | grep ' text' > /dev/null; then
+	    mime=text/plain
+	fi
+    fi
+    cat <<EOF
+HTTP/1.1 200 OK
+Content-Type: ${mime}
 
-	elif filename.endswith('.png'):
-		return 'image/png'
+EOF
+    unzip -p "$path" "$subpath"
+}
 
-	elif filename.endswith('.jpg') or filename.endswith('.jpeg'):
-		return 'image/jpeg'
+function get_subfiles_listing_rows {
+    local path="$1"
+    unzip -l "$path" | egrep -v  'Archive:|  Length  |  [0-9]+ files$|---------' | awk '
+    {
+	dirsym=""
+	subpath=""
+	for (i=4; i<=NF; i++) { subpath=subpath $i; subpath=subpath (i<NF ? OFS : "") }
 
-	elif filename.endswith('.gif'):
-		return 'image/gif'
+    	printf "<tr align=center bgcolor=%s>", (NR % 2 == 0 ? "" : "#dcdcdc")
+	printf "<td align=left><a href=\"?path=%s&subpath=%s\">%s</a>", "'"$path"'",subpath, subpath
+ 	printf "<td>%s&nbsp;bytes", $1
+	printf "<td>%s %s", $2, $3
+	print "</tr>"
+    }'
+}
 
-	return 'application/octet-stream'
+FILEPATH=`parse_path_param "$1"`
+SUBPATH=`parse_subpath_param "$1"`
 
-def parse_url_params(str_params):
-	"""Parse URL's parameters into a dictionary"""
-
-	if len(str_params) == 0:
-		return {}
-
-	return { name: urllib.parse.unquote_plus(value)
-		 for name, value
-		 in [
-			 tuple(par.split('='))
-			 for par in str_params.split('&')
-		 ]}
-
-class ZipDls(object):
-
-	def __init__(self, url, str_params=""):
-		self.url = url
-		self.params = parse_url_params(str_params)
-		print("DLS INIT: ", self.url, self.params, file=sys.stderr)
-
-	def make_url(self, path, subpath, curr_subpath=''):
-		"""Makes a relative URL for the DLS"""
-
-		def solve_path(path):
-			pieces = []
-
-			for piece in path.split('/'):
-				if len(piece) == 0 or piece == '.':
-					continue
-				elif piece == '..':
-					try:
-						pieces.pop()
-					except:
-						pass
-				else:
-					pieces.append(piece)
-
-			return '/'.join(pieces)
-		
-		return (
-			self.url +
-			"?path=" + urllib.parse.quote_plus(path) +
-			"&subpath=" + urllib.parse.quote_plus(
-				solve_path(curr_subpath + '/../' + subpath)
-			)
-		)
-		
-	def extract_file_data(self, subpath):
-		"""Returns the data of a file contained in the ZIP archive"""
-
-		with self.zip_file.open(subpath) as subfile:
-			return subfile.read()
-
-	def output_main_page(self):
-		"""Outputs the main page of the DLS"""
-
-		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
-		print(MAIN_PAGE_TEMPLATE, end="")
-
-	def output_subfile_content(self):
-		"""Outputs the content of a file of the ZIP archive"""
-
-		type = get_mime_type(self.params['subpath'])
-		buffer = self.extract_file_data(self.params['subpath'])
-		
-		print(("HTTP/1.1 200 OK\r\nContent-Type: {}\r\n" +
-		       "Content-Length: {}\r\n\r\n").format(type, len(buffer)),
-		      end="")
-
-		sys.stdout.flush()
-		sys.stdout.buffer.write(buffer)
-
-	def output_archive_listing(self):
-		"""Outputs directory listing of the archive"""
-
-		inner_files = self.zip_file.infolist()
-		rows = []
-		i = 0
-
-		for inner_file in inner_files:
-
-			dirsym = ""
-			type = get_mime_type(inner_file.filename)
-
-			if inner_file.is_dir():
-				dirsym = ">"
-				type = "Directory"
-
-			rows.append(ROW_TEMPLATE.format(
-				bgcolor=ROW_COLORS[i],
-				dirsym=dirsym,
-				href=self.make_url(self.params['path'], inner_file.filename),
-				name=inner_file.filename,
-				type=type,
-				size=inner_file.file_size,
-				date="{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}".format(
-					inner_file.date_time[0], inner_file.date_time[1],
-					inner_file.date_time[2], inner_file.date_time[3],
-					inner_file.date_time[4], inner_file.date_time[5]
-				)
-			))
-
-			i = (i + 1) % len(ROW_COLORS)
-
-		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
-		print(DIRECTORY_LISTING_TEMPLATE.format(url=self.params['path'],
-							rows='\n'.join(rows)), end="")
-		
-	def get_file_info(self):
-		"""Get zip file info"""
-
-		if len(self.params.get('path','')) == 0:
-			self.output_main_page()
-
-		else:
-			self.zip_file = zipfile.ZipFile(self.params['path'])
-			print("DLS OPENED ZIP: ", self.zip_file, file=sys.stderr)
-
-			if len(self.params.get('subpath','')) > 0:
-				self.output_subfile_content()
-
-			else:
-				self.output_archive_listing()
-
-
-def main():
-	
-	try:
-
-		url = "dls:zip"
-		params = ""
-
-		if len(sys.argv) > 1:
-			params = sys.argv[1]
-
-		zip_dls = ZipDls(url, params)
-		zip_dls.get_file_info()
-
-	except Exception as e:
-		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
-		print("<b>Execution error:</b> ", end="")
-		print(e)
-		print("<br/><pre>")
-		traceback.print_exc(file=sys.stdout)
-		print("</pre>")
-
-if __name__ == "__main__":
-	main()
+if [ ! -f "$FILEPATH" ]; then
+    display_main_page "$FILEPATH"
+elif [ -n "$FILEPATH" ] && [ -n "$SUBPATH" ]; then
+    display_subfile "$FILEPATH" "$SUBPATH"
+else
+    ROWS=`get_subfiles_listing_rows "$FILEPATH"`
+    display_directory_listing "$FILEPATH" "$ROWS"
+fi

@@ -1,136 +1,201 @@
-#!/usr/bin/env python3
+#!/bin/sh
 
-import os
-import re
-import sys
-import zipfile
-import traceback
-import urllib.parse
+function display_main_page {
+    local path="$1"
+    cat << EOF
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
 
-from xml.dom import minidom
-
-import imp
-zip = imp.load_source('zip', os.path.join(os.path.dirname(sys.argv[0]), 'zip.dls'))
-
-TOC_TEMPLATE = """
 <!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
 <HTML>
 <HEAD>
- <TITLE>Table of Content</TITLE>
+ <TITLE>DLS EPUB</TITLE>
 </HEAD>
-<BODY>
-<H1>Table of Content</H1>
-<ul>
-{rows}
-</ul>
+<BODY><H1>DLS EPUB Main Page</H1>
+<em>This DLS is a viewer for EPUB files</em>
+<p>Choose a file to start:</p>
+<form>
+<input name="path" placeholder="EPUB file path" value="$path" />
+<input type=submit />
+</form>
+<p>Note: the command <b>unzip</b> must be present on the system</p>
 </BODY></HTML>
-"""
+EOF
+}
 
-TOC_ITEM = """
-<li><a href="{href}">{name}</a>
-"""
+function display_directory_listing {
+    local url="$1"
+    local rows="$2"
+    cat << EOF
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
 
-class EpubDls(zip.ZipDls):
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>${url}</TITLE>
+</HEAD>
+<BODY><H1>Directory listing of ${url}</H1>
+<br><br>
+<table border=0 cellpadding=1 cellspacing=0 bgcolor=#E0E0E0 width=100%>
+<tr align=center><td width=60%><b>Filename</b><td><b>Size</b><td><b>Modified&nbsp;at</b>
+${rows}
+</table>
+</BODY></HTML>
+EOF
+}
 
-	def output_main_page(self):
-		"""Outputs the main page of the DLS"""
+function display_table_of_content {
+    local url="$1"
+    local rows="$2"
+    cat << EOF
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
 
-		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
-		print(zip.MAIN_PAGE_TEMPLATE.replace("ZIP", "EPUB"), end="")
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+<HTML>
+<HEAD>
+ <TITLE>EPUB Table of Content: ${url}</TITLE>
+</HEAD>
+<BODY><H1>EPUB Table of Content</H1>
+<br><br>
+<UL>
+${rows}
+</UL>
+</BODY></HTML>
+EOF
+}
 
-	def output_subfile_content(self):
-		"""Outputs the content of an EPUB subfile"""
+function display_error {
+    local error="$1"
+    cat <<EOF
+HTTP/1.1 500 Execution Error
+Content-Type: text/html
 
-		subpath = re.sub('#[^#]*$', '', self.params['subpath'])
+${error}
+EOF
+}
 
-		type = zip.get_mime_type(subpath)
-		buffer = self.extract_file_data(subpath)
+function get_mime_type {
+    # Get mime type based on filename
+    local filename="$1"
+    case "$filename" in
+	*.html | *.xhtml)
+	    echo 'text/html';;
+	*.xml | *.ncx | *.opf)
+	    echo 'text/xml';;
+	*.txt)
+	    echo 'text/plain';;
+	*.css)
+	    echo 'text/css';;
+	*.js)
+	    echo 'text/javascript';;
+	*.png)
+	    echo 'image/png';;
+	*.jpg | *.jpeg)
+	    echo 'image/jpeg';;
+	*.gif)
+	    echo 'image/gif';;
+	*)
+	    echo 'application/octet-stream';;
+    esac
+}
 
-		if type == 'text/html':
+function url_decode {
+    sed -e 's|+| |g' -e 's|%|\\\\x|g' | xargs printf
+}
 
-			buffer = buffer.decode('utf8')
+function parse_path_param {
+    # Extract file path from URL params
+    echo "$1" | egrep -o '^path=([^&]+)' | url_decode | cut -d '=' -f 2
+}
 
-			# replace hrefs and srcs
+function parse_subpath_param {
+    # Extract file path from URL params
+    echo "$1" | egrep -o '&subpath=([^&]+)' | url_decode | cut -d '=' -f 2
+}
 
-			for rex in ['(<img [^>]*src="[^"]+)"',
-				    '(<a [^>]*href="[^"]+)"',
-				    '(<link [^>]*href="[^"]+)"']:
+function display_subfile {
+    local path="$1"
+    local subpath="$2"
+    local mime=`get_mime_type "$2"`
+    if echo $subpath | grep '\.\.' > /dev/null; then
+	# resolve path
+	subpath=`realpath -m "$subpath" | sed "s|$PWD/||g"`
+    fi
+    if [ "$mime" = "application/octet-stream" ]; then
+	# second check using file content
+	if unzip -p "$path" "$subpath" | file - | grep ' text' > /dev/null; then
+	    mime=text/plain
+	fi
+    fi
+    cat <<EOF
+HTTP/1.1 200 OK
+Content-Type: ${mime}
 
-				tags = re.findall(rex, buffer)
+EOF
+    if echo $mime | grep text > /dev/null; then
+	# translate links and hrefs
+	unzip -p "$path" "$subpath" |
+	    sed -r 's/ (href|src)="([^"]+)"/ \1="?path=ZIPPATH\&subpath=\2"/g' |
+	    sed -r 's/subpath=([^/][^"]+)"/subpath=SUBPATH\/\1"/g' |
+	    sed -e "s|ZIPPATH|$path|" -e 's|SUBPATH|'`dirname "$subpath"`'|'
+    else
+	unzip -p "$path" "$subpath"
+    fi
+}
 
-				for tag in tags:
-					tag_prefix, tag_url = tag.rsplit('"', 1)
-					tag_url = self.make_url(
-						self.params['path'],
-						tag_url,
-						curr_subpath=subpath
-					)
-					buffer = re.sub(tag, tag_prefix + '"' + tag_url, buffer)
+function get_subfiles_listing_rows {
+    local path="$1"
+    unzip -l "$path" | egrep -v  'Archive:|  Length  |  [0-9]+ files$|---------' | awk '
+    {
+	dirsym=""
+	subpath=""
+	for (i=4; i<=NF; i++) { subpath=subpath $i; subpath=subpath (i<NF ? OFS : "") }
 
-			buffer = buffer.encode('utf8')
+    	printf "<tr align=center bgcolor=%s>", (NR % 2 == 0 ? "" : "#dcdcdc")
+	printf "<td align=left><a href=\"?path=%s&subpath=%s\">%s</a>", "'"$path"'",subpath, subpath
+ 	printf "<td>%s&nbsp;bytes", $1
+	printf "<td>%s %s", $2, $3
+	print "</tr>"
+    }'
+}
 
-		print(("HTTP/1.1 200 OK\r\nContent-Type: {}\r\n" +
-		       "Content-Length: {}\r\n\r\n").format(type, len(buffer)),
-		      end="")
+function get_opf_file {
+    local path="$1"
+    unzip -p "$path" "META-INF/container.xml" | egrep -o '[^"]+content.opf'
+}
 
-		sys.stdout.flush()
-		sys.stdout.buffer.write(buffer)
-	
-	def output_archive_listing(self):
-		"""List the table of content of the EPUB"""
+function get_opt_toc {
+    local path="$1"
+    local opf_subpath="$2"
+    unzip -p "$path" "$opf_subpath" | awk '
+    /<item / {
+	id=""; href="";
+	for(i=1; i<=NF; i++) {
+	    if ($i ~ /id=/) id=$i;
+	    if ($i ~ /href=/) href=$i;
+	}
+	gsub(/id=|"/, "", id);
+	gsub(/href=|"/, "", href);
+	print "<li><a href=\"?path='"$path"'&subpath='`dirname "$opf_subpath"`'/" href "\">" id "</a>"
+    }'
+}
 
-		content_opf_fullpath = "content.opf"
-		rows = []
+FILEPATH=`parse_path_param "$1"`
+SUBPATH=`parse_subpath_param "$1"`
 
-                # get location of content.opf from metadata
-		parser = minidom.parseString(self.extract_file_data('META-INF/container.xml').decode('utf8'))
-                
-		rootfiles = parser.getElementsByTagName('rootfile')
-		for rootfile in rootfiles:
-			if rootfile.getAttribute('full-path').endswith('.opf'):
-				content_opf_fullpath = rootfile.getAttribute('full-path')
+echo FILEPATH=$FILEPATH SUBPATH=$SUBPATH
 
-                # read table of content from content.opf
-		parser = minidom.parseString(self.extract_file_data(content_opf_fullpath).decode('utf8'))
-
-		manifest = parser.getElementsByTagName('manifest')[0]
-		items = { item.getAttribute('id'): item.getAttribute('href')
-			  for item in manifest.getElementsByTagName('item') }
-		
-		spine = parser.getElementsByTagName('spine')[0]
-		idrefs = [ itemref.getAttribute('idref')
-			   for itemref in spine.getElementsByTagName('itemref') ]
-
-		for idref in idrefs:
-			rows.append(TOC_ITEM.format(
-				href=self.make_url(self.params['path'], items[idref],
-                                                   curr_subpath=content_opf_fullpath),
-				name=items[idref]
-			))
-
-                # display table of content
-		print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", end="")
-		print(TOC_TEMPLATE.format(url=self.params['path'],
-					   rows='\n'.join(rows)), end="")
-
-def main():
-	try:
-		url = "dls:epub"
-		params = ""
-
-		if len(sys.argv) > 1:
-			params = sys.argv[1]
-
-		epub_dls = EpubDls(url, params)
-		epub_dls.get_file_info()
-		
-	except Exception as e:
-		print("HTTP/1.1 500 Execution Error\r\nContent-Type: text/html\r\n\r\n", end="")
-		print("<b>Execution error:</b> ", end="")
-		print(e)
-		print("<br/><pre>")
-		traceback.print_exc(file=sys.stdout)
-		print("</pre>")
-
-if __name__ == "__main__":
-	main()
+if [ ! -f "$FILEPATH" ]; then
+    display_main_page "$FILEPATH"
+elif [ -n "$FILEPATH" ] && [ -n "$SUBPATH"  ]; then
+    display_subfile "$FILEPATH" "$SUBPATH"
+elif get_opf_file "$FILEPATH" > /dev/null; then
+    OPF_FILE=`get_opf_file "$FILEPATH"`
+    ROWS=`get_opt_toc "$FILEPATH" "$OPF_FILE"`
+    display_table_of_content "$FILEPATH" "$ROWS"
+else
+    ROWS=`get_subfiles_listing_rows "$FILEPATH"`
+    display_directory_listing "$FILEPATH" "$ROWS"
+fi
