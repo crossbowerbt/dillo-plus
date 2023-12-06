@@ -17,8 +17,8 @@ LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
 
 CFLAGS ?= -g -O2
 CFLAGS += -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
-INCLUDES ?= -I. -I.. -I/usr/local/include
-LDFLAGS ?= -L/usr/local/lib
+INCLUDES = -I. -I.. -I/usr/local/include
+LDFLAGS = -L/usr/local/lib
 
 CXXCOMPILE = $(CXX) $(INCLUDES) $(CXXFLAGS)
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
