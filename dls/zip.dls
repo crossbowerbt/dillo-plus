@@ -18,7 +18,7 @@ Content-Type: text/html; charset=UTF-8
 <input name="path" placeholder="ZIP file path" value="$path" />
 <input type=submit />
 </form>
-<p>Note: the command <b>unzip</b> must be present on the system</p>
+<p>Note: the command <b>unzip</b> (or <b>7z</b>) must be present on the system</p>
 </BODY></HTML>
 EOF
 }
@@ -94,13 +94,23 @@ function parse_subpath_param {
     echo "$1" | egrep -o '&subpath=([^&]+)' | url_decode | cut -d '=' -f 2
 }
 
+function unzip_file {
+    local path="$1"
+    local subpath="$2"
+    if which 7z >/dev/null 2>/dev/null; then
+        7z x -so "$path" "$subpath"
+    else
+        unzip -p "$path" "$subpath"
+    fi
+}
+
 function display_subfile {
     local path="$1"
     local subpath="$2"
     local mime=`get_mime_type "$2"`
     if [ "$mime" = "application/octet-stream" ]; then
 	# second check using file content
-	if unzip -p "$path" "$subpath" | file - | grep ' text' > /dev/null; then
+	if unzip_file "$path" "$subpath" | file - | grep ' text' > /dev/null; then
 	    mime=text/plain
 	fi
     fi
@@ -109,23 +119,36 @@ HTTP/1.1 200 OK
 Content-Type: ${mime}
 
 EOF
-    unzip -p "$path" "$subpath"
+    unzip_file "$path" "$subpath"
 }
 
 function get_subfiles_listing_rows {
     local path="$1"
-    unzip -l "$path" | egrep -v  'Archive:|  Length  |  [0-9]+ files$|---------' | awk '
-    {
-	dirsym=""
-	subpath=""
-	for (i=4; i<=NF; i++) { subpath=subpath $i; subpath=subpath (i<NF ? OFS : "") }
+    if which 7z >/dev/null 2>/dev/null; then
+        7z l "$path" | egrep '^[0-9]{4}-[0-9]{2}-[0-9]{2}[ ]+' | egrep -v '[0-9]+ files$' | awk '
+        {
+            subpath=""
+            for (i=6; i<=NF; i++) { subpath=subpath $i; subpath=subpath (i<NF ? OFS : "") }
 
-    	printf "<tr align=center bgcolor=%s>", (NR % 2 == 0 ? "" : "#dcdcdc")
-	printf "<td align=left><a href=\"?path=%s&subpath=%s\">%s</a>", "'"$path"'",subpath, subpath
- 	printf "<td>%s&nbsp;bytes", $1
-	printf "<td>%s %s", $2, $3
-	print "</tr>"
-    }'
+            printf "<tr align=center bgcolor=%s>", (NR % 2 == 0 ? "" : "#dcdcdc")
+            printf "<td align=left><a href=\"?path=%s&subpath=%s\">%s</a>", "'"$path"'",subpath, subpath
+            printf "<td>%s&nbsp;bytes", $4
+            printf "<td>%s %s", $1, $2
+            print "</tr>"
+        }'
+    else
+        unzip -l "$path" | egrep '^[ ]*[0-9]+[ ]+[0-9]{2}-[0-9]{2}-[0-9]{4}[ ]+' | awk '
+        {
+            subpath=""
+            for (i=4; i<=NF; i++) { subpath=subpath $i; subpath=subpath (i<NF ? OFS : "") }
+
+            printf "<tr align=center bgcolor=%s>", (NR % 2 == 0 ? "" : "#dcdcdc")
+            printf "<td align=left><a href=\"?path=%s&subpath=%s\">%s</a>", "'"$path"'",subpath, subpath
+            printf "<td>%s&nbsp;bytes", $1
+            printf "<td>%s %s", $2, $3
+            print "</tr>"
+        }'
+    fi
 }
 
 FILEPATH=`parse_path_param "$1"`
