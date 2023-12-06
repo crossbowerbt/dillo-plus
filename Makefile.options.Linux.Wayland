@@ -43,6 +43,13 @@ DILLO_LDFLAGS = -ljpeg -L/usr/lib -L/usr/local/lib -lpng -Wl,-rpath,/usr/lib -Wl
 CA_CERTS_FILE ?= /etc/ssl/cert.pem
 CA_CERTS_DIR ?= /etc/ssl/
 
+# == EXTERNAL TOOLS ==
+
+DOWNLOADER_TOOL = wget
+DOWNLOADER_CONTINUE_ARG = -c
+DOWNLOADER_LOAD_COOKIES_ARG = --load_cookies
+DOWNLOADER_OUTPUT_FILENAME_ARG = -O
+
 # == INSTALL PATHS ==
 
 PREFIX ?= /usr/local

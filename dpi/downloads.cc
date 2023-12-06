@@ -138,8 +138,8 @@ public:
    void fork_done(int val) { ForkDone = val; }
    int log_done() { return LogDone; }
    void log_done(int val) { LogDone = val; }
-   int wget_status() { return WgetStatus; }
-   void wget_status(int val) { WgetStatus = val; }
+   int downloader_status() { return WgetStatus; }
+   void downloader_status(int val) { WgetStatus = val; }
    void update_prSize(int newsize);
    void update();
 };
@@ -320,16 +320,20 @@ DLItem::DLItem(const char *full_filename, const char *url)
       Filter_smtp_hack(esc_url);
    dl_argv = new char*[8];
    int i = 0;
-   dl_argv[i++] = (char*)"wget";
+   dl_argv[i++] = (char*)DOWNLOADER_TOOL;
    if (stat(fullname, &ss) == 0)
       init_bytesize = (int)ss.st_size;
-   dl_argv[i++] = (char*)"-c";
-   dl_argv[i++] = (char*)"--load-cookies";
+   dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
+   dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
    dl_argv[i++] = dStrconcat(dGethomedir(), "/.dillo/cookies.txt", NULL);
-   dl_argv[i++] = (char*)"-O";
+   dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
    dl_argv[i++] = fullname;
    dl_argv[i++] = esc_url;
    dl_argv[i++] = NULL;
+
+   // Create cookies.txt if it doesn't exist (needed for some downloaders)
+   FILE *fp = fopen(dl_argv[3], "ab+");
+   fclose(fp);
 
    DataDone = 0;
    LogDone = 0;
@@ -444,7 +448,7 @@ void DLItem::abort_dl()
       dClose(LogPipe[0]);
       Fl::remove_fd(LogPipe[0]);
       log_done(1);
-      // Stop wget
+      // Stop downloader
       if (!fork_done())
          kill(pid(), SIGTERM);
    }
@@ -465,7 +469,7 @@ void DLItem::child_init()
    dup2(LogPipe[1], 2); // stderr
    // set the locale to C for log parsing
    setenv("LC_ALL", "C", 1);
-   // start wget
+   // start downloader
    execvp(dl_argv[0], dl_argv);
 }
 
@@ -501,7 +505,7 @@ void DLItem::log_text_add(const char *buf, ssize_t st)
       prTitle->tooltip(log_text);
    }
 
-   // FSM to remove wget's "dot-progress" (i.e. "^ " || "^[0-9]+K")
+   // FSM to remove downloader's "dot-progress" (i.e. "^ " || "^[0-9]+K")
    q = log_text + log_len;
    for (p = esc_str; (size_t)(p - esc_str) < esc_len; ++p) {
       switch (log_state) {
@@ -635,16 +639,16 @@ void DLItem::father_init()
    Fl::add_fd(LogPipe[0], 1, read_log_cb, this); // Read
 
    // Start the timer after the child is running.
-   // (this makes a big difference with wget)
+   // (this makes a big difference with wget and other downloaders)
    //init_time = time(NULL);
 }
 
 /*
- * Our wget exited, let's check its status and update the panel.
+ * Our downloader exited, let's check its status and update the panel.
  */
 void DLItem::child_finished(int status)
 {
-   wget_status(status);
+   downloader_status(status);
 
    if (status == 0) {
       prButton->label("Done");
@@ -660,7 +664,7 @@ void DLItem::child_finished(int status)
    }
    prButton->activate();
    prButton->redraw();
-   MSG("wget status %d\n", status);
+   MSG(DOWNLOADER_TOOL " status %d\n", status);
 }
 
 /*
@@ -730,7 +734,7 @@ void DLItem::update()
       prETA->copy_label(str);
       if (total_bytesize == -1) {
          update_prSize(curr_bytesize);
-         if (wget_status() == 0)
+         if (downloader_status() == 0)
             status_msg("Done");
       }
    } else {
@@ -774,7 +778,7 @@ static void est_sigchld(void)
 }
 
 /*
- * Timeout function to check wget's exit status.
+ * Timeout function to check downloader's exit status.
  */
 static void cleanup_cb(void *data)
 {

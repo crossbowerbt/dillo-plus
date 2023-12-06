@@ -26,7 +26,7 @@ datauri.filter.dpi: datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o datauri.filter.dpi datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 downloads_dpi-downloads.o: downloads.cc
-	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -o downloads_dpi-downloads.o -c downloads.cc
+	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -DDOWNLOADER_TOOL='"$(DOWNLOADER_TOOL)"' -DDOWNLOADER_CONTINUE_ARG='"$(DOWNLOADER_CONTINUE_ARG)"' -DDOWNLOADER_LOAD_COOKIES_ARG='"$(DOWNLOADER_LOAD_COOKIES_ARG)"' -DDOWNLOADER_OUTPUT_FILENAME_ARG='"$(DOWNLOADER_OUTPUT_FILENAME_ARG)"' -o downloads_dpi-downloads.o -c downloads.cc
 
 downloads.dpi: downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a  ../dlib/libDlib.a
 	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) $(LIBFLTK_LDFLAGS) -o downloads.dpi downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
