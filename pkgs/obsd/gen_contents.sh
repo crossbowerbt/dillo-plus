@@ -19,7 +19,7 @@ function gen_file {
 }
 
 cat  >+CONTENTS <<EOF
-@name dillo-plus-3.2.2-custom
+@name dillo-plus-3.2.3-custom
 @version 10
 @arch amd64
 $(gen_file "" +DESC)

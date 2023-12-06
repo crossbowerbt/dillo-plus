@@ -74,7 +74,7 @@
 #define PACKAGE_NAME "dillo"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "dillo 3.2.2"
+#define PACKAGE_STRING "dillo 3.2.3"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "dillo"
@@ -83,7 +83,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.2.2"
+#define PACKAGE_VERSION "3.2.3"
 
 /* The size of `char', as computed by sizeof. */
 #define SIZEOF_CHAR 1
@@ -104,7 +104,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "3.2.2"
+#define VERSION "3.2.3"
 
 /* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
    <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
