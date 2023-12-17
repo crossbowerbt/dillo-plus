@@ -1231,6 +1231,28 @@ static int Css_shorthand_info_cmp(const void *a, const void *b)
                       ((CssShorthandInfo *) b)->symbol);
 }
 
+/*
+ * excludes some properties that may break reader mode
+ */
+static int safeCss(CssPropertyName prop) {
+   switch(prop) {
+      case CSS_PROPERTY_DISPLAY:
+      case CSS_PROPERTY_FLOAT:
+      case CSS_PROPERTY_MARGIN_BOTTOM:
+      case CSS_PROPERTY_MARGIN_LEFT:
+      case CSS_PROPERTY_MARGIN_RIGHT:
+      case CSS_PROPERTY_MARGIN_TOP:
+      case CSS_PROPERTY_MAX_HEIGHT:
+      case CSS_PROPERTY_MAX_WIDTH:
+      case CSS_PROPERTY_MIN_HEIGHT:
+      case CSS_PROPERTY_MIN_WIDTH:
+      case CSS_PROPERTY_WIDTH:
+         return 0;
+      default:
+         return 1;
+   }
+}
+
 void CssParser::parseDeclaration(CssPropertyList *props,
                                  CssPropertyList *importantProps)
 {
@@ -1265,10 +1287,14 @@ void CssParser::parseDeclaration(CssPropertyList *props,
             if (tokenMatchesProperty (prop, &type) &&
                 parseValue(prop, type, &val)) {
                weight = parseWeight();
-               if (weight && importantProps)
-                  importantProps->set(prop, type, val);
-               else
-                  props->set(prop, type, val);
+               if(!prefs.load_reader_mode_css ||
+                  origin != CSS_ORIGIN_AUTHOR ||
+                  safeCss(prop)) { // fix reader mode on some sites
+                  if (weight && importantProps)
+                     importantProps->set(prop, type, val);
+                  else
+                     props->set(prop, type, val);
+               }
             }
          }
       } else {
@@ -1306,13 +1332,18 @@ void CssParser::parseDeclaration(CssPropertyList *props,
                            if (parseValue(Css_shorthand_info[sh_index]
                                           .properties[i], type, &val)) {
                               weight = parseWeight();
-                              if (weight && importantProps)
-                                 importantProps->
-                                     set(Css_shorthand_info[sh_index].
-                                         properties[i], type, val);
-                              else
-                                 props->set(Css_shorthand_info[sh_index].
+                              if(!prefs.load_reader_mode_css ||
+                                 origin != CSS_ORIGIN_AUTHOR ||
+                                 safeCss(Css_shorthand_info[sh_index].
+                                         properties[i])) { // fix reader mode on some sites
+                                 if (weight && importantProps)
+                                    importantProps->
+                                        set(Css_shorthand_info[sh_index].
                                             properties[i], type, val);
+                                 else
+                                    props->set(Css_shorthand_info[sh_index].
+                                               properties[i], type, val);
+                              }
                            }
                         }
                   } while (found);
@@ -1335,16 +1366,21 @@ void CssParser::parseDeclaration(CssPropertyList *props,
                   weight = parseWeight();
                   if (n > 0) {
                      for (i = 0; i < 4; i++)
-                        if (weight && importantProps)
-                           importantProps->set(Css_shorthand_info[sh_index]
-                                               .properties[i],
-                                               dir_types[dir_set[n - 1][i]],
-                                               dir_vals[dir_set[n - 1][i]]);
-                        else
-                           props->set(Css_shorthand_info[sh_index]
-                                      .properties[i],
-                                      dir_types[dir_set[n - 1][i]],
-                                      dir_vals[dir_set[n - 1][i]]);
+                        if(!prefs.load_reader_mode_css ||
+                           origin != CSS_ORIGIN_AUTHOR ||
+                           safeCss(Css_shorthand_info[sh_index]
+                                    .properties[i])) { // fix reader mode on some sites
+                           if (weight && importantProps)
+                              importantProps->set(Css_shorthand_info[sh_index]
+                                                  .properties[i],
+                                                  dir_types[dir_set[n - 1][i]],
+                                                  dir_vals[dir_set[n - 1][i]]);
+                           else
+                              props->set(Css_shorthand_info[sh_index]
+                                         .properties[i],
+                                         dir_types[dir_set[n - 1][i]],
+                                         dir_vals[dir_set[n - 1][i]]);
+                        }
                   } else
                      MSG_CSS("no values for shorthand property '%s'\n",
                              Css_shorthand_info[sh_index].symbol);
@@ -1363,13 +1399,18 @@ void CssParser::parseDeclaration(CssPropertyList *props,
                                           .properties[i], type, &val)) {
                               weight = parseWeight();
                               for (j = 0; j < 4; j++)
-                                 if (weight && importantProps)
-                                    importantProps->
-                                       set(Css_shorthand_info[sh_index].
+                                 if(!prefs.load_reader_mode_css ||
+                                    origin != CSS_ORIGIN_AUTHOR ||
+                                    safeCss(Css_shorthand_info[sh_index]
+                                             .properties[i])) { // fix reader mode on some sites
+                                    if (weight && importantProps)
+                                       importantProps->
+                                          set(Css_shorthand_info[sh_index].
+                                             properties[j * 3 + i], type, val);
+                                    else
+                                       props->set(Css_shorthand_info[sh_index].
                                           properties[j * 3 + i], type, val);
-                                 else
-                                    props->set(Css_shorthand_info[sh_index].
-                                       properties[j * 3 + i], type, val);
+                                 }
                            }
                         }
                   } while (found);
@@ -1785,14 +1826,14 @@ void CssParser::parse(DilloHtml *html, const DilloUrl *baseUrl,
 void CssParser::parseDeclarationBlock(const DilloUrl *baseUrl,
                                       const char *buf, int buflen,
                                       CssPropertyList *props,
-                                      CssPropertyList *propsImortant)
+                                      CssPropertyList *propsImportant)
 {
    CssParser parser (NULL, CSS_ORIGIN_AUTHOR, baseUrl, buf, buflen);
 
    parser.withinBlock = true;
 
    do
-      parser.parseDeclaration(props, propsImortant);
+      parser.parseDeclaration(props, propsImportant);
    while (!(parser.ttype == CSS_TK_END ||
          (parser.ttype == CSS_TK_CHAR && parser.tval[0] == '}')));
 }
