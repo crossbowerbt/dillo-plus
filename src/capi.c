@@ -303,8 +303,8 @@ static char *Capi_dpi_build_cmd(DilloWeb *web, char *server)
 
    if (strcmp(server, "downloads") == 0) {
       /* let the downloads server get it */
-      cmd = a_Dpip_build_cmd("cmd=%s url=%s destination=%s",
-                             "download", URL_STR(web->url), web->filename);
+      cmd = a_Dpip_build_cmd("cmd=%s user_agent=%s url=%s destination=%s",
+                             "download", prefs.http_user_agent, URL_STR(web->url), web->filename);
 
    } else {
       /* For everyone else, the url string is enough... */
