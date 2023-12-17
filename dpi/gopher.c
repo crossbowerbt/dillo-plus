@@ -264,7 +264,7 @@ static void gopher_main(void)
    }
 
    if (exit_error == 0) {
-      char *d_cmd, *tmp, *query_piece;
+      char *d_cmd, *query_piece;
 
       fprintf(stderr, "Gopher Request = %s\n", gopher_query);
 

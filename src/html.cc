@@ -4791,7 +4791,7 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
       }
       
       if(end_of_line - (buf + buf_index) >= (long) sizeof(html->last_partial_line)) {
-         printf("Long line: %d\n", end_of_line - (buf + buf_index));
+         printf("Long line: %ld\n", end_of_line - (buf + buf_index));
          BUG_MSG("Line too long: skipping.");
          goto CLEANUP_GOPHER;
       }

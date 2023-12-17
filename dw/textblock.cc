@@ -556,7 +556,7 @@ void Textblock::notifySetParent ()
          // avoid dublicates
          bool found = false;
          for (int j = 0; !found && j < numSizeReferences; j++)
-            if (oofContainer[i] == oofContainer[i])
+            if (oofContainer[i] == oofContainer[j])
                found = true;
 
          if (!found)

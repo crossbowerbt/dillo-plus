@@ -1055,7 +1055,7 @@ void StyleEngine::init () {
 void StyleEngine::buildUserStyle () {
    Dstr *style;
    char *filename = dStrconcat(dGethomedir(), "/.dillo/style.css", NULL);
-   char *sys_filename = DILLO_SYSCONF "style.css";
+   const char *sys_filename = DILLO_SYSCONF "style.css";
 
    if ((style = a_Misc_file2dstr(filename))) {
       CssParser::parse (NULL,NULL,cssContext,style->str, style->len,CSS_ORIGIN_USER);
@@ -1069,7 +1069,7 @@ void StyleEngine::buildUserStyle () {
 
 void StyleEngine::buildReaderModeStyle () {
    Dstr *style;
-   char *sys_reader_mode_filename = DILLO_SYSCONF "style_reader_mode.css";
+   const char *sys_reader_mode_filename = DILLO_SYSCONF "style_reader_mode.css";
 
    if ((style = a_Misc_file2dstr(sys_reader_mode_filename))) {
       CssParser::parse (NULL,NULL,cssContext,style->str, style->len,CSS_ORIGIN_USER);

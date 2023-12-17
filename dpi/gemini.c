@@ -180,7 +180,7 @@ static void yes_ssl_support(void)
    int ret = 0;
    int network_socket = -1;
 
-   int u = 0;
+   unsigned int u = 0;
 
    MSG("{In gemini.filter.dpi}\n");
 
@@ -614,7 +614,6 @@ static int handle_certificate_problem(SSL * ssl_connection)
    int response_number;
    int ret = -1;
    long st;
-   char *cn;
    char buf[4096], *d_cmd, *msg;
    X509 * remote_cert;
 

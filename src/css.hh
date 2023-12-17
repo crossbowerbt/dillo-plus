@@ -81,7 +81,7 @@ typedef enum {
                                   millimeters. */
    CSS_LENGTH_TYPE_EM,
    CSS_LENGTH_TYPE_EX,
-/* CSS_LENGTH_TYPE_CH,         /* not used to remain in the 3 bits space, converted to EM by cssparser */
+/* CSS_LENGTH_TYPE_CH, */      /* not used to remain in the 3 bits space, converted to EM by cssparser */
    CSS_LENGTH_TYPE_PERCENTAGE,
    CSS_LENGTH_TYPE_RELATIVE,   /* This does not exist in CSS but
                                   is used in HTML */

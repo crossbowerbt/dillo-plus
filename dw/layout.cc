@@ -864,7 +864,9 @@ void Layout::resizeIdle ()
 
    enterResizeIdle ();
 
+#ifdef DBG_RTFL
    static int calls = 0;
+#endif
 
    // There are two commits, 2863:b749629fbfc9 and 4645:ab70f9ce4353, the second
    // reverting the former. Interrestingly, the second fixes a bug. However, it

@@ -853,7 +853,6 @@ void a_Tls_connect(int fd, const DilloUrl *url)
    SSL *ssl = SSL_new(ssl_context);
    bool_t success = TRUE;
    int connkey = -1;
-   int ret;
 
    if (ssl == NULL) {
       MSG("Error creating SSL connection\n");

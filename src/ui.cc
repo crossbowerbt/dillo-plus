@@ -56,6 +56,7 @@ static struct iconset standard_icons = {
    new Fl_Pixmap(right_xpm),
    NULL,
    new Fl_Pixmap(stop_xpm),
+   NULL,
 };
 
 static struct iconset small_icons = {
@@ -74,6 +75,7 @@ static struct iconset small_icons = {
    new Fl_Pixmap(right_s_xpm),
    NULL,
    new Fl_Pixmap(stop_s_xpm),
+   NULL,
 };
 
 

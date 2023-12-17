@@ -266,8 +266,8 @@ static void handle_local_script(void)
       }
    }
 
-   strncat(dls_path_real, dls_path, sizeof(dls_path_real));
-   strncat(dls_path_real, ".dls", sizeof(dls_path_real));
+   strncat(dls_path_real, dls_path, sizeof(dls_path_real)-1);
+   strncat(dls_path_real, ".dls", sizeof(dls_path_real)-strlen(dls_path)-1);
 
    fprintf(stderr, "DLS Script = %s\n", dls_path_real);
    
