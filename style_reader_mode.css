@@ -31,7 +31,6 @@ p, q, blockquote {
   max-width: 800px !important;
   margin: auto !important;
   padding: 10px 0 10px 0;
-  display: block;
 }
 
 img, figure, figcaption {
