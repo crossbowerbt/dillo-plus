@@ -23,6 +23,7 @@
 #include "ui.hh" // for (UI *)
 #include "keys.hh"
 #include "timeout.hh"
+#include "cookies.h" // for enabling cookies
 
 /*
  * Local data types
@@ -745,6 +746,25 @@ static void Menu_bgimg_load_toggle_cb(Fl_Widget *wid, void*)
 }
 
 /*
+ * Toggle usage of cookies.
+ */
+#ifndef DISABLE_COOKIES
+static void Menu_cookies_enable_toggle_cb(Fl_Widget *wid, void*)
+{
+   Fl_Menu_Item *item = (Fl_Menu_Item*) wid;
+
+   item->flags ^= FL_MENU_VALUE;
+   if(a_Cookies_get_disabled()){
+      a_Cookies_set_disabled(FALSE);
+   }
+   else{
+      a_Cookies_set_disabled(TRUE);
+   };
+   MSG("The cookies are now %s\n", a_Cookies_get_disabled() == TRUE ? "disabled" : "enabled");
+}
+#endif
+
+/*
  * Tools popup menu (construction & popup)
  */
 void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
@@ -761,6 +781,10 @@ void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
        FL_MENU_TOGGLE,0,0,0,0},
       {"Load background images", 0, Menu_bgimg_load_toggle_cb, 0,
        FL_MENU_TOGGLE|FL_MENU_DIVIDER,0,0,0,0},
+#ifndef DISABLE_COOKIES
+      {"Enable cookies", 0, Menu_cookies_enable_toggle_cb,0,
+       FL_MENU_TOGGLE|FL_MENU_DIVIDER,0,0,0,0},
+#endif
       {"Panel size", 0, Menu_nop_cb, (void*)"Submenu1", FL_SUBMENU,0,0,0,0},
          {"tiny",  0,Menu_panel_change_cb,(void*)0,FL_MENU_RADIO,0,0,0,0},
          {"small", 0,Menu_panel_change_cb,(void*)1,FL_MENU_RADIO,0,0,0,0},
@@ -775,6 +799,8 @@ void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
    popup_bw = bw;
    int cur_panelsize = ui->get_panelsize();
    int cur_smallicons = ui->get_smallicons();
+   // Let's calculate the submenu position if cookies are enabled
+   char submenu_position_offset = 0;
 
    if (prefs.load_stylesheets)
       pm[0].set();
@@ -786,12 +812,15 @@ void a_Menu_tools_popup(BrowserWindow *bw, int x, int y)
       pm[3].set();
    if (prefs.load_background_images)
       pm[4].set();
-   pm[6+cur_panelsize].setonly();
-   cur_smallicons ? pm[9].set() : pm[9].clear();
-
+#ifndef DISABLE_COOKIES
+   submenu_position_offset = submenu_position_offset+1;
+   if (!a_Cookies_get_disabled())
+      pm[5].set(); // The cookies are enabled by default
+#endif
+   pm[6+cur_panelsize+submenu_position_offset].setonly();
+   cur_smallicons ? pm[9+submenu_position_offset].set() : pm[9+submenu_position_offset].clear();
    item = pm->popup(x, y);
    if (item) {
       ((Fl_Widget *)item)->do_callback();
    }
 }
-

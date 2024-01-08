@@ -126,6 +126,16 @@ void a_Cookies_init(void)
    disabled = FALSE;
 }
 
+bool_t  a_Cookies_get_disabled(void)
+{
+   return disabled;
+}
+
+void  a_Cookies_set_disabled(bool_t new_state)
+{
+   disabled = new_state;
+}
+
 /*
  * Flush cookies to disk and free all the memory allocated.
  */
