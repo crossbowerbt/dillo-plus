@@ -173,8 +173,11 @@ int CustInput2::handle(int e)
          return 0;
       }
       if (modifier == FL_CTRL) {
-         if (k == 'a' || k == 'e') {
-            position(k == 'a' ? 0 : size());
+         if (k == 'a') {
+            position(size(), 0);
+	    return 1;
+	 } else if (k == 'e') {
+            position(size());
             return 1;
          } else if (k == 'k') {
             cut(position(), size());
