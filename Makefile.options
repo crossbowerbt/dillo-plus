@@ -17,8 +17,8 @@ LINK = $(CC) $(CFLAGS) $(LDFLAGS) -o $@
 
 CFLAGS ?= -g -O2
 CFLAGS += -DD_DNS_THREADED -D_REENTRANT -DHAVE_CONFIG -D_THREAD_SAFE -Wall -W -Wno-unused-parameter -Waggregate-return -Wl,--no-as-needed
-INCLUDES = -I. -I.. -I/usr/local/include
-LDFLAGS = -L/usr/local/lib
+INCLUDES ?= -I. -I.. -I/usr/local/include
+LDFLAGS ?= -L/usr/local/lib
 
 CXXCOMPILE = $(CXX) $(INCLUDES) $(CXXFLAGS)
 CXXFLAGS = $(CFLAGS) -fno-rtti -fno-exceptions
@@ -31,7 +31,7 @@ HTTPS_LDFLAGS = -lcrypto -lssl
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
 
-DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
+DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz -lX11
 
 # == HTTPS CERTS ==
 
@@ -40,11 +40,11 @@ CA_CERTS_DIR ?= /etc/ssl/
 
 # == EXTERNAL TOOLS ==
 
-DOWNLOADER_TOOL = ftp
+DOWNLOADER_TOOL = wget
 DOWNLOADER_USER_AGENT_ARG = -U
-DOWNLOADER_CONTINUE_ARG = -C
-DOWNLOADER_LOAD_COOKIES_ARG = -c
-DOWNLOADER_OUTPUT_FILENAME_ARG = -o
+DOWNLOADER_CONTINUE_ARG = -c
+DOWNLOADER_LOAD_COOKIES_ARG = --load_cookies
+DOWNLOADER_OUTPUT_FILENAME_ARG = -O
 
 # == INSTALL PATHS ==
 
