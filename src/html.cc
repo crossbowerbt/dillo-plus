@@ -4706,7 +4706,6 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char body_open[] = "<body>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
    char link_open[2048] = "", link_close[] = "</a>";
-   char br[] = "<br />";
    char input_tag[] = "<input name=\"q\" placeholder=\"search text\" />";
    char submit_tag[] = "<input type=\"submit\" />";
    char form_open[2048] = "", form_open_template[] = "<form action=\"gopher://1::%s:%s%s\">", form_close[] = "</form>";
