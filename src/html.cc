@@ -4463,6 +4463,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char ch = 0;
    int token_start, buf_index;
 
+   char title_open[] = "<title>",  title_close[] = "</title>";
    char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
    char heading_open[16] = "<hX>", heading_close[16] = "</hX>";
@@ -4479,9 +4480,16 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    /* Restore flags */
    in_pre = html->in_pre;
 
-   /* Open a body tag at the beginning */
-   if (html->CurrOfs == 0)
+   /* Set default title and open body tag at the beginning */
+   if (html->CurrOfs == 0) {
+      if(a_Url_hostname(html->page_url)) {
+         Html_process_tag(html, title_open, strlen(title_open));
+         Html_process_word(html, a_Url_hostname(html->page_url), strlen(a_Url_hostname(html->page_url)));
+         Html_process_tag(html, title_close, strlen(title_close));
+      }
+
       Html_process_tag(html, body_open, strlen(body_open));
+   }
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
@@ -4511,7 +4519,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
             snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
             Html_process_tag(html, heading_open, strlen(heading_open));
-            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            while (buf_index < bufsize && buf[buf_index] != '\n' && isspace(buf[buf_index])) buf_index++; /* skip spaces */
             token_start = buf_index;
          }
 
@@ -4558,7 +4566,7 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             buf_index += 2;
             in_link = true;
             in_middle_line = true;
-            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            while (buf_index < bufsize && buf[buf_index] != '\n' && isspace(buf[buf_index])) buf_index++; /* skip spaces */
             token_start = buf_index;
             while (buf_index < bufsize && !isspace(buf[buf_index]) && buf[buf_index] != '\n')
                buf_index++; /* read href */
@@ -4694,21 +4702,30 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char ch_str[2] = { 0 };
    int token_start, buf_index;
 
+   char title_open[] = "<title>",  title_close[] = "</title>";
    char body_open[] = "<body>";
    char pre_open[] = "<pre>", pre_close[] = "</pre>";
    char link_open[2048] = "", link_close[] = "</a>";
+   char br[] = "<br />";
    char input_tag[] = "<input name=\"q\" placeholder=\"search text\" />";
    char submit_tag[] = "<input type=\"submit\" />";
    char form_open[2048] = "", form_open_template[] = "<form action=\"gopher://1::%s:%s%s\">", form_close[] = "</form>";
 
+   bool in_line = false;
+
    char line_type = 'i'; /* gophermap line type */
 
-   /* Open a body tag at the beginning */
+   /* Set default title and open body tag at the beginning */
    if (html->CurrOfs == 0) {
+      if(a_Url_hostname(html->page_url)) {
+         Html_process_tag(html, title_open, strlen(title_open));
+         Html_process_word(html, a_Url_hostname(html->page_url), strlen(a_Url_hostname(html->page_url)));
+         Html_process_tag(html, title_close, strlen(title_close));
+      }
+
       Html_process_tag(html, body_open, strlen(body_open));
-      Html_process_tag(html, pre_open, strlen(pre_open));
    }
-   
+
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
    buf_index = 0;
@@ -4820,24 +4837,32 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
       case '7':
          /* Gopher full-text search */
+         if(in_line) {
+            in_line = false;
+            Html_process_tag(html, pre_close, strlen(pre_close));
+         }
+         Html_process_tag(html, pre_open, strlen(pre_open));
          ch_str[0] = line_type;
          Html_process_word(html, "[", strlen("["));
          Html_process_word(html, ch_str, strlen(ch_str));
          Html_process_word(html, "] ", strlen("] "));
          Html_process_word(html, text, strlen(text));
          Html_process_word(html, "\n", strlen("\n"));
-         Html_process_tag(html, pre_close, strlen(pre_close));
          snprintf(form_open, sizeof(form_open)-1, form_open_template,
                   host, port, resource);
          Html_process_tag(html, form_open, strlen(form_open));
          Html_process_tag(html, input_tag, strlen(input_tag));
          Html_process_tag(html, submit_tag, strlen(submit_tag));
          Html_process_tag(html, form_close, strlen(form_close));
-         Html_process_tag(html, pre_open, strlen(pre_open));
+         Html_process_tag(html, pre_close, strlen(pre_close));
          break;
          
       case 'i':
          /* Informational message */
+         if(!in_line) {
+            in_line = true;
+            Html_process_tag(html, pre_open, strlen(pre_open));
+         }
          Html_process_word(html, text, strlen(text));
          break;
 
@@ -4864,6 +4889,11 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
       case 'P': /* document pdf file (Portable Document Format) */
       case 'X': /* document xml file (eXtensive Markup Language) */
       default:
+         if(in_line) {
+            in_line = false;
+            Html_process_tag(html, pre_close, strlen(pre_close));
+         }
+         Html_process_tag(html, pre_open, strlen(pre_open));
          ch_str[0] = line_type;
          Html_process_word(html, "[", strlen("["));
          Html_process_word(html, ch_str, strlen(ch_str));
@@ -4886,6 +4916,7 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          Html_process_tag(html, link_open, strlen(link_open));
          Html_process_word(html, text, strlen(text));
          Html_process_tag(html, link_close, strlen(link_close));
+         Html_process_tag(html, pre_close, strlen(pre_close));
          break;
       }
 
@@ -4962,6 +4993,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    char ch = 0;
    int token_start, buf_index, tmp;
 
+   char title_open[] = "<title>",  title_close[] = "</title>";
    char body_open[] = "<body>";
    char par_open[] = "<p>", par_close[] = "</p>";
    char heading_open[16] = "<hX>", heading_close[16] = "</hX>";
@@ -4991,9 +5023,16 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
    in_link = html->in_link;
    list_level = html->list_level;
 
-   /* Open a body tag at the beginning */
-   if (html->CurrOfs == 0 && !in_link)
+   /* Set default title and open body tag at the beginning */
+   if (html->CurrOfs == 0 && !in_link) {
+      if(a_Url_hostname(html->page_url)) {
+         Html_process_tag(html, title_open, strlen(title_open));
+         Html_process_word(html, a_Url_hostname(html->page_url), strlen(a_Url_hostname(html->page_url)));
+         Html_process_tag(html, title_close, strlen(title_close));
+      }
+
       Html_process_tag(html, body_open, strlen(body_open));
+   }
 
    /* Now, 'buf' and 'bufsize' define a buffer aligned to start at a token
     * boundary. Iterate through tokens until end of buffer is reached. */
@@ -5043,7 +5082,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             snprintf(heading_open, sizeof(heading_open), "<h%d>", buf_index - token_start);
             snprintf(heading_close, sizeof(heading_close), "</h%d>", buf_index - token_start);
             Html_process_tag(html, heading_open, strlen(heading_open));
-            while (buf_index < bufsize && isspace(buf[buf_index])) buf_index++; /* skip spaces */
+            while (buf_index < bufsize && buf[buf_index] != '\n' && isspace(buf[buf_index])) buf_index++; /* skip spaces */
             token_start = buf_index;
          }
 
@@ -5075,7 +5114,7 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          else if (NEXT2CH('-', ' ') || NEXT2CH('+', ' ') || NEXT2CH('*', ' ')) {
             /* open/close list and list element */
             
-            while (++buf_index < bufsize && isspace(buf[buf_index])) ;
+            while (++buf_index < bufsize && buf[buf_index] != '\n' && isspace(buf[buf_index])) ;
 
             if(list_level < 0 || list_indents[list_level] < curr_indent) {
                /* beginning of a new multiline list/sublist */
