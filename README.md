@@ -11,7 +11,7 @@ Because javascript is not used, extra bloat is not needed to be downloaded.  If 
 
 Finally, your online experience can be more secure with Dillo+. Not only does it not use Javascript, rules can also be defined per website domain. These rules can block connecting to certain domains, block ads and trackers, and require sites to use encryption.
 
-Note that not websites will work correctly without Javascript, so be forewarned.
+Note that not all websites will work correctly without Javascript, so be forewarned.
 
 # Browser Features
 
