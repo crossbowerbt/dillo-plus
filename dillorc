@@ -31,6 +31,10 @@
 # (While browsing, this can be changed from the tools/settings menu.)
 #parse_embedded_css=YES
 
+# Change this if you want to enable loading of reader mode CSS initially.
+# (While browsing, this can be changed from the tools/settings menu.)
+#load_reader_mode_css=NO
+
 # Change the buffering scheme for drawing
 # 0 no double buffering - useful for debugging
 # 1 light buffering using a single back buffer for all windows
