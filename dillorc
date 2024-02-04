@@ -5,56 +5,37 @@
 # "#option=..." shows the built-in default.
 # "# option=..." is an additional example.
 # "option=..." overrides the built-in value.
-
 #-------------------------------------------------------------------------
 #                             FIRST SECTION                             :)
 #-------------------------------------------------------------------------
-
 # Set the desired initial browser size
 # geometry=650x545+0+20
 #geometry=780x580
-
 # Change this (and the following option) if you want to have text-only browsing
 # from the start. (While browsing, this can be changed from the tools/settings
 # menu.)
 #load_images=YES
-
 # Change this if you want background images to be loaded initially.
 # (While browsing, this can be changed from the tools/settings menu.)
 #load_background_images=NO
-
-# Change this if you want to disable ithe use of cookies initially.
-# (While browsing, this can be changed from the tools/settings menu.)
-#use_cookies=YES
-
 # Change this if you want to disable loading of CSS stylesheets initially.
 # (While browsing, this can be changed from the tools/settings menu.)
 #load_stylesheets=YES
-
 # Change this if you want to disable parsing of embedded CSS initially.
 # (While browsing, this can be changed from the tools/settings menu.)
 #parse_embedded_css=YES
-
-# Change this if you want to enable loading of reader mode CSS initially.
-# (While browsing, this can be changed from the tools/settings menu.)
-#load_reader_mode_css=NO
-
 # Change the buffering scheme for drawing
 # 0 no double buffering - useful for debugging
 # 1 light buffering using a single back buffer for all windows
 # 2 full fltk-based double buffering for all windows
 #buffered_drawing=1
-
 # Video player (e.g. for Youtube videos)
 media_player=mpv --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" --ytdl-format="bestvideo[height<=?360]+bestaudio/best"
-
 # Set your default directory for download/save operations
 #save_dir=/tmp
-
 #-------------------------------------------------------------------------
 #                           RENDERING SECTION
 #-------------------------------------------------------------------------
-
 # Default fonts:
 #
 # If FLTK has been configured with Xft enabled (the default), you can use
@@ -73,104 +54,81 @@ font_cursive="DejaVu Serif"
 # font_cursive="helvetica"
 # font_fantasy="helvetica"
 # font_monospace="courier"
-
 # All font sizes are scaled by this value
 # font_factor=1.5
 #font_factor=1.0
-
 # Maximum font size in pixels
 #font_max_size=100
-
 # Minimum font size in pixels
 #font_min_size=6
-
 # Show tooltip popups for HTML title attributes
 #show_tooltip=YES
-
 # Set this to YES to limit the word wrap width to the viewport width
 #limit_text_width=NO
-
 # If this is set to YES, all CSS size specifications are adjusted so that
 # all contents can be displayed. (Except for tables, see below.)
 #adjust_min_width=YES
-
 # If this is set to YES, all CSS size specifications for tables are
 # adjusted so that all contents can be displayed. This is seperated
 # from "adjust_min_width" so that it is able to mimic Firefox, which
 # differenciates between tables and, say, textblocks (in some cases).
 #adjust_table_min_width=YES
-
 #-------------------------------------------------------------------------
 #                               PENALTIES
 #-------------------------------------------------------------------------
-
 # Penalties are used to control good and bad break points. The bigger
 # the penalty for a given break point, the less likely the line is
 # broken here. "inf" means that breaking is prohibited, "-inf" means
 # that a line *must* be broken here. (The latter should not be used
 # here, however.) Normal spaces get a penalty of 0. The exact
 # definition can be found in doc/dw-line-breaking.doc.
-
 # Penalties for hyphenation breaks; this covers automatic hyphenation,
 # soft hyphens, and unconditional hyphens. Since hyphenation should
 # rather be avoided, the default values are larger than 0.
-
 # This is used for hyphenation points, when there is no hyphen or dash
 # before:
 #penalty_hyphen = 1
-
 # This is used for hyphenation points, when the line before ends
 # already with a hyphen or a dash. Consequent lines ending with
 # hyphens or dashes should be avoided, so this value is bigger than
 # "penalty_hyphen":
 #penalty_hyphen_2 = 8
-
 # The same for a break right of an em-dash, when there are no spaces
 # surrounding it (as in English). The default values are the same as
 # for hyphens:
 #penalty_em_dash_right = 1
 #penalty_em_dash_right_2 = 8
-
 # Penalty for a break *left* of an em-dash. Since a line ending with
 # an em-dash (and so breaking right of the em-dash) looks better than
 # a line beginning with an em-dash (breaking left of an em-dash), the
 # default value is bigger than "penalty_em_dash_right":
 #penalty_em_dash_left = 8
-
 # Notice that there is no "penalty_em_dash_left_2", since breaking
 # left of an em-dash makes the line *begin*, not *end* with a dash.
-
 # This factor is multiplied with the line height to get the
 # stretchability of a non-justified line. The larger this factor (and
 # thus, the stretchability), the less likely the words are hyphenated;
 # so you can use this value to control hyphenation of non-justified
 # text.
 #stretchability_factor=1
-
 #-------------------------------------------------------------------------
 #                            PARSING SECTION
 #-------------------------------------------------------------------------
-
 # If you prefer more accurate HTML bug diagnosis over better rendering
 # (page authors and webmasters) set the following to "NO".
 #
 #w3c_plus_heuristics=YES
-
-
 #-------------------------------------------------------------------------
 #                            NETWORK SECTION
 #-------------------------------------------------------------------------
-
 # Set the start page.
 # start_page="about:blank"
-# start_page="https://dillo-browser.github.io/"
+# start_page="http://www.dillo.org"
 # start_page="file:/home/jcid/custom_page.html"
 #start_page="about:splash"
-
 # Set the home location
 # home="file:/home/jcid/HomePage/Home.html"
-#home="https://dillo-browser.github.io/old/"
-
+#home="http://www.dillo.org/"
 # Set the URLs used by the web search dialog.
 # "%s" is replaced with the search keywords separated by '+'.
 # Format: search_url="[prefix ][<label> ]<url>"
@@ -184,6 +142,11 @@ search_url="se3 SearX (searxng.au) https://searxng.au/search?q=%s"
 search_url="se4 SearX (cosmohub.io) https://srx.cosmohub.io/search?q=%s"
 search_url="ya Yandex https://yandex.com/search/?text=%s"
 search_url="wk Wikipedia https://www.wikipedia.org/w/index.php?search=%s&go=Go"
+search_url="wt Wiktionary https://www.wiktionary.org/w/index.php?search=%s&go=Go"
+search_url="wc Wikicommons https://commons.wikimedia.org/w/index.php?search=%s&go=Go"
+search_url="wb Wikibooks https://www.wikibooks.org/w/index.php?search=%s&go=Go"
+search_url="wv Wikiversity https://www.wikiversity.org/w/index.php?search=%s&go=Go"
+search_url="wy Wikivoyage https://www.wikivoyage.org/w/index.php?search=%s&go=Go"
 search_url="ar Internet Archive https://archive.org/search.php?query=%s"
 search_url="fd Free Dictionary https://www.thefreedictionary.com/%s"
 search_url="sp Startpage https://www.startpage.com/do/search?query=%s"
@@ -197,6 +160,18 @@ search_url="pb The Pirate Bay https://thepiratebay.party/search/%s"
 search_url="tw Twitter https://uhttps://nitter.net/search?f=users&q=%s"
 search_url="un Unsplash https://unsplash.com/s/photos/%s"
 search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
+#search_url="dw Debian Wiki https://wiki.debian.org/FrontPage?action=fullsearch&context=180&value=%s"
+#search_url="aw Arch Wiki https://wiki.archlinux.org/index.php?search=%s&title=Special%3ASearch"
+#search_url="gw Gentoo Wiki https://wiki.gentoo.org/index.php?title=Special%3ASearch&search=%s"
+#search_url="ow OpenSuse Wiki https://en.opensuse.org/index.php?search=%s"
+#search_url="sl Slackware Docs https://docs.slackware.com/%s?do=search&q=%s"
+#search_url="db Debian Package https://packages.debian.org/search?keywords=%s&s:"
+#search_url="ap Arch Package https://archlinux.org/packages/?sort=&q=%s&maintainer=&flagged="
+#search_url="fp Fedora Package https://packages.fedoraproject.org/search?query=%s"
+#search_url="ob OpenBSD Package https://openbsd.app/?search=%s"
+#search_url="os OpenSuse Package https://software.opensuse.org/search?q=%s&baseproject=openSUSE%3AFactory"
+#search_url="fb FreeBSD Man https://man.freebsd.org/cgi/man.cgi?query=%s&sektion=0"
+
 
 
 # If set, dillo will ask web servers to send pages in this language.
@@ -207,15 +182,12 @@ search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
 # http_language="de"
 # http_language="pt-BR"
 # http_language="en-US,en;q=0.5"
-
 # Maximum number of simultaneous TCP connections to a single server or proxy.
 # http_max_conns=6
-
 # If enabled, Dillo will reuse HTTP connections to a server or proxy when
 # possible rather than making a new connection for every request for a new
 # page/image/stylesheet.
 #http_persistent_conns=YES
-
 # This mechanism allows servers to specify that they are only to be contacted
 # through HTTPS and not HTTP.
 #
@@ -224,7 +196,6 @@ search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
 # tracking mechanism. The term is "HSTS super cookie", although note that these
 # HSTS directives are not saved between browser sessions.
 #http_strict_transport_security=YES
-
 # Set the proxy information for http/https.
 # Note that the http_proxy environment variable overrides this setting.
 # WARNING: FTP and downloads plugins use wget. To use a proxy with them,
@@ -232,16 +203,13 @@ search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
 #          http://www.gnu.org/software/wget/manual/html_node/Proxies.html
 # http_proxy="http://localhost:8080/"
 #(by default, no proxy is used)
-
 # If you need to provide a  user/password pair for the proxy,
 # set the proxy user name here and Dillo will ask for the password later.
 # http_proxyuser="joe"
 #(by default, no proxy is used)
-
 # Set the domains to access without proxy
 # no_proxy = ".hola.com .mynet.cl .hi.de"
 #no_proxy="localhost 127.0.0.1"
-
 # Set the HTTP Referer (sic) header.
 # Note that there is no option to reveal the page that you came from because it
 # would endanger your privacy. 'host' and 'path' allow you to pretend that the
@@ -250,7 +218,6 @@ search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
 # host  : Send the requested URI's hostname.
 # path  : Send the requested URI's host and path.
 #http_referer=host
-
 # Set the HTTP User-Agent header.
 # This can be useful for privacy and for working around servers who think
 # Dillo is less capable than it really is. However, if you pretend to use a
@@ -269,33 +236,25 @@ search_url="dv Deviant Art https://www.deviantart.com/search?q=%s"
 # To prevent some browser fingerprinting and avoid some filters the default
 # string is set to a common user agent (in this case: Windows 10, Chrome 108):
 http_user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-
 #-------------------------------------------------------------------------
 #                            COLORS SECTION
 #-------------------------------------------------------------------------
-
 # Set the page background color
 # bg_color=gray
 # bg_color=0xd6d6c0
 #bg_color=0xdcd1ba
 bg_color=0x778899
-
 # If your eyes suffer with white backgrounds, change this.
 #allow_white_bg=YES
-
 # If allow_white_bg is set to NO, white backgrounds are replaced by
 # this color.
 #white_bg_replacement=0xe0e0a3
-
 # When set to YES, the page author's visited link color may be overridden
 # to allow better contrast with text/links/background
 #contrast_visited_color=YES
-
-
 #-------------------------------------------------------------------------
 #                        USER INTERFACE SECTION
 #-------------------------------------------------------------------------
-
 # UI theme
 # "none" is the default FLTK appearance, which "resembles old Windows...and
 # old GTK/KDE".
@@ -307,7 +266,6 @@ bg_color=0x778899
 #theme=none
 # theme=gtk+
 # theme=plastic
-
 # UI colors
 # Note that FLTK may sometimes override colors, generally for contrast and
 # readability.
@@ -351,7 +309,6 @@ bg_color=0x778899
 # Colors for the other tabs.
 #ui_tab_bg_color=(by default, the main background color)
 #ui_tab_fg_color=(by default, the main foreground color)
-
 #
 # Gray theme (traditional)
 #
@@ -365,6 +322,54 @@ bg_color=0x778899
 #ui_tab_bg_color=#b7beb7
 
 #
+# Breeze-light theme
+#
+# unused from /usr/share/themes/Breeze/gtk-2.0/gtkrc:
+#  insensitive_base_color(e7e7e7) tooltip_bg_color(f7f7f7)
+#  insensitive_fg_color(a6a8a9) button_insensitive_fg_color(aeafb0)
+#ui_fg_color=232629# text_color button_fg_color tooltip_fg_color
+#ui_main_bg_color=0xdee0e2# matches screenshots.debian and system
+#ui_text_bg_color=0xfeffff# base_color but modified to avoid whitereplace
+#ui_selection_color=0x3daee9# selected_bg_color button_active
+#ui_button_highlight_color=0xceced0# matches system
+#ui_tab_active_bg_color=0xeff0f1# bg_color
+#ui_tab_active_fg_color=0x232629# text_color button_fg_color tooltip_fg_color
+#ui_tab_bg_color=0xdee0e2# matches screenshots.debian and system
+
+#
+# Adwaita-dark theme
+#
+# copied from /usr/share/themes/Adwaita-dark/gtk-2.0/gtkrc
+#ui_fg_color=feffff# text_color slightly off-white to avoid whitereplace
+#ui_main_bg_color=0x2d3234# insensitive_bg_color
+#ui_text_bg_color=0x232729# base_color
+#ui_selection_color=0x215d9c# selected_bg_color
+#ui_button_highlight_color=0x262b2d# menu_color
+#ui_tab_active_bg_color=0x232729# base_color
+#ui_tab_active_fg_color=0xfeffff# text_color slightly off-white to avoid whitereplace
+#ui_tab_bg_color=0x2d3234# insensitive_bg_color
+
+#
+# Adwaita theme
+#
+# copied from /usr/share/themes/Adwaita/gtk-2.0/gtkrc using: echo '' && \
+#   cat /usr/share/themes/Adwaita/gtk-2.0/gtkrc | grep -e 'text_color\
+#   \|insensitive_bg_color\|base_color\|selected_bg_color\|menu_color'\
+#   | awk '{print $3}' | sed -e 's/\\n/\'$'\n''/g' | sed -e 's/"//g'\
+#   | sed -e 's/:#/ 0x/g' | sed -e 's/:black/ 0x000000/g' | sed -e\
+#   's/:white/ 0xffffff/g' | awk '{$0 = sprintf("%30-s %s", $1,$2);\
+#   print}' | grep -v fg_color && echo ''
+#
+#ui_fg_color=0x000000# text_color slightly off-white to avoid whitereplace
+#ui_main_bg_color=0xf1f1f1# insensitive_bg_color
+#ui_text_bg_color=feffff# base_color slightly off-white to avoid whitereplace
+#ui_selection_color=0x4a90d9# selected_bg_color
+#ui_button_highlight_color=0xfeffff# menu_color slightly off-white to avoid whitereplace
+#ui_tab_active_bg_color=0xfeffff# base_color slightly off-white to avoid whitereplace
+#ui_tab_active_fg_color=0x000000# text_color
+#ui_tab_bg_color=0xf1f1f1# insensitive_bg_color
+
+#
 # Earthly theme:
 #
 #ui_fg_color=#100404
@@ -374,7 +379,6 @@ bg_color=0x778899
 #ui_tab_active_bg_color=#af4b3f
 #ui_tab_active_fg_color=white
 #ui_tab_bg_color=#d2b48c
-
 #
 # Greenish theme:
 #
@@ -386,7 +390,6 @@ bg_color=0x778899
 #ui_tab_active_bg_color=#b5b679
 #ui_tab_active_fg_color=#b60907
 #ui_tab_bg_color=#cac682
-
 #
 # Bluish theme:
 #
@@ -398,7 +401,6 @@ bg_color=0x778899
 #ui_tab_active_bg_color=#BBCCDD
 #ui_tab_active_fg_color=#100404
 #ui_tab_bg_color=#AABBCC
-
 #
 # Default theme (Dillo+):
 #
@@ -410,7 +412,6 @@ ui_button_highlight_color=#FFFFFF
 ui_tab_active_bg_color=#EEEEEE
 ui_tab_active_fg_color=#100404
 ui_tab_bg_color=#D5D8DD
-
 #
 # w00f theme
 #
@@ -422,7 +423,6 @@ ui_tab_bg_color=#D5D8DD
 #ui_tab_active_bg_color=#D3E7F3
 #ui_tab_active_fg_color=black
 #ui_tab_bg_color=#A4CCE3
-
 # Size of dillo panel
 # tiny   : buttons, location, and progress boxes in one row
 # small  : location in one row, buttons + progress boxes in another
@@ -430,9 +430,7 @@ ui_tab_bg_color=#D5D8DD
 # panel_size=tiny
 # panel_size=small
 #panel_size=medium
-
 #small_icons=NO
-
 # Here you can choose to hide some widgets of the dillo panel...
 #show_back=YES
 #show_forw=YES
@@ -448,58 +446,42 @@ ui_tab_bg_color=#D5D8DD
 #show_search=YES
 #show_help=YES
 #show_progress_box=YES
-
 # Show tooltip popups for the UI
 #show_ui_tooltip=YES
-
 # Start dillo with the panels hidden?
 #fullwindow_start=NO
-
 # When filling out forms, our default behaviour is to submit on enterpress,
 # but only when there's a single text entry (to avoid incomplete submits).
 # OTOH, if you have to fill out the same form repeatedly, you may find it
 # useful to keep away from the mouse by forcing enter to submit.
 #enterpress_forces_submit=NO
-
 # A mouse's middle click over a link opens a new Tab.
 # If you prefer to open a new Window instead, set it to NO.
 #middle_click_opens_new_tab=YES
-
 # A mouse's middle click over a tab closes the Tab.
 # With mousewheel mouses, right click feels way better (set to YES).
 #right_click_closes_tab=NO
-
 # Mouse middle click by default drives drag-scrolling.
 # To paste an URL into the window instead of scrolling, set it to NO.
 # Note: You could always paste the URL onto the URL box clear button.
 #middle_click_drags_page=YES
-
 # Focus follows new Tabs.
 # You can hold SHIFT to temporarily revert this behaviour.
 #focus_new_tab=YES
-
 # Ask before quitting Dillo with more than one window or tab open.
 #show_quit_dialog=YES
-
 #-------------------------------------------------------------------------
 #                        DEBUG MESSAGES SECTION
 #-------------------------------------------------------------------------
-
 # Soon we should add the "show_debug_messages=NO" option...
-
 # Generic messages (mainly for debugging specific parts)
 # Change this to disable them.
 #show_msg=YES
-
-
 #-------------------------------------------------------------------------
 #                        HTML BUG MESSAGES SECTION
 #-------------------------------------------------------------------------
-
 # Accepted by the W3C validator but "strongly discouraged" by the SPEC.
 # (Such as "TAB character inside <PRE>").
 #show_extra_warnings=NO
-
-
 # -----------------------------------------------------------------------
 # dillorc ends here.
