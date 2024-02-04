@@ -143,7 +143,7 @@ font_cursive="DejaVu Serif"
 
 # Set the start page.
 # start_page="about:blank"
-# start_page="http://www.dillo.org"
+# start_page="https://dillo-browser.github.io/"
 # start_page="file:/home/jcid/custom_page.html"
 #start_page="about:splash"
 

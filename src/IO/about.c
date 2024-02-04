@@ -65,7 +65,7 @@ const char *const AboutSplash=
 "    <table border='0' cellspacing='0' cellpadding='5'><tr><td>\n"
 "    <table border='0' cellspacing='0' cellpadding='2'><tr>\n"
 "    <td><td><a href='file:" DOC_PATH "/user_help.html'>Help</a>\n"
-"     <tr><td><td><a href='http://www.dillo.org/dillo3-help.html'>\n"
+"     <tr><td><td><a href='https://dillo-browser.github.io/old/dillo3-help.html'>\n"
 "     Online Help</a>\n"
 "    <tr>\n"
 "    <td>&nbsp;&nbsp;\n"

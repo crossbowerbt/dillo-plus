@@ -114,4 +114,6 @@ Hyphenation pattern files.
 .BR wget (1)
 .PP
 Dillo website:
-.B http://www.dillo.org
+.B https://dillo-browser.github.io/
+Dillo-plus website:
+.B https://github.com/crossbowerbt/dillo-plus/

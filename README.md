@@ -3,7 +3,7 @@
 
 **Dillo+** (Dillo-Plus) is a lightweight (about 10MB) *multi-protocol browser* for Linux, BSD and unix OS in general, that does not use Javascript but still support many advanced features.
 
-This project is a port of the official Dillo that is located at https://www.dillo.org with additions and fixes in part developed by me and in part merged from the DilloNG project located at https://github.com/w00fpack/dilloNG/.
+This project is a port of the official Dillo that is located at https://dillo-browser.github.io/old/ with additions and fixes in part developed by me and in part merged from the DilloNG project located at https://github.com/w00fpack/dilloNG/.
 
 Lightweight browsers, such as Dillo, are beneficial for loading websites quickly.  Also, lightweight web browsers can work on older hardware where common browser would take up too many resources, that could freeze up your computer.
 
@@ -94,7 +94,7 @@ Please check under releases
 
 ## Requirements
 
-Please see https://www.dillo.org for requirement details.
+Please see https://dillo-browser.github.io/old/ for requirement details.
 
 In brief, these dependencies are sufficient for the browser:
 * libiconv
@@ -110,10 +110,9 @@ To run some DLS scripts you'll also need *python*.
 
 On Debian-based systems with OpenSSL, you can run `apt install libiconv-hook1 libfltk1.3-dev libglx-dev libgl-dev libopengl-dev libssl-dev libxrender-dev libxfixes-dev libxcursor-dev libxext-dev libxinerama-dev libfontconfig1-dev libxft-dev libfontconfig-dev` to install dependencies, but some of these may need manually installed from the .deb (obtainable from `apt download [package]`) with `dpkg --force-all -i [path-to-package]`.
 
-
 ## INSTALLATION AND COMPILING
 
-The compilation system has been converted from the autotools suite used by the original dillo (see https://www.dillo.org for the old install details) to a plain Makefile system.
+The compilation system has been converted from the autotools suite used by the original dillo (see https://dillo-browser.github.io/old/ for the old install details) to a plain Makefile system.
 
 Before compiling the code you can personalize some compilation options in the [Makefile.options](Makefile.options) files.
 
@@ -141,7 +140,7 @@ Some additional instructions to compile Dillo+ on MacOs with Homebrew, and a pre
 
 # Contributing
 
-If you can use Mercurial, you can use the official code repository at htps://dillo.org.   If you would like to use this GIT repository to submit code changes, please open pull requests against this GitHub repository. Here's some general guidelines when submitting PRs:
+You can access the original code repository at https://dillo-browser.github.io/old/. If you would like to use this GIT repository to submit code changes, please open pull requests against this GitHub repository. Here's some general guidelines when submitting PRs:
 
  * In your pull request, please:
    * Describe the changes, why they were necessary, etc
