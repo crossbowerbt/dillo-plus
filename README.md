@@ -108,6 +108,9 @@ To enable image rendering install also:
 
 To run some DLS scripts you'll also need *python*.
 
+On Debian-based systems with OpenSSL, you can run `apt install libiconv-hook1 libfltk1.3-dev libglx-dev libgl-dev libopengl-dev libssl-dev libxrender-dev libxfixes-dev libxcursor-dev libxext-dev libxinerama-dev libfontconfig1-dev libxft-dev libfontconfig-dev` to install dependencies, but some of these may need manually installed from the .deb (obtainable from `apt download [package]`) with `dpkg --force-all -i [path-to-package]`.
+
+
 ## INSTALLATION AND COMPILING
 
 The compilation system has been converted from the autotools suite used by the original dillo (see https://www.dillo.org for the old install details) to a plain Makefile system.
