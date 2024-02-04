@@ -75,6 +75,7 @@ void a_Prefs_init(void)
    prefs.adjust_table_min_width = TRUE;
    prefs.load_images=TRUE;
    prefs.load_background_images=FALSE;
+   prefs.use_cookies=TRUE;
    prefs.load_stylesheets=TRUE;
    prefs.middle_click_drags_page = TRUE;
    prefs.middle_click_opens_new_tab = TRUE;

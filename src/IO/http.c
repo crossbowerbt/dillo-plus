@@ -381,7 +381,8 @@ static Dstr *Http_make_content_type(const DilloUrl *url)
  */
 static Dstr *Http_make_query_str(DilloWeb *web, bool_t use_proxy)
 {
-   char *ptr, *cookies, *referer, *auth;
+   char *ptr, *referer, *auth;
+   char *cookies = NULL;
    const DilloUrl *url = web->url;
    Dstr *query      = dStr_new(""),
         *request_uri = dStr_new(""),
@@ -413,7 +414,8 @@ static Dstr *Http_make_query_str(DilloWeb *web, bool_t use_proxy)
                     (URL_PATH_(url) || URL_QUERY_(url)) ? "" : "/");
    }
 
-   cookies = a_Cookies_get_query(url, web->requester);
+   if(prefs.use_cookies)
+      cookies = a_Cookies_get_query(url, web->requester);
    auth = a_Auth_get_auth_str(url, request_uri->str);
    referer = Http_get_referer(url);
    if (URL_FLAGS(url) & URL_Post) {
@@ -438,7 +440,7 @@ static Dstr *Http_make_query_str(DilloWeb *web, bool_t use_proxy)
          request_uri->str, URL_AUTHORITY(url), prefs.http_user_agent,
          accept_hdr_value, HTTP_Language_hdr, auth ? auth : "",
          proxy_auth->str, referer, connection_hdr_val, content_type->str,
-         (long)URL_DATA(url)->len, cookies);
+         (long)URL_DATA(url)->len, prefs.use_cookies ? cookies : "");
       dStr_append_l(query, URL_DATA(url)->str, URL_DATA(url)->len);
       dStr_free(content_type, TRUE);
    } else {
@@ -463,10 +465,11 @@ static Dstr *Http_make_query_str(DilloWeb *web, bool_t use_proxy)
          proxy_auth->str, referer, connection_hdr_val,
          (URL_FLAGS(url) & URL_E2EQuery) ?
             "Pragma: no-cache\r\nCache-Control: no-cache\r\n" : "",
-         cookies);
+         prefs.use_cookies ? cookies : "");
    }
    dFree(referer);
-   dFree(cookies);
+   if(prefs.use_cookies)
+      dFree(cookies);
    dFree(auth);
 
    dStr_free(request_uri, TRUE);
