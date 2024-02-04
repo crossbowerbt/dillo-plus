@@ -756,7 +756,7 @@ static void Cache_parse_header(CacheEntry_t *entry)
    dFree(encoding); /* free Transfer-Encoding */
 
 #ifndef DISABLE_COOKIES
-   if ((Cookies = Cache_parse_multiple_fields(header, "Set-Cookie"))) {
+   if (prefs.use_cookies && (Cookies = Cache_parse_multiple_fields(header, "Set-Cookie"))) {
       CacheClient_t *client;
 
       for (i = 0; (client = dList_nth_data(ClientQueue, i)); ++i) {
