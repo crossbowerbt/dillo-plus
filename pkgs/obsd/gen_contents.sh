@@ -61,6 +61,8 @@ lib/dillo/dpi/cookies/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/cookies/cookies.dpi)
 lib/dillo/dpi/datauri/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/datauri/datauri.filter.dpi)
+lib/dillo/dpi/dls/
+@bin $(gen_file "/usr/local/" lib/dillo/dpi/dls/dls.filter.dpi)
 lib/dillo/dpi/downloads/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/downloads/downloads.dpi)
 lib/dillo/dpi/file/
