@@ -380,6 +380,54 @@ bg_color=0x778899
 #ui_tab_bg_color=#b7beb7
 
 #
+# Breeze-light theme
+#
+# unused from /usr/share/themes/Breeze/gtk-2.0/gtkrc:
+#  insensitive_base_color(e7e7e7) tooltip_bg_color(f7f7f7)
+#  insensitive_fg_color(a6a8a9) button_insensitive_fg_color(aeafb0)
+#ui_fg_color=232629# text_color button_fg_color tooltip_fg_color
+#ui_main_bg_color=0xdee0e2# matches screenshots.debian and system
+#ui_text_bg_color=0xfeffff# base_color but modified to avoid whitereplace
+#ui_selection_color=0x3daee9# selected_bg_color button_active
+#ui_button_highlight_color=0xceced0# matches system
+#ui_tab_active_bg_color=0xeff0f1# bg_color
+#ui_tab_active_fg_color=0x232629# text_color button_fg_color tooltip_fg_color
+#ui_tab_bg_color=0xdee0e2# matches screenshots.debian and system
+
+#
+# Adwaita-dark theme
+#
+# copied from /usr/share/themes/Adwaita-dark/gtk-2.0/gtkrc
+#ui_fg_color=feffff# text_color slightly off-white to avoid whitereplace
+#ui_main_bg_color=0x2d3234# insensitive_bg_color
+#ui_text_bg_color=0x232729# base_color
+#ui_selection_color=0x215d9c# selected_bg_color
+#ui_button_highlight_color=0x262b2d# menu_color
+#ui_tab_active_bg_color=0x232729# base_color
+#ui_tab_active_fg_color=0xfeffff# text_color slightly off-white to avoid whitereplace
+#ui_tab_bg_color=0x2d3234# insensitive_bg_color
+
+#
+# Adwaita theme
+#
+# copied from /usr/share/themes/Adwaita/gtk-2.0/gtkrc using: echo '' && \
+#   cat /usr/share/themes/Adwaita/gtk-2.0/gtkrc | grep -e 'text_color\
+#   \|insensitive_bg_color\|base_color\|selected_bg_color\|menu_color'\
+#   | awk '{print $3}' | sed -e 's/\\n/\'$'\n''/g' | sed -e 's/"//g'\
+#   | sed -e 's/:#/ 0x/g' | sed -e 's/:black/ 0x000000/g' | sed -e\
+#   's/:white/ 0xffffff/g' | awk '{$0 = sprintf("%30-s %s", $1,$2);\
+#   print}' | grep -v fg_color && echo ''
+#
+#ui_fg_color=0x000000# text_color slightly off-white to avoid whitereplace
+#ui_main_bg_color=0xf1f1f1# insensitive_bg_color
+#ui_text_bg_color=feffff# base_color slightly off-white to avoid whitereplace
+#ui_selection_color=0x4a90d9# selected_bg_color
+#ui_button_highlight_color=0xfeffff# menu_color slightly off-white to avoid whitereplace
+#ui_tab_active_bg_color=0xfeffff# base_color slightly off-white to avoid whitereplace
+#ui_tab_active_fg_color=0x000000# text_color
+#ui_tab_bg_color=0xf1f1f1# insensitive_bg_color
+
+#
 # Earthly theme:
 #
 #ui_fg_color=#100404
