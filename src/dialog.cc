@@ -65,8 +65,11 @@ int CustInput3::handle(int e)
    unsigned modifier = Fl::event_state() & (FL_SHIFT | FL_CTRL | FL_ALT);
 
    if (e == FL_KEYBOARD && modifier == FL_CTRL) {
-      if (k == 'a' || k == 'e') {
-         position(k == 'a' ? 0 : size());
+      if (k == 'a') {
+	 position(size(), 0);
+	 return 1;
+      } else if(k == 'e') {
+         position(size());
          return 1;
       } else if (k == 'k') {
          cut(position(), size());
