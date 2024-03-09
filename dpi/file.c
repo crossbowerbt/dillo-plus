@@ -25,7 +25,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <sys/un.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -36,6 +35,7 @@
 #include "../dpip/dpip.h"
 #include "dpiutil.h"
 #include "d_size.h"
+#include "fileutil.h"
 
 /*
  * Debugging macros
@@ -45,8 +45,6 @@
 #define _MSG_RAW(...)
 #define MSG_RAW(...)  printf(__VA_ARGS__)
 
-
-#define MAXNAMESIZE 30
 #define HIDE_DOTFILES TRUE
 
 /*
@@ -67,14 +65,6 @@ typedef enum {
    st_done,
    st_err
 } FileState;
-
-typedef struct {
-   char *full_path;
-   const char *filename;
-   off_t size;
-   mode_t mode;
-   time_t mtime;
-} FileInfo;
 
 typedef struct {
    char *dirname;
@@ -117,67 +107,6 @@ static void File_close(int fd)
 {
    while (fd >= 0 && close(fd) < 0 && errno == EINTR)
       ;
-}
-
-/*
- * Detects 'Content-Type' when the server does not supply one.
- * It uses the magic(5) logic from file(1). Currently, it
- * only checks the few mime types that Dillo supports.
- *
- * 'Data' is a pointer to the first bytes of the raw data.
- * (this is based on a_Misc_get_content_type_from_data())
- */
-static const char *File_get_content_type_from_data(void *Data, size_t Size)
-{
-   static const char *Types[] = {
-      "application/octet-stream",
-      "text/html", "text/plain",
-      "image/gif", "image/png", "image/jpeg",
-   };
-   int Type = 0;
-   char *p = Data;
-   size_t i, non_ascci;
-
-   _MSG("File_get_content_type_from_data:: Size = %d\n", Size);
-
-   /* HTML try */
-   for (i = 0; i < Size && dIsspace(p[i]); ++i);
-   if ((Size - i >= 5  && !dStrnAsciiCasecmp(p+i, "<html", 5)) ||
-       (Size - i >= 5  && !dStrnAsciiCasecmp(p+i, "<head", 5)) ||
-       (Size - i >= 6  && !dStrnAsciiCasecmp(p+i, "<title", 6)) ||
-       (Size - i >= 14 && !dStrnAsciiCasecmp(p+i, "<!doctype html", 14)) ||
-       /* this line is workaround for FTP through the Squid proxy */
-       (Size - i >= 17 && !dStrnAsciiCasecmp(p+i, "<!-- HTML listing", 17))) {
-
-      Type = 1;
-
-   /* Images */
-   } else if (Size >= 4 && !strncmp(p, "GIF8", 4)) {
-      Type = 3;
-   } else if (Size >= 4 && !strncmp(p, "\x89PNG", 4)) {
-      Type = 4;
-   } else if (Size >= 2 && !strncmp(p, "\xff\xd8", 2)) {
-      /* JPEG has the first 2 bytes set to 0xffd8 in BigEndian - looking
-       * at the character representation should be machine independent. */
-      Type = 5;
-
-   /* Text */
-   } else {
-      /* We'll assume "text/plain" if the set of chars above 127 is <= 10
-       * in a 256-bytes sample.  Better heuristics are welcomed! :-) */
-      non_ascci = 0;
-      Size = MIN (Size, 256);
-      for (i = 0; i < Size; i++)
-         if ((uchar_t) p[i] > 127)
-            ++non_ascci;
-      if (Size == 256) {
-         Type = (non_ascci > 10) ? 0 : 2;
-      } else {
-         Type = (non_ascci > 0) ? 0 : 2;
-      }
-   }
-
-   return (Types[Type]);
 }
 
 /*
@@ -283,254 +212,6 @@ static void File_dillodir_free(DilloDir *Ddir)
 }
 
 /*
- * Output the string for parent directory
- */
-static void File_print_parent_dir(ClientInfo *client, const char *dirname)
-{
-   if (strcmp(dirname, "/") != 0) {        /* Not the root dir */
-      char *p, *parent, *HUparent, *Uparent;
-
-      parent = dStrdup(dirname);
-      /* cut trailing slash */
-      parent[strlen(parent) - 1] = '\0';
-      /* make 'parent' have the parent dir path */
-      if ((p = strrchr(parent, '/')))
-         *(p + 1) = '\0';
-
-      Uparent = Escape_uri_str(parent, NULL);
-      HUparent = Escape_html_str(Uparent);
-      a_Dpip_dsh_printf(client->sh, 0,
-         "<a href='file:%s'>Parent directory</a>", HUparent);
-      dFree(HUparent);
-      dFree(Uparent);
-      dFree(parent);
-   }
-}
-
-/*
- * Given a timestamp, output an HTML-formatted date string.
- */
-static void File_print_mtime(ClientInfo *client, time_t mtime)
-{
-   char *ds = ctime(&mtime);
-
-   /* Month, day and {hour or year} */
-   if (client->old_style) {
-      a_Dpip_dsh_printf(client->sh, 0, " %.3s %.2s", ds + 4, ds + 8);
-      if (time(NULL) - mtime > 15811200) {
-         a_Dpip_dsh_printf(client->sh, 0, "  %.4s", ds + 20);
-      } else {
-         a_Dpip_dsh_printf(client->sh, 0, " %.5s", ds + 11);
-      }
-   } else {
-      a_Dpip_dsh_printf(client->sh, 0,
-         "<td>%.3s&nbsp;%.2s&nbsp;%.5s", ds + 4, ds + 8,
-         /* (more than 6 months old) ? year : hour; */
-         (time(NULL) - mtime > 15811200) ? ds + 20 : ds + 11);
-   }
-}
-
-/*
- * Return a HTML-line from file info.
- */
-static void File_info2html(ClientInfo *client, FileInfo *finfo, int n)
-{
-   int size;
-   char *sizeunits;
-   char namebuf[MAXNAMESIZE + 1];
-   char *Uref, *HUref, *Hname;
-   const char *ref, *filecont, *name = finfo->filename;
-
-   if (finfo->size <= 9999) {
-      size = finfo->size;
-      sizeunits = "bytes";
-   } else if (finfo->size / 1024 <= 9999) {
-      size = finfo->size / 1024 + (finfo->size % 1024 >= 1024 / 2);
-      sizeunits = "KB";
-   } else {
-      size = finfo->size / 1048576 + (finfo->size % 1048576 >= 1048576 / 2);
-      sizeunits = "MB";
-   }
-
-   /* we could note if it's a symlink... */
-   if (S_ISDIR (finfo->mode)) {
-      filecont = "Directory";
-   } else if (finfo->mode & (S_IXUSR | S_IXGRP | S_IXOTH)) {
-      filecont = "Executable";
-   } else {
-      filecont = File_content_type(finfo->full_path);
-      if (!filecont || !strcmp(filecont, "application/octet-stream"))
-         filecont = "unknown";
-   }
-
-   ref = name;
-
-   if (strlen(name) > MAXNAMESIZE) {
-      memcpy(namebuf, name, MAXNAMESIZE - 3);
-      strcpy(namebuf + (MAXNAMESIZE - 3), "...");
-      name = namebuf;
-   }
-
-   /* escape problematic filenames */
-   Uref = Escape_uri_str(ref, NULL);
-   HUref = Escape_html_str(Uref);
-   Hname = Escape_html_str(name);
-
-   if (client->old_style) {
-      char *dots = ".. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. ..";
-      int ndots = MAXNAMESIZE - strlen(name);
-      a_Dpip_dsh_printf(client->sh, 0,
-         "%s<a href='%s'>%s</a>"
-         " %s"
-         " %-11s%4d %-5s",
-         S_ISDIR (finfo->mode) ? ">" : " ", HUref, Hname,
-         dots + 50 - (ndots > 0 ? ndots : 0),
-         filecont, size, sizeunits);
-
-   } else {
-      a_Dpip_dsh_printf(client->sh, 0,
-         "<tr align=center %s><td>%s<td align=left><a href='%s'>%s</a>"
-         "<td>%s<td>%d&nbsp;%s",
-         (n & 1) ? "bgcolor=#dcdcdc" : "",
-         S_ISDIR (finfo->mode) ? ">" : " ", HUref, Hname,
-         filecont, size, sizeunits);
-   }
-   File_print_mtime(client, finfo->mtime);
-   a_Dpip_dsh_write_str(client->sh, 0, "\n");
-
-   dFree(Hname);
-   dFree(HUref);
-   dFree(Uref);
-}
-
-/*
- * Send the HTML directory page in HTTP.
- */
-static void File_send_dir(ClientInfo *client)
-{
-   int n;
-   char *d_cmd, *Hdirname, *Udirname, *HUdirname;
-   DilloDir *Ddir = client->d_dir;
-
-   if (client->state == st_start) {
-      /* Send DPI command */
-      d_cmd = a_Dpip_build_cmd("cmd=%s url=%s", "start_send_page",
-                               client->orig_url);
-      a_Dpip_dsh_write_str(client->sh, 1, d_cmd);
-      dFree(d_cmd);
-      client->state = st_dpip;
-
-   } else if (client->state == st_dpip) {
-      /* send HTTP header and HTML top part */
-
-      /* Send page title */
-      Udirname = Escape_uri_str(Ddir->dirname, NULL);
-      HUdirname = Escape_html_str(Udirname);
-      Hdirname = Escape_html_str(Ddir->dirname);
-
-      a_Dpip_dsh_printf(client->sh, 0,
-         "HTTP/1.1 200 OK\r\n"
-         "Content-Type: text/html\r\n"
-         "\r\n"
-         "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>\n"
-         "<HTML>\n<HEAD>\n <BASE href='file:%s'>\n"
-         " <TITLE>file:%s</TITLE>\n</HEAD>\n"
-         "<BODY><H1>Directory listing of %s</H1>\n",
-         HUdirname, Hdirname, Hdirname);
-      dFree(Hdirname);
-      dFree(HUdirname);
-      dFree(Udirname);
-
-      if (client->old_style) {
-         a_Dpip_dsh_write_str(client->sh, 0, "<pre>\n");
-      }
-
-      /* Output the parent directory */
-      File_print_parent_dir(client, Ddir->dirname);
-
-      /* HTML style toggle */
-      a_Dpip_dsh_write_str(client->sh, 0,
-         "&nbsp;&nbsp;<a href='dpi:/file/toggle'>%</a>\n");
-
-      if (dList_length(Ddir->flist)) {
-         if (client->old_style) {
-            a_Dpip_dsh_write_str(client->sh, 0, "\n\n");
-         } else {
-            a_Dpip_dsh_write_str(client->sh, 0,
-               "<br><br>\n"
-               "<table border=0 cellpadding=1 cellspacing=0"
-               " bgcolor=#E0E0E0 width=100%>\n"
-               "<tr align=center>\n"
-               "<td>\n"
-               "<td width=60%><b>Filename</b>"
-               "<td><b>Type</b>"
-               "<td><b>Size</b>"
-               "<td><b>Modified&nbsp;at</b>\n");
-         }
-      } else {
-         a_Dpip_dsh_write_str(client->sh, 0, "<br><br>Directory is empty...");
-      }
-      client->state = st_http;
-
-   } else if (client->state == st_http) {
-      /* send directories as HTML contents */
-      for (n = 0; n < dList_length(Ddir->flist); ++n) {
-         File_info2html(client, dList_nth_data(Ddir->flist,n), n+1);
-      }
-
-      if (client->old_style) {
-         a_Dpip_dsh_write_str(client->sh, 0, "</pre>\n");
-      } else if (dList_length(Ddir->flist)) {
-         a_Dpip_dsh_write_str(client->sh, 0, "</table>\n");
-      }
-
-      a_Dpip_dsh_write_str(client->sh, 1, "</BODY></HTML>\n");
-      client->state = st_content;
-      client->flags |= FILE_DONE;
-   }
-}
-
-/*
- * Return a content type based on the extension of the filename.
- */
-static const char *File_ext(const char *filename)
-{
-   char *e;
-
-   if (!(e = strrchr(filename, '.')))
-      return NULL;
-
-   e++;
-
-   if (!dStrAsciiCasecmp(e, "gif")) {
-      return "image/gif";
-   } else if (!dStrAsciiCasecmp(e, "jpg") ||
-              !dStrAsciiCasecmp(e, "jpeg")) {
-      return "image/jpeg";
-   } else if (!dStrAsciiCasecmp(e, "png")) {
-      return "image/png";
-   } else if (!dStrAsciiCasecmp(e, "html") ||
-              !dStrAsciiCasecmp(e, "htm") ||
-              !dStrAsciiCasecmp(e, "shtml")) {
-      return "text/html";
-   } else if (!dStrAsciiCasecmp(e, "xml")) {
-      return "text/xml";
-   } else if (!dStrAsciiCasecmp(e, "rss")) {
-      return "application/rss+xml";
-   } else if (!dStrAsciiCasecmp(e, "gmi")) {
-      return "text/gemini";
-   } else if (!dStrAsciiCasecmp(e, "gophermap")) {
-      return "text/gopher";
-   } else if (!dStrAsciiCasecmp(e, "md")) {
-      return "text/markdown";
-   } else if (!dStrAsciiCasecmp(e, "txt")) {
-      return "text/plain";
-   } else {
-      return NULL;
-   }
-}
-
-/*
  * Based on the extension, return the content_type for the file.
  * (if there's no extension, analyze the data and try to figure it out)
  */
@@ -557,6 +238,60 @@ static const char *File_content_type(const char *filename)
    }
    _MSG("File_content_type: name=%s ct=%s\n", filename, ct);
    return ct;
+}
+
+/*
+ * Send the HTML directory page in HTTP.
+ */
+static void File_send_dir(ClientInfo *client)
+{
+   int n;
+   char *d_cmd;
+   const char *filecont;
+   FileInfo *finfo;
+   DilloDir *Ddir = client->d_dir;
+
+   if (client->state == st_start) {
+      /* Send DPI command */
+      d_cmd = a_Dpip_build_cmd("cmd=%s url=%s", "start_send_page",
+                               client->orig_url);
+      a_Dpip_dsh_write_str(client->sh, 1, d_cmd);
+      dFree(d_cmd);
+      client->state = st_dpip;
+
+   } else if (client->state == st_dpip) {
+      /* send HTTP header and HTML top part */
+
+      /* Send page title */
+      File_print_page_header(client->sh, "file", Ddir->dirname, client->old_style);
+
+      /* Output the parent directory */
+      File_print_parent_dir(client->sh, Ddir->dirname);
+
+      /* HTML style toggle */
+      a_Dpip_dsh_write_str(client->sh, 0,
+         "&nbsp;&nbsp;<a href='dpi:/file/toggle'>%</a>\n");
+	 
+      /* Output the file listing table */
+      File_print_table_header(client->sh, dList_length(Ddir->flist), client->old_style);
+
+      client->state = st_http;
+
+   } else if (client->state == st_http) {
+      /* send directories as HTML contents */
+      for (n = 0; n < dList_length(Ddir->flist); ++n) {
+         finfo = dList_nth_data(Ddir->flist,n);
+         filecont = File_content_type(finfo->full_path);
+         File_print_info(client->sh, finfo, n+1, filecont, client->old_style);
+      }
+      
+      File_print_table_footer(client->sh, dList_length(Ddir->flist), client->old_style);
+
+      File_print_page_footer(client->sh, client->old_style);
+
+      client->state = st_content;
+      client->flags |= FILE_DONE;
+   }
 }
 
 /*

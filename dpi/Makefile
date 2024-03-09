@@ -31,11 +31,14 @@ downloads_dpi-downloads.o: downloads.cc
 downloads.dpi: downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a  ../dlib/libDlib.a
 	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) $(LIBFLTK_LDFLAGS) -o downloads.dpi downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
+fileutil.o: fileutil.c
+	$(COMPILE) -c fileutil.c
+
 file.o: file.c
 	$(COMPILE) -c file.c
 
-file.dpi: file.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-	$(COMPILE) -o file.dpi file.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+file.dpi: file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+	$(COMPILE) -o file.dpi file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 ftp.o: ftp.c
 	$(COMPILE) -c ftp.c
