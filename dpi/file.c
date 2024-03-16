@@ -56,7 +56,6 @@
 #define FILE_DONE        8     /* Operation done */
 #define FILE_ERR        16     /* Operation error */
 
-
 typedef enum {
    st_start = 10,
    st_dpip,
@@ -65,11 +64,6 @@ typedef enum {
    st_done,
    st_err
 } FileState;
-
-typedef struct {
-   char *dirname;
-   Dlist *flist;       /* List of files and subdirectories (for sorting) */
-} DilloDir;
 
 typedef struct {
    Dsh *sh;
@@ -99,7 +93,6 @@ static Dlist *Clients;
 /* Set of filedescriptors we're working on */
 fd_set read_set, write_set;
 
-
 /*
  * Close a file descriptor, but handling EINTR
  */
@@ -110,47 +103,20 @@ static void File_close(int fd)
 }
 
 /*
- * Compare two FileInfo pointers
- * This function is used for sorting directories
- */
-static int File_comp(const FileInfo *f1, const FileInfo *f2)
-{
-   if (S_ISDIR(f1->mode)) {
-      if (S_ISDIR(f2->mode)) {
-         return strcmp(f1->filename, f2->filename);
-      } else {
-         return -1;
-      }
-   } else {
-      if (S_ISDIR(f2->mode)) {
-         return 1;
-      } else {
-         return strcmp(f1->filename, f2->filename);
-      }
-   }
-}
-
-/*
  * Allocate a DilloDir structure, set safe values in it and sort the entries.
  */
-static DilloDir *File_dillodir_new(char *dirname)
+static DilloDir *File_dillodir_fs_new(char *dirname)
 {
    struct stat sb;
    struct dirent *de;
    DIR *dir;
    DilloDir *Ddir;
-   FileInfo *finfo;
-   char *fname;
-   int dirname_len;
+   char *full_path;
 
    if (!(dir = opendir(dirname)))
       return NULL;
 
-   Ddir = dNew(DilloDir, 1);
-   Ddir->dirname = dStrdup(dirname);
-   Ddir->flist = dList_new(512);
-
-   dirname_len = strlen(Ddir->dirname);
+   Ddir = FileUtil_dillodir_new(dirname);
 
    /* Scan every name and sort them */
    while ((de = readdir(dir)) != 0) {
@@ -166,49 +132,21 @@ static DilloDir *File_dillodir_new(char *dirname)
             continue;
       }
 
-      fname = dStrconcat(Ddir->dirname, de->d_name, NULL);
-      if (stat(fname, &sb) == -1) {
-         dFree(fname);
+      full_path = dStrconcat(Ddir->dirname, de->d_name, NULL);
+      if (stat(full_path, &sb) == -1) {
+         dFree(full_path);
          continue;              /* ignore files we can't stat */
       }
-
-      finfo = dNew(FileInfo, 1);
-      finfo->full_path = fname;
-      finfo->filename = fname + dirname_len;
-      finfo->size = sb.st_size;
-      finfo->mode = sb.st_mode;
-      finfo->mtime = sb.st_mtime;
-
-      dList_append(Ddir->flist, finfo);
+      
+      FileUtil_dillodir_add(Ddir, full_path, sb);
    }
 
    closedir(dir);
 
    /* sort the entries */
-   dList_sort(Ddir->flist, (dCompareFunc)File_comp);
+   dList_sort(Ddir->flist, (dCompareFunc)FileUtil_comp);
 
    return Ddir;
-}
-
-/*
- * Deallocate a DilloDir structure.
- */
-static void File_dillodir_free(DilloDir *Ddir)
-{
-   int i;
-   FileInfo *finfo;
-
-   dReturn_if (Ddir == NULL);
-
-   for (i = 0; i < dList_length(Ddir->flist); ++i) {
-      finfo = dList_nth_data(Ddir->flist, i);
-      dFree(finfo->full_path);
-      dFree(finfo);
-   }
-
-   dList_free(Ddir->flist);
-   dFree(Ddir->dirname);
-   dFree(Ddir);
 }
 
 /*
@@ -223,15 +161,15 @@ static const char *File_content_type(const char *filename)
    char buf[256];
    ssize_t buf_size;
 
-   if (!(ct = File_ext(filename))) {
+   if (!(ct = FileUtil_ext(filename))) {
       /* everything failed, let's analyze the data... */
       if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) != -1) {
          if ((buf_size = read(fd, buf, 256)) == 256 ) {
-            ct = File_get_content_type_from_data(buf, (size_t)buf_size);
+            ct = FileUtil_get_content_type_from_data(buf, (size_t)buf_size);
 
          } else if (stat(filename, &sb) != -1 &&
                     buf_size > 0 && buf_size == sb.st_size) {
-            ct = File_get_content_type_from_data(buf, (size_t)buf_size);
+            ct = FileUtil_get_content_type_from_data(buf, (size_t)buf_size);
          }
          File_close(fd);
       }
@@ -263,17 +201,17 @@ static void File_send_dir(ClientInfo *client)
       /* send HTTP header and HTML top part */
 
       /* Send page title */
-      File_print_page_header(client->sh, "file", Ddir->dirname, client->old_style);
+      FileUtil_print_page_header(client->sh, "file", Ddir->dirname, client->old_style);
 
       /* Output the parent directory */
-      File_print_parent_dir(client->sh, Ddir->dirname);
+      FileUtil_print_parent_dir(client->sh, "file", Ddir->dirname);
 
       /* HTML style toggle */
       a_Dpip_dsh_write_str(client->sh, 0,
          "&nbsp;&nbsp;<a href='dpi:/file/toggle'>%</a>\n");
 	 
       /* Output the file listing table */
-      File_print_table_header(client->sh, dList_length(Ddir->flist), client->old_style);
+      FileUtil_print_table_header(client->sh, dList_length(Ddir->flist), client->old_style);
 
       client->state = st_http;
 
@@ -282,12 +220,12 @@ static void File_send_dir(ClientInfo *client)
       for (n = 0; n < dList_length(Ddir->flist); ++n) {
          finfo = dList_nth_data(Ddir->flist,n);
          filecont = File_content_type(finfo->full_path);
-         File_print_info(client->sh, finfo, n+1, filecont, client->old_style);
+         FileUtil_print_info(client->sh, finfo, n+1, filecont, client->old_style);
       }
       
-      File_print_table_footer(client->sh, dList_length(Ddir->flist), client->old_style);
+      FileUtil_print_table_footer(client->sh, dList_length(Ddir->flist), client->old_style);
 
-      File_print_page_footer(client->sh, client->old_style);
+      FileUtil_print_page_footer(client->sh, client->old_style);
 
       client->state = st_content;
       client->flags |= FILE_DONE;
@@ -361,7 +299,7 @@ static int File_prepare_send_dir(ClientInfo *client,
       dStr_append(ds_dirname, "/");
 
    /* Let's get a structure ready for transfer */
-   Ddir = File_dillodir_new(ds_dirname->str);
+   Ddir = File_dillodir_fs_new(ds_dirname->str);
    dStr_free(ds_dirname, TRUE);
    if (Ddir) {
       /* looks ok, set things accordingly */
@@ -515,76 +453,6 @@ static int File_send_file(ClientInfo *client)
 }
 
 /*
- * Given a hex octet (e3, 2F, 20), return the corresponding
- * character if the octet is valid, and -1 otherwise
- */
-static int File_parse_hex_octet(const char *s)
-{
-   int hex_value;
-   char *tail, hex[3];
-
-   if ((hex[0] = s[0]) && (hex[1] = s[1])) {
-      hex[2] = 0;
-      hex_value = strtol(hex, &tail, 16);
-      if (tail - hex == 2)
-        return hex_value;
-   }
-
-   return -1;
-}
-
-/*
- * Make a file URL into a human (and machine) readable path.
- * The idea is to always have a path that starts with only one slash.
- * Embedded slashes are ignored.
- */
-static char *File_normalize_path(const char *orig)
-{
-   char *str = (char *) orig, *basename = NULL, *ret = NULL, *p;
-
-   dReturn_val_if (orig == NULL, ret);
-
-   /* Make sure the string starts with "file:/" */
-   if (dStrnAsciiCasecmp(str, "file:/", 5) != 0)
-      return ret;
-   str += 5;
-
-   /* Skip "localhost" */
-   if (dStrnAsciiCasecmp(str, "//localhost/", 12) == 0)
-      str += 11;
-
-   /* Skip packed slashes, and leave just one */
-   while (str[0] == '/' && str[1] == '/')
-      str++;
-
-   {
-      int i, val;
-      Dstr *ds = dStr_sized_new(32);
-      dStr_sprintf(ds, "%s%s%s",
-                   basename ? basename : "",
-                   basename ? "/" : "",
-                   str);
-      dFree(basename);
-
-      /* Parse possible hexadecimal octets in the URI path */
-      for (i = 0; ds->str[i]; ++i) {
-         if (ds->str[i] == '%' &&
-             (val = File_parse_hex_octet(ds->str + i+1)) != -1) {
-            ds->str[i] = val;
-            dStr_erase(ds, i+1, 2);
-         }
-      }
-      /* Remove the fragment if not a part of the filename */
-      if ((p = strrchr(ds->str, '#')) != NULL && access(ds->str, F_OK) != 0)
-         dStr_truncate(ds, p - ds->str);
-      ret = ds->str;
-      dStr_free(ds, 0);
-   }
-
-   return ret;
-}
-
-/*
  * Set the style flag and ask for a reload, so it shows immediately.
  */
 static void File_toggle_html_style(ClientInfo *client)
@@ -645,7 +513,7 @@ static void File_remove_client(ClientInfo *client)
    File_close(client->file_fd);
    dFree(client->orig_url);
    dFree(client->filename);
-   File_dillodir_free(client->d_dir);
+   FileUtil_dillodir_free(client->d_dir);
 
    dFree(client);
 }
@@ -681,7 +549,7 @@ static void File_serve_client(void *data, int f_write)
             /* Get file request */
             cmd = a_Dpip_get_attr(dpip_tag, "cmd");
             url = a_Dpip_get_attr(dpip_tag, "url");
-            path = File_normalize_path(url);
+            path = FileUtil_normalize_path("file", url);
             if (cmd) {
                if (strcmp(cmd, "DpiBye") == 0) {
                   DPIBYE = 1;

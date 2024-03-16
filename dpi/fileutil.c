@@ -32,6 +32,157 @@
 #define MSG(...)  printf("[file dpi]: " __VA_ARGS__)
 #define _MSG_RAW(...)
 #define MSG_RAW(...)  printf(__VA_ARGS__)
+
+/*
+ * Compare two FileInfo pointers
+ * This function is used for sorting directories
+ */
+int FileUtil_comp(const FileInfo *f1, const FileInfo *f2)
+{
+   if (S_ISDIR(f1->mode)) {
+      if (S_ISDIR(f2->mode)) {
+         return strcmp(f1->filename, f2->filename);
+      } else {
+         return -1;
+      }
+   } else {
+      if (S_ISDIR(f2->mode)) {
+         return 1;
+      } else {
+         return strcmp(f1->filename, f2->filename);
+      }
+   }
+}
+
+/*
+ * Allocate an empty DilloDir structure.
+ */
+DilloDir *FileUtil_dillodir_new(char *dirname)
+{
+   DilloDir *Ddir;
+
+   Ddir = dNew(DilloDir, 1);
+   Ddir->dirname = dStrdup(dirname);
+   Ddir->flist = dList_new(512);
+
+   return Ddir;
+}
+
+/*
+ * Add a FileInfo to DilloDir structure.
+ */
+void FileUtil_dillodir_add(DilloDir *Ddir, char *full_path, struct stat sb)
+{
+   int dirname_len;
+   FileInfo *finfo;
+
+   dirname_len = strlen(Ddir->dirname);
+   
+   finfo = dNew(FileInfo, 1);
+   finfo->full_path = full_path;
+   finfo->filename = full_path + dirname_len;
+   finfo->size = sb.st_size;
+   finfo->mode = sb.st_mode;
+   finfo->mtime = sb.st_mtime;
+
+   dList_append(Ddir->flist, finfo);      
+}
+
+/*
+ * Deallocate a DilloDir structure.
+ */
+void FileUtil_dillodir_free(DilloDir *Ddir)
+{
+   int i;
+   FileInfo *finfo;
+
+   dReturn_if (Ddir == NULL);
+
+   for (i = 0; i < dList_length(Ddir->flist); ++i) {
+      finfo = dList_nth_data(Ddir->flist, i);
+      dFree(finfo->full_path);
+      dFree(finfo);
+   }
+
+   dList_free(Ddir->flist);
+   dFree(Ddir->dirname);
+   dFree(Ddir);
+}
+
+
+/*
+ * Given a hex octet (e3, 2F, 20), return the corresponding
+ * character if the octet is valid, and -1 otherwise
+ */
+static int FileUtil_parse_hex_octet(const char *s)
+{
+   int hex_value;
+   char *tail, hex[3];
+
+   if ((hex[0] = s[0]) && (hex[1] = s[1])) {
+      hex[2] = 0;
+      hex_value = strtol(hex, &tail, 16);
+      if (tail - hex == 2)
+        return hex_value;
+   }
+
+   return -1;
+}
+
+/*
+ * Make a file URL into a human (and machine) readable path.
+ * The idea is to always have a path that starts with only one slash.
+ * Embedded slashes are ignored.
+ */
+char *FileUtil_normalize_path(const char *dpiname, const char *orig)
+{
+   char *str = (char *) orig, *basename = NULL, *ret = NULL, *p;
+
+   dReturn_val_if (orig == NULL, ret);
+
+   /* Make sure the string starts with dpiname + ":/" */
+   if (dStrnAsciiCasecmp(str, dpiname, strlen(dpiname)) != 0)
+      return ret;
+   str += strlen(dpiname);
+   
+   if (dStrnAsciiCasecmp(str, ":/", 2) != 0)
+      return ret;
+   str += 1;
+
+   /* Skip "localhost" */
+   if (dStrnAsciiCasecmp(str, "//localhost/", 12) == 0)
+      str += 11;
+
+   /* Skip packed slashes, and leave just one */
+   while (str[0] == '/' && str[1] == '/')
+      str++;
+
+   {
+      int i, val;
+      Dstr *ds = dStr_sized_new(32);
+      dStr_sprintf(ds, "%s%s%s",
+                   basename ? basename : "",
+                   basename ? "/" : "",
+                   str);
+      dFree(basename);
+
+      /* Parse possible hexadecimal octets in the URI path */
+      for (i = 0; ds->str[i]; ++i) {
+         if (ds->str[i] == '%' &&
+             (val = FileUtil_parse_hex_octet(ds->str + i+1)) != -1) {
+            ds->str[i] = val;
+            dStr_erase(ds, i+1, 2);
+         }
+      }
+      /* Remove the fragment if not a part of the filename */
+      if ((p = strrchr(ds->str, '#')) != NULL && access(ds->str, F_OK) != 0)
+         dStr_truncate(ds, p - ds->str);
+      ret = ds->str;
+      dStr_free(ds, 0);
+   }
+
+   return ret;
+}
  
 /*
  * Detects 'Content-Type' when the server does not supply one.
@@ -41,7 +192,7 @@
  * 'Data' is a pointer to the first bytes of the raw data.
  * (this is based on a_Misc_get_content_type_from_data())
  */
-const char *File_get_content_type_from_data(void *Data, size_t Size)
+const char *FileUtil_get_content_type_from_data(void *Data, size_t Size)
 {
    static const char *Types[] = {
       "application/octet-stream",
@@ -53,7 +204,7 @@ const char *File_get_content_type_from_data(void *Data, size_t Size)
    char *p = Data;
    size_t i, non_ascci;
 
-   _MSG("File_get_content_type_from_data:: Size = %d\n", Size);
+   _MSG("FileUtil_get_content_type_from_data:: Size = %d\n", Size);
 
    /* HTML try */
    for (i = 0; i < Size && dIsspace(p[i]); ++i);
@@ -104,7 +255,7 @@ const char *File_get_content_type_from_data(void *Data, size_t Size)
 /*
  * Return a content type based on the extension of the filename.
  */
-const char *File_ext(const char *filename)
+const char *FileUtil_ext(const char *filename)
 {
    char *e;
 
@@ -155,7 +306,7 @@ const char *File_ext(const char *filename)
 /*
  * Given a timestamp, output an HTML-formatted date string.
  */
-void File_print_mtime(Dsh *sh, time_t mtime, int old_style)
+void FileUtil_print_mtime(Dsh *sh, time_t mtime, int old_style)
 {
    char *ds = ctime(&mtime);
 
@@ -178,7 +329,7 @@ void File_print_mtime(Dsh *sh, time_t mtime, int old_style)
 /*
  * Output the HTML page header and title.
  */
-void File_print_page_header(Dsh *sh, const char *dpiname, const char *dirname, int old_style)
+void FileUtil_print_page_header(Dsh *sh, const char *dpiname, const char *dirname, int old_style)
 {
    char *Hdirname, *Udirname, *HUdirname;
 
@@ -208,7 +359,7 @@ void File_print_page_header(Dsh *sh, const char *dpiname, const char *dirname, i
 /*
  * Output the string for parent directory.
  */
-void File_print_parent_dir(Dsh *sh, const char *dpiname, const char *dirname)
+void FileUtil_print_parent_dir(Dsh *sh, const char *dpiname, const char *dirname)
 {
    if (strcmp(dirname, "/") != 0) {        /* Not the root dir */
       char *p, *parent, *HUparent, *Uparent;
@@ -233,7 +384,7 @@ void File_print_parent_dir(Dsh *sh, const char *dpiname, const char *dirname)
 /*
  * Output the header for the file listing table.
  */
-void File_print_table_header(Dsh *sh, int dirlen, int old_style)
+void FileUtil_print_table_header(Dsh *sh, int dirlen, int old_style)
 {
    if (dirlen) {
       if (old_style) {
@@ -258,7 +409,7 @@ void File_print_table_header(Dsh *sh, int dirlen, int old_style)
 /*
  * Output a HTML-line from file info.
  */
-void File_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, int old_style)
+void FileUtil_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, int old_style)
 {
    int size;
    char *sizeunits;
@@ -319,7 +470,7 @@ void File_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, int 
          S_ISDIR (finfo->mode) ? ">" : " ", HUref, Hname,
          filecont, size, sizeunits);
    }
-   File_print_mtime(sh, finfo->mtime, old_style);
+   FileUtil_print_mtime(sh, finfo->mtime, old_style);
    a_Dpip_dsh_write_str(sh, 0, "\n");
 
    dFree(Hname);
@@ -330,7 +481,7 @@ void File_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, int 
 /*
  * Output the footer for the file listing table.
  */
-void File_print_table_footer(Dsh *sh, int dirlen, int old_style)
+void FileUtil_print_table_footer(Dsh *sh, int dirlen, int old_style)
 {
    if (!old_style && dirlen) {
       a_Dpip_dsh_write_str(sh, 0, "</table>\n");
@@ -340,7 +491,7 @@ void File_print_table_footer(Dsh *sh, int dirlen, int old_style)
 /*
  * Output the HTML page footer.
  */
-void File_print_page_footer(Dsh *sh, int old_style)
+void FileUtil_print_page_footer(Dsh *sh, int old_style)
 {
    if (old_style) {
       a_Dpip_dsh_write_str(sh, 0, "</pre>\n");
