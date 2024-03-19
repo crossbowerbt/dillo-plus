@@ -4,8 +4,11 @@ AR ?= ar
 ARFLAGS ?= cru
 RANLIB ?= ranlib
 
-CC ?= gcc
-CXX ?= g++
+CC ?= clang
+CXX ?= clang
+# try egcc and g++ if clang fails to compile
+# CC ?= egcc
+# CXX ?= g++
 
 INSTALL ?= /usr/bin/install
 INSTALL_SH = ../install-sh
@@ -53,10 +56,10 @@ LIBDIR = $(PREFIX)/lib/
 
 DILLO_BINDIR = $(PREFIX)/bin/
 DILLO_LIBDIR = $(PREFIX)/lib/dillo/
-DILLO_ETCDIR = $(PREFIX)/etc/dillo/
+DILLO_ETCDIR = /etc/dillo/
 
 DPIDRC_SYS = $(DILLO_ETCDIR)/dpidrc
 
 DOC_PATH = $(PREFIX)/share/doc/dillo
-MAN_PATH = $(PREFIX)/share/man/man1
+MAN_PATH = $(PREFIX)/man/man1
 
