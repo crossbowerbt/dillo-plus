@@ -57,7 +57,7 @@ int FileUtil_comp(const FileInfo *f1, const FileInfo *f2)
 /*
  * Allocate an empty DilloDir structure.
  */
-DilloDir *FileUtil_dillodir_new(char *dirname)
+DilloDir *FileUtil_dillodir_new(const char *dirname)
 {
    DilloDir *Ddir;
 
@@ -280,6 +280,8 @@ const char *FileUtil_ext(const char *filename)
               !dStrAsciiCasecmp(e, "ncx") ||
               !dStrAsciiCasecmp(e, "opf")) {
       return "text/xml";
+   } else if (!dStrAsciiCasecmp(e, "pdf")) {
+      return "application/pdf";
    } else if (!dStrAsciiCasecmp(e, "zip")) {
       return "application/zip";
    } else if (!dStrAsciiCasecmp(e, "epub")) {
@@ -416,6 +418,7 @@ void FileUtil_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, 
    char namebuf[MAXNAMESIZE + 1];
    char *Uref, *HUref, *Hname;
    const char *ref, *name = finfo->filename;
+   const char *HHandler = "";
 
    if (finfo->size <= 9999) {
       size = finfo->size;
@@ -437,8 +440,14 @@ void FileUtil_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, 
       if (!filecont || !strcmp(filecont, "application/octet-stream"))
          filecont = "unknown";
    }
+   
+   /* dirty trick to open the file with the correct dpi */
+   if(!strcmp(filecont, "application/zip") ||
+      !strcmp(filecont, "application/epub")) {
+      HHandler = "zip:";
+   }
 
-   ref = name;
+   ref = finfo->full_path;
 
    if (strlen(name) > MAXNAMESIZE) {
       memcpy(namebuf, name, MAXNAMESIZE - 3);
@@ -455,19 +464,19 @@ void FileUtil_print_info(Dsh *sh, FileInfo *finfo, int n, const char *filecont, 
       char *dots = ".. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. ..";
       int ndots = MAXNAMESIZE - strlen(name);
       a_Dpip_dsh_printf(sh, 0,
-         "%s<a href='%s'>%s</a>"
+         "%s<a href='%s%s'>%s</a>"
          " %s"
          " %-11s%4d %-5s",
-         S_ISDIR (finfo->mode) ? ">" : " ", HUref, Hname,
+         S_ISDIR (finfo->mode) ? ">" : " ", HHandler, HUref, Hname[0] == '/' ? Hname + 1 : Hname,
          dots + 50 - (ndots > 0 ? ndots : 0),
          filecont, size, sizeunits);
 
    } else {
       a_Dpip_dsh_printf(sh, 0,
-         "<tr align=center %s><td>%s<td align=left><a href='%s'>%s</a>"
+         "<tr align=center %s><td>%s<td align=left><a href='%s%s'>%s</a>"
          "<td>%s<td>%d&nbsp;%s",
          (n & 1) ? "bgcolor=#dcdcdc" : "",
-         S_ISDIR (finfo->mode) ? ">" : " ", HUref, Hname,
+         S_ISDIR (finfo->mode) ? ">" : " ", HHandler, HUref, Hname[0] == '/' ? Hname + 1 : Hname,
          filecont, size, sizeunits);
    }
    FileUtil_print_mtime(sh, finfo->mtime, old_style);

@@ -50,7 +50,7 @@ int FileUtil_comp(const FileInfo *f1, const FileInfo *f2);
 /*
  * Allocate an empty DilloDir structure.
  */
-DilloDir *FileUtil_dillodir_new(char *dirname);
+DilloDir *FileUtil_dillodir_new(const char *dirname);
 
 /*
  * Add a FileInfo to DilloDir structure.
