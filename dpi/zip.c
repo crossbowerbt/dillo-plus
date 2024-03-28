@@ -143,6 +143,32 @@ static void Zip_close(FILE *fp)
 }
 
 /*
+ * Open a zip listing process
+ */
+FILE *Zip_open_listing(const char *archive_filename) {
+#if(ZIP_USE_7Z==1)
+   return Zip_open("7z l \"", archive_filename, "\"", NULL, NULL);
+#else
+   return Zip_open("unzip -l \"", archive_filename, "\"", NULL, NULL);
+#endif
+}
+
+/*
+ * Open a zip extracting process
+ */
+FILE *Zip_open_extract(const char *archive_filename, const char *inner_filename) {
+#if(ZIP_USE_7Z==1)
+   return Zip_open("7z x -so \"", archive_filename, "\" \"",
+                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename,
+                   "\"");
+#else
+   return Zip_open("unzip -p \"", archive_filename, "\" \"",
+                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename,
+                   "\"");
+#endif
+}
+
+/*
  * Parse a zip file listing line
  */
 int Zip_parse_list_line(char *line, ZipFileInfo *zfi) {
@@ -156,6 +182,9 @@ int Zip_parse_list_line(char *line, ZipFileInfo *zfi) {
    while(*line==' ') line++;             \
 }
 
+   while(*line==' ') line++;
+
+#if(ZIP_USE_7Z==1)
    zfi->date = line;
 
    ZIP_NEXT_LINE_TOKEN;
@@ -172,6 +201,18 @@ int Zip_parse_list_line(char *line, ZipFileInfo *zfi) {
 
    ZIP_NEXT_LINE_TOKEN;
    zfi->name = line;
+#else
+   zfi->size = line;
+
+   ZIP_NEXT_LINE_TOKEN;
+   zfi->date = line;
+
+   ZIP_NEXT_LINE_TOKEN;	
+   zfi->time = line;
+
+   ZIP_NEXT_LINE_TOKEN;
+   zfi->name = line;
+#endif
 	
 #undef ZIP_NEXT_LINE_TOKEN
 
@@ -201,12 +242,14 @@ static DilloDir *Zip_dillodir_fs_new(const char *archive_filename)
    int in_file_listing;
    char line[1024];
 
-   if (!(zip = Zip_open("7z l \"", archive_filename, "\"", NULL, NULL)))
+   if (!(zip = Zip_open_listing(archive_filename)))
       return NULL;
 
    Ddir = FileUtil_dillodir_new(archive_filename);
 
    in_file_listing = 0;
+
+   memset(&tm, 0, sizeof(tm));
 
    while(fgets(line, sizeof(line) - 1, zip)) {
       if(!strncmp(line, "-----", 5)) {
@@ -223,7 +266,11 @@ static DilloDir *Zip_dillodir_fs_new(const char *archive_filename)
             sb.st_mode = S_IFREG;
 
             timestamp = dStrconcat(zfi.date, " ", zfi.time, NULL);
+#if(ZIP_USE_7Z == 1)
             strptime(timestamp, "%Y-%m-%d %H:%M:%S", &tm);
+#else
+            strptime(timestamp, "%m-%d-%Y %H:%M", &tm);
+#endif
             sb.st_mtime = mktime(&tm);
             free(timestamp);
 
@@ -253,9 +300,7 @@ static const char *Zip_content_type(const char *archive_filename, const char *in
 
    if (!(ct = FileUtil_ext(inner_filename))) {
       /* everything failed, let's analyze the data... */
-      zip = Zip_open("7z x -so \"", archive_filename, "\" \"",
-                     inner_filename[0] == '/' ? inner_filename + 1 : inner_filename,
-                     "\"");      
+      zip = Zip_open_extract(archive_filename, inner_filename);
       if (zip) {
          if ((buf_size = fread(buf, 1, 256, zip)) > 0) {
             ct = FileUtil_get_content_type_from_data(buf, (size_t)buf_size);
@@ -413,7 +458,7 @@ static int Zip_prepare_send_file(ClientInfo *client,
    FILE *zip;
    int res = -1;
 
-   if (!(zip = Zip_open("7z x -so \"", archive_filename, "\" \"", inner_filename, "\""))) {
+   if (!(zip = Zip_open_extract(archive_filename, inner_filename))) {
       /* prepare an error message */
       res = errno;
    } else {

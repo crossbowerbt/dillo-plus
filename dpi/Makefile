@@ -41,7 +41,7 @@ file.dpi: file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o file.dpi file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 zip.o: zip.c
-	$(COMPILE) -c zip.c
+	$(COMPILE) -DZIP_USE_7Z='$(ZIP_USE_7Z)' -c zip.c
 
 zip.dpi: zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o zip.dpi zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
