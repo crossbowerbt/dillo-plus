@@ -47,7 +47,7 @@ zip.dpi: zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o zip.dpi zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 ftp.o: ftp.c
-	$(COMPILE) -c ftp.c
+	$(COMPILE) -DFTP_USE_WGET='$(FTP_USE_WGET)' -c ftp.c
 
 ftp.filter.dpi: ftp.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o ftp.filter.dpi ftp.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
