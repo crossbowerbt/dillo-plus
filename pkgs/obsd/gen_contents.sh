@@ -67,6 +67,8 @@ lib/dillo/dpi/downloads/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/downloads/downloads.dpi)
 lib/dillo/dpi/file/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/file/file.dpi)
+lib/dillo/dpi/zip/
+@bin $(gen_file "/usr/local/" lib/dillo/dpi/zip/zip.dpi)
 lib/dillo/dpi/ftp/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/ftp/ftp.filter.dpi)
 lib/dillo/dpi/gemini/
