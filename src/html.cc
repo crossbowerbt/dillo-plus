@@ -99,7 +99,10 @@ void *a_Html_text(const char *type, void *P, CA_Callback_t *Call,void **Data);
 /*-----------------------------------------------------------------------------
  * Forward declarations
  *---------------------------------------------------------------------------*/
-static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
+static void Html_process_tag(DilloHtml *html, char *tag, int tagsize);
+static void Rss_process_tag(DilloHtml *html, char *tag, int tagsize);
+static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof,
+                          void process_tag(DilloHtml *html, char *tag, int tagsize));
 static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
 static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof);
@@ -599,8 +602,17 @@ void DilloHtml::write(char *Buf, int BufSize, int Eof)
       token_start = Gopher_write_raw(this, buf, bufsize, Eof);
    } else if(!strncmp(this->content_type, "text/markdown", 13)) {
       token_start = Markdown_write_raw(this, buf, bufsize, Eof);
+   } else if(strstr(this->content_type, "/rss") ||
+             (bufsize > 5 && !strncmp(buf, "<?xml", 5) &&
+              strstr(buf, "<rss version="))) {
+      if(!strstr(this->content_type, "/rss")) {
+         // change content type to an appropriate one
+         dFree(content_type);
+         this->content_type = dStrdup("text/rss");
+      }
+      token_start = Html_write_raw(this, buf, bufsize, Eof, &Rss_process_tag);
    } else {
-      token_start = Html_write_raw(this, buf, bufsize, Eof);
+      token_start = Html_write_raw(this, buf, bufsize, Eof, &Html_process_tag);
    }
    Start_Ofs += token_start;
 }
@@ -3166,7 +3178,7 @@ static void Html_tag_open_meta(DilloHtml *html, const char *tag, int tagsize)
             snprintf(delay_str, 64, " after %d second%s.",
                      delay, (delay > 1) ? "s" : "");
          } else {
-            sprintf(delay_str, ".");
+            snprintf(delay_str, 64, ".");
          }
          /* Skip to anything after "URL=" or ";" if "URL=" is not found */
          if ((p = dStriAsciiStr(content, "url=")))
@@ -3208,7 +3220,7 @@ static void Html_tag_open_meta(DilloHtml *html, const char *tag, int tagsize)
                int o_TagSoup = html->TagSoup;
                html->InFlags = IN_BODY + IN_META_HACK;
                html->TagSoup = false;
-               Html_write_raw(html, ds_msg->str, ds_msg->len, 0);
+               Html_write_raw(html, ds_msg->str, ds_msg->len, 0, &Html_process_tag);
                html->TagSoup = o_TagSoup;
                html->InFlags = o_InFlags;
             }
@@ -4017,7 +4029,7 @@ static void Html_display_listitem(DilloHtml *html)
 }
 
 /*
- * Process a tag, given as 'tag' and 'tagsize'. -- tagsize is [1 based]
+ * Process a HTML tag, given as 'tag' and 'tagsize'. -- tagsize is [1 based]
  * ('tag' must include the enclosing angle brackets)
  * This function calls the right open or close function for the tag.
  */
@@ -4147,6 +4159,98 @@ static void Html_process_tag(DilloHtml *html, char *tag, int tagsize)
          /* This was a close tag */
          html->ReqTagClose = false;
       }
+   }
+}
+
+/*
+ * Process an RSS tag, converting it to an HTML equivalent to be displayed.
+ */
+static void Rss_process_tag(DilloHtml *html, char *tag, int tagsize)
+{
+   char channel_tag[]="<div class=\"channel\">", channel_tag_end[]="</div>";
+   char link_tag[]="<a>", link_tag_end[]="</a>";
+   char title_tag[]="<h1>", title_tag_end[]="</h1>";
+   char description_tag[]="<div class=\"description\">", description_tag_end[]="</div>";
+   char item_tag[]="<div class=\"item\">", item_tag_end[]="</div>";
+   char pubdate_tag[]="<div class=\"pubdate\">", pubdate_tag_end[]="</div>";
+
+   char doctype_tag[]="<!DOCTYPE html>";
+   char head_tag[]="<head>", head_tag_end[]="</head>";
+   char head_title_tag[]="<title>", head_title_tag_end[]="</title>";
+   char hr_tag[]="<hr />";
+   char style_tag[]="<style type=\"text/css\">", style_tag_end[]="</style>";
+   char style[]=".channel { margin-bottom: 10px; } .channel > h1 { font-size: bigger; } .pubdate { font-style: italic; } .description { margin-top: 10px; } ";
+
+   // rss headers
+   if(tagsize > 5 && !strncmp(tag, "<?xml", 5)) {
+      return;
+   } else if(tagsize > 4 && !strncmp(tag, "<rss", 4)) {
+      Html_process_tag(html, doctype_tag, sizeof(doctype_tag)-1);
+      Html_process_tag(html, head_tag, sizeof(head_tag)-1);
+      if(a_Url_hostname(html->page_url)) {
+         Html_process_tag(html, head_title_tag, sizeof(head_title_tag)-1);
+         Html_process_word(html, a_Url_hostname(html->page_url), strlen(a_Url_hostname(html->page_url)));           Html_process_tag(html, head_title_tag_end, sizeof(head_title_tag_end)-1);
+      }
+      Html_process_tag(html, style_tag, sizeof(style_tag)-1);
+      Html_process_word(html, style, sizeof(style)-1);
+      Html_process_tag(html, style_tag_end, sizeof(style_tag_end)-1);
+      Html_process_tag(html, head_tag_end, sizeof(head_tag_end)-1);
+      return;
+   }
+
+   // channel
+   else if(tagsize > 8 && !strncmp(tag, "<channel", 8)) {
+      return Html_process_tag(html, channel_tag, sizeof(channel_tag)-1);
+   } else if(tagsize > 9 && !strncmp(tag, "</channel", 9)) {
+      return Html_process_tag(html, channel_tag_end, sizeof(channel_tag_end)-1);
+   }
+   
+   // link
+   else if(tagsize > 5 && !strncmp(tag, "<link", 5)) {
+      return Html_process_tag(html, link_tag, sizeof(link_tag)-1);
+   } else if(tagsize > 6 && !strncmp(tag, "</link", 6)) {
+      return Html_process_tag(html, link_tag_end, sizeof(link_tag_end)-1);
+   }
+
+   // url
+   else if(tagsize > 4 && !strncmp(tag, "<url", 4)) {
+      return Html_process_tag(html, link_tag, sizeof(link_tag)-1);
+   } else if(tagsize > 5 && !strncmp(tag, "</url", 5)) {
+      return Html_process_tag(html, link_tag_end, sizeof(link_tag_end)-1);
+   }
+   
+   // title
+   else if(tagsize > 6 && !strncmp(tag, "<title", 6)) {
+      return Html_process_tag(html, title_tag, sizeof(title_tag)-1);
+   } else if(tagsize > 7 && !strncmp(tag, "</title", 7)) {
+      return Html_process_tag(html, title_tag_end, sizeof(title_tag_end)-1);
+   }
+   
+   // description
+   else if(tagsize > 12 && !strncmp(tag, "<description", 12)) {
+      return Html_process_tag(html, description_tag, sizeof(description_tag)-1);
+   } else if(tagsize > 13 && !strncmp(tag, "</description", 13)) {
+      return Html_process_tag(html, description_tag_end, sizeof(description_tag_end)-1);
+   }
+   
+   // item
+   else if(tagsize > 5 && !strncmp(tag, "<item", 5)) {
+      Html_process_tag(html, hr_tag, sizeof(hr_tag)-1);
+      return Html_process_tag(html, item_tag, sizeof(item_tag)-1);
+   } else if(tagsize > 6 && !strncmp(tag, "</item", 6)) {
+      return Html_process_tag(html, item_tag_end, sizeof(item_tag_end)-1);
+   }
+   
+   // pubDate
+   else if(tagsize > 8 && !strncmp(tag, "<pubDate", 8)) {
+      return Html_process_tag(html, pubdate_tag, sizeof(pubdate_tag)-1);
+   } else if(tagsize > 9 && !strncmp(tag, "</pubDate", 9)) {
+      return Html_process_tag(html, pubdate_tag_end, sizeof(pubdate_tag_end)-1);
+   }
+      
+   // normal html tag
+   else {
+      return Html_process_tag(html, tag, tagsize);
    }
 }
 
@@ -4312,7 +4416,8 @@ static void Html_callback(int Op, CacheClient_t *Client)
  * Here's where we parse the html and put it into the Textblock structure.
  * Return value: number of bytes parsed
  */
-static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
+static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof,
+                          void process_tag(DilloHtml *html, char *tag, int tagsize))
 {
    char ch = 0, *p, *text;
    int token_start, buf_index;
@@ -4370,6 +4475,10 @@ static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
                token_start = buf_index;
             } else
                buf_index = bufsize;
+         } else if (buf_index + 8 < bufsize && !strncmp(buf + buf_index, "<![CDATA[", 9)) {
+            /* CDATA: skip tag opening and try to render the data inside */
+            buf_index += 9;
+            token_start = buf_index;
          } else {
             /* Tag: search end of tag (skipping over quoted strings) */
             html->CurrOfs = html->Start_Ofs + token_start;
@@ -4409,8 +4518,8 @@ static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             }
             if (buf_index < bufsize) {
                buf_index++;
-               Html_process_tag(html, buf + token_start,
-                                buf_index - token_start);
+               process_tag(html, buf + token_start,
+                           buf_index - token_start);
                token_start = buf_index;
             }
          }
@@ -4429,8 +4538,13 @@ static int Html_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             /* successfully found end of token */
             ch = buf[buf_index];
             buf[buf_index] = 0;
-            Html_process_word(html, buf + token_start,
-                              buf_index - token_start);
+            if(buf_index - token_start >= 3 &&
+               !strncmp(buf + token_start, "]]>", 3)) {
+               // skip end of <![CDATA[ tag
+            } else {
+               Html_process_word(html, buf + token_start,
+                                 buf_index - token_start);
+            }
             buf[buf_index] = ch;
             token_start = buf_index;
          }
@@ -4571,9 +4685,9 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             while (buf_index < bufsize && !isspace(buf[buf_index]) && buf[buf_index] != '\n')
                buf_index++; /* read href */
             ch = buf[buf_index]; buf[buf_index] = '\0'; /* null-terminate temporarily the href */
-            strcpy(link_open, "<a href=\"");
+            strncpy(link_open, "<a href=\"", 10);
             strncat(link_open, buf + token_start, sizeof(link_open) - 12);
-            strcat(link_open, "\">");
+            strncat(link_open, "\">", 3);
             buf[buf_index] = ch; /* restore the correct char */
             Html_process_tag(html, par_open, strlen(par_open));
             Html_process_tag(html, link_open, strlen(link_open));
@@ -4814,7 +4928,7 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 
       if(*end_of_line != '\n' && !html->last_partial_line[0]) {
 
-         strcpy(html->last_partial_line, buf + buf_index);
+         strncpy(html->last_partial_line, buf + buf_index, sizeof(html->last_partial_line) - 1);
          goto CLEANUP_GOPHER;
          
       } else if (*end_of_line != '\n') {
@@ -4897,21 +5011,21 @@ static int Gopher_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
          Html_process_word(html, "[", strlen("["));
          Html_process_word(html, ch_str, strlen(ch_str));
          Html_process_word(html, "] ", strlen("] "));
-         strcpy(link_open, "<a href=\"");
+         strncpy(link_open, "<a href=\"", 10);
 
          if(!strncmp(resource, "URL:", 4)) {
             strncat(link_open, resource + 4, sizeof(link_open) - 21);
          } else {
-            strcat(link_open, "gopher://");
+            strncat(link_open, "gopher://", 10);
             strncat(link_open, ch_str, sizeof(link_open) - 21);
             strncat(link_open, "::", sizeof(link_open) - 21);
             strncat(link_open, host, sizeof(link_open) - 21);
-            strcat(link_open, ":");
+            strncat(link_open, ":", 2);
             strncat(link_open, port, sizeof(link_open) - 21);
             strncat(link_open, resource, sizeof(link_open) - 21);
          }
          
-         strcat(link_open, "\">");
+         strncat(link_open, "\">", 3);
          Html_process_tag(html, link_open, strlen(link_open));
          Html_process_word(html, text, strlen(text));
          Html_process_tag(html, link_close, strlen(link_close));
@@ -4987,6 +5101,7 @@ static int validate_md_link(const char *buf, int bufsize) {
    return true;
    
 }
+
 static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
 {
    char ch = 0;
@@ -5362,20 +5477,20 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
                tmp = buf_index++;
                while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of src */
                buf[buf_index] = '\0';
-               strcpy(img_tag, img_start_tag);
+               strncpy(img_tag, img_start_tag, sizeof(img_tag) - 1);
                if (strlen(buf + tmp + 1) < ((sizeof(img_tag) - 200) / 2)) /* note: we keep a larger margin than necessary */
-                  strcat(img_tag, buf + tmp + 1);
+                  strncat(img_tag, buf + tmp + 1, ((sizeof(img_tag) - 200) / 2));
                else
                   BUG_MSG("Image src attribute too long");
-               strcat(img_tag, img_middle_tag);
+               strncat(img_tag, img_middle_tag, sizeof(img_tag) - strlen(img_tag) - 1);
                buf[buf_index] = ')';
                buf_index++;
                buf[tmp-1] = '\0';
                if (strlen(buf + token_start + 2) < ((sizeof(img_tag) - 200) / 2)) /* note: we keep a larger margin than necessary */
-                  strcat(img_tag, buf + token_start + 2);
+                  strncat(img_tag, buf + token_start + 2,((sizeof(img_tag) - 200) / 2));
                else
                   BUG_MSG("Image alt text attribute too long");
-               strcat(img_tag, img_end_tag);
+               strncat(img_tag, img_end_tag, sizeof(img_tag) - strlen(img_tag) - 1);
                buf[tmp-1] = ']';
                Html_process_tag(html, img_tag, strlen(img_tag)); /* send img tag */
             }
@@ -5411,9 +5526,9 @@ static int Markdown_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
                tmp = buf_index++;
                while (buf_index < bufsize && buf[buf_index] != ')') buf_index++; /* find end of href */
                buf[buf_index] = '\0';
-               strcpy(link_open, "<a href=\"");
+               strncpy(link_open, "<a href=\"", 10);
                strncat(link_open, buf + tmp + 1, sizeof(link_open) - 12);
-               strcat(link_open, "\">");
+               strncat(link_open, "\">", 3);
                buf[buf_index] = ')';
                Html_process_tag(html, link_open, strlen(link_open)); /* send open link tag */
                buf_index++;
