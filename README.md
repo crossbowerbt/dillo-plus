@@ -35,13 +35,13 @@ To make it easier reading articles from the web, and also to rearrange large pag
 
 ## Additional content types
 
-Support for rendering pages and local files written in the **gemini**, **gopher** and **markdown** formats has been added.
+Support for rendering pages and local files written in the **gemini**, **gopher**, **markdown** and *rss* formats has been added.
 
-## DLS Scripts
+## Additional DPIs
 
-To implement some advanced features, like **Zip**, **EPub**, **RSS**, **Telegram channels** and others, a system of external scripts/plugins called DLS (Dillo Local Script) has been added to the browser. You can see the available DLS using the prefix dls: (to call a DLS add its name after the prefix).
+To implement some advanced features, like **Zip**, **EPub** and others, a serie of additional DPI modules has been added by default to the browser.
 
-Here are some screenshots of the Epub reader DLS:
+Here are some screenshots of the Epub reader:
 
 [![epub1](screenshots/epub1.png)](screenshots/epub1.png)
 [![epub2](screenshots/epub2.png)](screenshots/epub2.png)
@@ -57,12 +57,17 @@ For example, 'dd pizza', will search the Duck Duck Go website for the term 'pizz
 
 ```
 dd - to search DuckDuckGo
-se - to search SearX (prvcy.eu)
-se2 - to search2 SearX (metasearx.com)
-se3 - to search3 SearX (searxng.au)
-se4 - to search4 SearX (cosmohub.io)
+se - to search SearX (searx.be)
+se2 - to search2 SearX (searxng.ch)
+se3 - to search3 SearX (searxng.ca)
+se4 - to search4 SearX (priv.au)
 ya - to search Yandex
 wk - to search Wikipedia
+wt - to search Wiktionary
+wc - to search Wikicommons
+wb - to search Wikibooks
+wv - to search Wikiversity
+wy - to search Wikivoyage
 ar - to search Internet Archive
 fd - to search Free Dictionary
 sp - to search Startpage
@@ -76,6 +81,17 @@ pb - to search The Pirate Bay
 tw - to search Twitter
 un - to search Unsplash
 dv - to search Deviant Art
+dw - to search Debian Wiki
+aw - to search Arch Wiki
+gw - to search Gentoo Wiki
+ow - to search OpenSuse Wiki
+sl - to search Slackware Docs
+db - to search Debian Package
+ap - to search Arch Package
+fp - to search Fedora Package
+ob - to search OpenBSD Package
+os - to search OpenSuse Package
+fb - to search FreeBSD Man
 ```
 
 To modify these quick searches, refer to this link.
@@ -105,8 +121,6 @@ To enable image rendering install also:
 * libjpeg
 * libpng
 * libgif
-
-To run some DLS scripts you'll also need *python*.
 
 On Debian-based systems with OpenSSL, you can run `apt install libiconv-hook1 libfltk1.3-dev libglx-dev libgl-dev libopengl-dev libssl-dev libxrender-dev libxfixes-dev libxcursor-dev libxext-dev libxinerama-dev libfontconfig1-dev libxft-dev libfontconfig-dev` to install dependencies, but some of these may need manually installed from the .deb (obtainable from `apt download [package]`) with `dpkg --force-all -i [path-to-package]`.
 

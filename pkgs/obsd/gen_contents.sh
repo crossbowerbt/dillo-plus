@@ -61,8 +61,6 @@ lib/dillo/dpi/cookies/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/cookies/cookies.dpi)
 lib/dillo/dpi/datauri/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/datauri/datauri.filter.dpi)
-lib/dillo/dpi/dls/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/dls/dls.filter.dpi)
 lib/dillo/dpi/downloads/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/downloads/downloads.dpi)
 lib/dillo/dpi/file/
@@ -88,14 +86,5 @@ $(gen_file "/usr/local/" etc/dillo/dpidrc)
 $(gen_file "/usr/local/" etc/dillo/dillorc)
 $(gen_file "/usr/local/" etc/dillo/style.css)
 $(gen_file "/usr/local/" etc/dillo/style_reader_mode.css)
-lib/dillo/dls/
-@bin $(gen_file "/usr/local/" lib/dillo/dls/default.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/test.dls)
-$(gen_file "/usr/local/" lib/dillo/dls/not_executable.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/zip.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/epub.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/rss.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/telegram.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/aggregator.dls)
 EOF
 
