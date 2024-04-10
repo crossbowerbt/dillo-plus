@@ -236,7 +236,7 @@ static void search_cb(Fl_Widget *wid, void *data)
  */
 static void help_cb(Fl_Widget *w, void *)
 {
-   char *path = dStrconcat(DILLO_DOCDIR, "user_help.html", NULL);
+   char *path = dStrconcat(DOC_PATH, "/user_help.html", NULL);
    BrowserWindow *bw = a_UIcmd_get_bw_by_widget(w);
 
    if (access(path, R_OK) == 0) {
