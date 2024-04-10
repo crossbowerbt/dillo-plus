@@ -103,43 +103,79 @@ static Dlist *Clients;
 fd_set read_set, write_set;
 
 /*
- * Popen() an unzip process with the specified cmdline arguments
+ * Open a pipe to an unzip process with the specified cmdline arguments
  */
-FILE *Zip_open(const char *cmd_prefix, const char *archive_filename,
-               const char *cmd_postfix, const char *inner_filename,
-               const char *cmd_closing) {
-   char cmd[1024] = { 0 };
+FILE *Zip_open(const char *cmd, const char *mode, const char *args,
+             const char *archive_filename, const char *inner_filename) {
+   int pid = 0;
+   int pipe_1[2];
+   int pipe_2[2];
 
-   size_t len = strlen(cmd_prefix) + strlen(archive_filename) +
-                (cmd_postfix ? strlen(cmd_postfix) : 0) +
-                (inner_filename ? strlen(inner_filename) : 0) + 
-                (cmd_closing ? strlen(cmd_closing) : 0);
-	
-   /* Check command length */
-   if(len > sizeof(cmd) - 1) {
-      MSG("error: zip_list(): cmd too long\n");
+   if (pipe(pipe_1) < 0) {
       return NULL;
    }
 
-   /* Note: we assume the arguments here have already been validated
-      by Zip_parse_path(), otherwise a shell command injection is possible */
+   if (pipe(pipe_2) < 0) {
+      close(pipe_1[0]);
+      close(pipe_1[1]);
+      return NULL;
+   }
 
-   /* Assemble command */
-   strncat(cmd, cmd_prefix, sizeof(cmd) - 1);
-   strncat(cmd, archive_filename, sizeof(cmd) - strlen(cmd) - 1);
-   if(cmd_postfix) strncat(cmd, cmd_postfix, sizeof(cmd) - strlen(cmd) - 1);
-   if(inner_filename) strncat(cmd, inner_filename, sizeof(cmd) - strlen(cmd) - 1);
-   if(cmd_closing) strncat(cmd, cmd_closing, sizeof(cmd) - strlen(cmd) - 1);
+   pid = fork();
 
-   return popen(cmd, "r");
+   if (pid == -1) {
+      close(pipe_1[0]);
+      close(pipe_1[1]);
+      close(pipe_2[0]);
+      close(pipe_2[1]);
+      return NULL;
+   }
+
+   else if (pid == 0) {
+      // child
+
+      close(fileno(stdin));
+      close(fileno(stdout));
+      
+      close(pipe_1[1]);
+      close(pipe_2[0]);
+
+      // redirect stdout
+      if (pipe_2[1] != STDOUT_FILENO) {
+	dup2(pipe_2[1], STDOUT_FILENO);
+	close(pipe_2[1]);
+      }
+
+      // redirect stdin
+      if (pipe_1[0] != STDIN_FILENO) {
+	dup2(pipe_1[0], STDIN_FILENO);
+	close(pipe_1[0]);
+      }
+
+      // launch cmd
+      const char* argp[] = {cmd, mode, args, archive_filename, inner_filename, NULL};
+      execvp(cmd, (char**) argp);
+
+      // if the function returns an error has occurred
+      perror("execvp");
+      exit(127);
+   }
+
+   // parent
+   
+   close(pipe_1[0]);
+   close(pipe_2[1]);
+   close(pipe_1[1]); // do not write to child stdin
+   
+   return fdopen(pipe_2[0], "r");
 }
 
 /*
- * Close a popen()-ed file but handling EINTR
+ * Close an open pipe to zip process but handling EINTR
  */
 static void Zip_close(FILE *fp)
 {
-   if (fp != NULL) pclose(fp);
+   if (fp != NULL) fclose(fp);
 }
 
 /*
@@ -147,9 +183,9 @@ static void Zip_close(FILE *fp)
  */
 FILE *Zip_open_listing(const char *archive_filename) {
 #if(ZIP_USE_7Z==1)
-   return Zip_open("7z l \"", archive_filename, "\"", NULL, NULL);
+   return Zip_open("7z", "l", "-y", archive_filename, NULL);
 #else
-   return Zip_open("unzip -l \"", archive_filename, "\"", NULL, NULL);
+   return Zip_open("unzip", "-l", "-b", archive_filename, NULL);
 #endif
 }
 
@@ -158,13 +194,11 @@ FILE *Zip_open_listing(const char *archive_filename) {
  */
 FILE *Zip_open_extract(const char *archive_filename, const char *inner_filename) {
 #if(ZIP_USE_7Z==1)
-   return Zip_open("7z x -so \"", archive_filename, "\" \"",
-                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename,
-                   "\"");
+   return Zip_open("7z", "x", "-so", archive_filename,
+                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename);
 #else
-   return Zip_open("unzip -p \"", archive_filename, "\" \"",
-                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename,
-                   "\"");
+   return Zip_open("unzip", "-p", "-b", archive_filename,
+                   inner_filename[0] == '/' ? inner_filename + 1 : inner_filename);
 #endif
 }
 
