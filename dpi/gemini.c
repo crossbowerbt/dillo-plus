@@ -392,6 +392,10 @@ int gemini_send_request(SSL *ssl_connection, char *query,
 
    /* Send query we want */
    SSL_write(ssl_connection, query, (int)strlen(query));
+
+   /* Add end on line if needed */
+   if(query[strlen(query)-1]!='\n')
+      SSL_write(ssl_connection, "\r\n", 2);
       
    /* Read header line */
    if(SSL_read_line(ssl_connection, buf, size) < 3) {
@@ -407,8 +411,6 @@ int gemini_send_request(SSL *ssl_connection, char *query,
       if(*buf == '\r' || *buf == '\n') *buf = '\0';
       buf++;
    }
-
-   fprintf(stderr, "HEADER LINE = %s\n", buf);
 
    return gemini_code;
 }
@@ -512,6 +514,8 @@ static void yes_ssl_support(void)
          MSG("Error parsing server reponse\n");
          exit_error = 1;
       }
+
+      fprintf(stderr, "HEADER LINE = %s\n", buf);
    }
 
    /* Read the Gemini response */
@@ -605,7 +609,7 @@ static void yes_ssl_support(void)
 
    }
 
-   /*Begin cleanup of all resources used*/
+   /* Begin cleanup of all resources used */
    dFree(dpip_tag);
    dFree(cmd);
    dFree(url);
@@ -1108,15 +1112,125 @@ static void no_ssl_support(void)
 
 /*---------------------------------------------------------------------------*/
 
-int download(const char *gemini_url, const char *output_filename) {
+int download(char *url, char *output_filename,
+             char *proxy_url, char *proxy_connect, int check_cert) {
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+   SSL_CTX * ssl_context = NULL;
+   SSL * ssl_connection = NULL;
 
-#ifdef ENABLE_SSL
-      //yes_ssl_support();
-#else
-      //no_ssl_support();
-#endif
+   char buf[4096];
+   int ret = 0;
+   int network_socket = -1;
 
-   fprintf(stderr, "Error: file download not implemented yet\n");
+   int gemini_code = -1;
+   FILE *outfile = NULL;
+
+   /* Open output file */
+   if((outfile = fopen(output_filename, "w")) == NULL) {
+      MSG("Error opening output file\n");
+      exit_error = 1;
+   }
+
+   /* Create context and SSL object */
+   if (exit_error == 0){
+      if ((ssl_context = init_ssl()) == NULL){
+         MSG("Error creating SSL context\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Init an SSL connection */
+   if (exit_error == 0){
+      if ((ssl_connection = init_ssl_connection(ssl_context)) == NULL){
+         MSG("Error creating SSL connection\n");
+         exit_error = 1;
+      }
+   }
+
+
+   /* Open the SSL connection to a server */
+   if (exit_error == 0){
+      network_socket = open_ssl_connection(ssl_connection, url,
+                                           proxy_url, proxy_connect,
+                                           check_cert);
+      if (network_socket<0){
+         MSG("Network socket create error\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Perform the Gemini request */
+   if (exit_error == 0) {
+      gemini_code = gemini_send_request(ssl_connection, url,
+                                        buf, sizeof(buf));
+      if(gemini_code < 0) {
+         MSG("Error parsing server reponse\n");
+         exit_error = 1;
+      }
+
+      fprintf(stderr, "HEADER LINE = %s\n", buf);
+   }
+
+   /* Read the Gemini response */
+   if (exit_error == 0) {
+
+      switch(gemini_code) {
+
+      case 10: // search
+
+         MSG("Error downloading file: search code received\n");
+         exit_error = 1;
+
+         break;
+      
+      case 31: // redirect
+
+         MSG("Error downloading file: redirect code received\n");
+         exit_error = 1;
+
+         break;
+
+      case 51: // not found
+
+         MSG("Error downloading file: not found\n");
+         exit_error = 1;
+      
+         break;
+
+      case 20: // ok
+      default:
+
+         /* Save file data */
+         while ((ret = SSL_read(ssl_connection, buf, 4096)) > 0 ){
+            fwrite(buf, 1, (size_t)ret, outfile);
+         }
+
+         break;
+
+      }
+
+   }
+
+   /* Begin cleanup of all resources used */
+   if (network_socket != -1){
+      dClose(network_socket);
+      network_socket = -1;
+   }
+   if (ssl_connection != NULL){
+      SSL_free(ssl_connection);
+      ssl_connection = NULL;
+   }
+   if (ssl_context != NULL){
+      SSL_CTX_free(ssl_context);
+      ssl_context = NULL;
+   }
+   if(outfile != NULL){
+      fclose(outfile);
+      outfile = NULL;
+   }
 
    return 0;
 }
@@ -1135,7 +1249,15 @@ int main(int argc, char *argv[])
 
       if(i+1<argc) {
          /* Found URL to download */
-         return download(argv[i], argv[i+1]);
+
+#ifdef ENABLE_SSL
+         return download(argv[i], argv[i+1], NULL, NULL, 0);
+#else
+         fprintf(stderr, "Error: compiled without SSL support: "
+                         "file download disabled\n");
+         return 1;
+#endif
+
       } else {
          fprintf(stderr, "usage: %s gemini_url output_filename\n", argv[0]);
          return 1;

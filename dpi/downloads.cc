@@ -107,7 +107,7 @@ class DLItem {
    int twosec_bytesize, onesec_bytesize;
    int init_bytesize, curr_bytesize, total_bytesize;
    int DataDone, LogDone, ForkDone, UpdatesDone, WidgetDone;
-   int WgetStatus;
+   int DownloaderStatus;
 
    int gw, gh;
    Fl_Group *group;
@@ -138,8 +138,8 @@ public:
    void fork_done(int val) { ForkDone = val; }
    int log_done() { return LogDone; }
    void log_done(int val) { LogDone = val; }
-   int downloader_status() { return WgetStatus; }
-   void downloader_status(int val) { WgetStatus = val; }
+   int downloader_status() { return DownloaderStatus; }
+   void downloader_status(int val) { DownloaderStatus = val; }
    void update_prSize(int newsize);
    void update();
 };
@@ -317,34 +317,47 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
    // BUG:? test a URL with ' inside.
    /* escape "'" character for the shell. Is it necessary? */
    esc_url = Escape_uri_str(url, "'");
+
    /* avoid malicious SMTP relaying with FTP urls */
    if (dStrnAsciiCasecmp(esc_url, "ftp:/", 5) == 0)
       Filter_smtp_hack(esc_url);
+
    dl_argv = new char*[10];
    int i = 0;
-   dl_argv[i++] = (char*)DOWNLOADER_TOOL;
-   if (stat(fullname, &ss) == 0)
-      init_bytesize = (int)ss.st_size;
-   dl_argv[i++] = (char*)DOWNLOADER_USER_AGENT_ARG;
-   dl_argv[i++] = useragent;
-   dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
-   dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
-   dl_argv[i++] = dStrconcat(dGethomedir(), "/.dillo/cookies.txt", NULL);
-   dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
-   dl_argv[i++] = fullname;
-   dl_argv[i++] = esc_url;
-   dl_argv[i++] = NULL;
+   
+   if(dStrnAsciiCasecmp(esc_url, "gemini:/", 8) == 0) {
+      /* Use internal Gemini downloader */
+      dl_argv[i++] = (char*)DILLO_LIBDIR "/dpi/gemini/gemini.filter.dpi";
+      dl_argv[i++] = esc_url;
+      dl_argv[i++] = fullname;
+      /* ToDo: add the other options */
+      dl_argv[i++] = NULL;
+   } else {
+      /* Use external downloader */
+      dl_argv[i++] = (char*)DOWNLOADER_TOOL;
+      if (stat(fullname, &ss) == 0)
+         init_bytesize = (int)ss.st_size;
+      dl_argv[i++] = (char*)DOWNLOADER_USER_AGENT_ARG;
+      dl_argv[i++] = useragent;
+      dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
+      dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
+      dl_argv[i++] = dStrconcat(dGethomedir(), "/.dillo/cookies.txt", NULL);
+      dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
+      dl_argv[i++] = fullname;
+      dl_argv[i++] = esc_url;
+      dl_argv[i++] = NULL;
 
-   // Create cookies.txt if it doesn't exist (needed for some downloaders)
-   FILE *fp = fopen(dl_argv[5], "ab+");
-   fclose(fp);
+      // Create cookies.txt if it doesn't exist (needed for some downloaders)
+      FILE *fp = fopen(dl_argv[5], "ab+");
+      fclose(fp);
+   }
 
    DataDone = 0;
    LogDone = 0;
    UpdatesDone = 0;
    ForkDone = 0;
    WidgetDone = 0;
-   WgetStatus = -1;
+   DownloaderStatus = -1;
 
    gw = 400, gh = 70;
    group = new Fl_Group(0,0,gw,gh);
