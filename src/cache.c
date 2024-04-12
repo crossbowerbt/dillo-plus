@@ -1088,7 +1088,8 @@ int a_Cache_download_enabled(const DilloUrl *url)
    if (!dStrAsciiCasecmp(URL_SCHEME(url), "http") ||
        !dStrAsciiCasecmp(URL_SCHEME(url), "https") ||
        !dStrAsciiCasecmp(URL_SCHEME(url), "ftp") ||
-       !dStrAsciiCasecmp(URL_SCHEME(url), "gemini"))
+       !dStrAsciiCasecmp(URL_SCHEME(url), "gemini") ||
+       !dStrAsciiCasecmp(URL_SCHEME(url), "gopher"))
       return 1;
    return 0;
 }

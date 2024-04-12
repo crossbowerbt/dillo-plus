@@ -1150,7 +1150,6 @@ int download(char *url, char *output_filename,
       }
    }
 
-
    /* Open the SSL connection to a server */
    if (exit_error == 0){
       network_socket = open_ssl_connection(ssl_connection, url,
@@ -1171,7 +1170,6 @@ int download(char *url, char *output_filename,
          exit_error = 1;
       }
 
-      fprintf(stderr, "HEADER LINE = %s\n", buf);
    }
 
    /* Read the Gemini response */

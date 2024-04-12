@@ -332,6 +332,13 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
       dl_argv[i++] = fullname;
       /* ToDo: add the other options */
       dl_argv[i++] = NULL;
+   } else if(dStrnAsciiCasecmp(esc_url, "gopher:/", 8) == 0) {
+      /* Use internal Gopher downloader */
+      dl_argv[i++] = (char*)DILLO_LIBDIR "/dpi/gopher/gopher.filter.dpi";
+      dl_argv[i++] = esc_url;
+      dl_argv[i++] = fullname;
+      /* ToDo: add the other options */
+      dl_argv[i++] = NULL;
    } else {
       /* Use external downloader */
       dl_argv[i++] = (char*)DOWNLOADER_TOOL;
