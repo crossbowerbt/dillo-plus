@@ -163,28 +163,19 @@ static int SSL_read_until_delims(SSL *ssl, char *buf, int num, const char *delim
 }
 
 /*
- *  This function does all of the work with SSL
+ *  This function initializes an SSL context
  */
-static void yes_ssl_support(void)
+SSL_CTX *init_ssl(void)
 {
    /* The following variable will be set to 1 in the event of
     * an error and skip any further processing
     */
    int exit_error = 0;
    SSL_CTX * ssl_context = NULL;
-   SSL * ssl_connection = NULL;
-
-   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *gemini_query = NULL,
-        *proxy_url = NULL, *proxy_connect = NULL, *check_cert = NULL;
-   char buf[4096], buf2[4096*4];
-   int ret = 0;
-   int network_socket = -1;
-
+   char buf[4096];
    unsigned int u = 0;
 
-   MSG("{In gemini.filter.dpi}\n");
-
-   /*Initialize library*/
+   /* Initialize library */
    SSL_load_error_strings();
    SSL_library_init();
    if (RAND_status() != 1){
@@ -192,7 +183,7 @@ static void yes_ssl_support(void)
       MSG("Insufficient random entropy\n");
    }
 
-   /*Create context and SSL object*/
+   /* Create context and SSL object */
    if (exit_error == 0){
       ssl_context = SSL_CTX_new(SSLv23_client_method());
       if (ssl_context == NULL){
@@ -206,11 +197,11 @@ static void yes_ssl_support(void)
     */
    if (exit_error == 0){
       SSL_CTX_set_options(ssl_context,
-                        SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_NO_COMPRESSION);
+                          SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_NO_COMPRESSION);
    }
 
-   /*Set directory to load certificates from*/
-   /*FIXME - provide for sysconfdir variables and such*/
+   /* Set directory to load certificates from */
+   /* FIXME - provide for sysconfdir variables and such */
    if (exit_error == 0){
       for (u = 0; u < sizeof(ca_files)/sizeof(ca_files[0]); u++) {
          if (SSL_CTX_load_verify_locations(
@@ -229,81 +220,77 @@ static void yes_ssl_support(void)
    }
 
    if (exit_error == 0){
-      ssl_connection = SSL_new(ssl_context);
-      if (ssl_connection == NULL){
-         MSG("Error creating SSL connection\n");
-         exit_error = 1;
-      }
-   }
-
-   if (exit_error == 0){
       /* Don't want: eNULL, which has no encryption; aNULL, which has no
        * authentication; LOW, which as of 2014 use 64 or 56-bit encryption;
        * EXPORT40, which uses 40-bit encryption; RC4, for which methods were
        * found in 2013 to defeat it somewhat too easily.
        */
       SSL_CTX_set_cipher_list(ssl_context,
-                              //"EECDH+AESGCM+AES128:EECDH+AESGCM+AES256:EECDH+CHACHA20:EDH+AESGCM+AES128:EDH+AESGCM+AES256:EDH+CHACHA20:EECDH+SHA256+AES128:EECDH+SHA384+AES256:EDH+SHA256+AES128:EDH+SHA256+AES256:EECDH+SHA1+AES128:EECDH+SHA1+AES256:EDH+SHA1+AES128:EDH+SHA1+AES256:EECDH+HIGH:EDH+HIGH:AESGCM+AES128:AESGCM+AES256:CHACHA20:SHA256+AES128:SHA256+AES256:SHA1+AES128:SHA1+AES256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK:!KRB5:!aECDH");
+                            /*
+                              "EECDH+AESGCM+AES128:EECDH+AESGCM+AES256:"
+                              "EECDH+CHACHA20:EDH+AESGCM+AES128:EDH+AESGCM+AES256:"
+                              "EDH+CHACHA20:EECDH+SHA256+AES128:EECDH+SHA384+AES256:"
+                              "EDH+SHA256+AES128:EDH+SHA256+AES256:EECDH+SHA1+AES128:"
+                              "EECDH+SHA1+AES256:EDH+SHA1+AES128:EDH+SHA1+AES256:"
+                              "EECDH+HIGH:EDH+HIGH:AESGCM+AES128:AESGCM+AES256:"
+                              "CHACHA20:SHA256+AES128:SHA256+AES256:SHA1+AES128:"
+                              "SHA1+AES256:HIGH:"
+                              "!aNULL:!eNULL:!EXPORT:!DES:!RC4:!3DES:!MD5:!PSK:!KRB5:!aECDH"
+                            */
                               "ALL:!aNULL:!eNULL:!LOW:!EXPORT40:!RC4:");
+   }
 
+   return exit_error ? NULL : ssl_context;
+}
+
+/*
+ * This function initializes an SSL connection
+ */
+static SSL *init_ssl_connection(SSL_CTX *ssl_context)
+{
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+   SSL * ssl_connection = NULL;
+
+   ssl_connection = SSL_new(ssl_context);
+   if (ssl_connection == NULL){
+      MSG("Error creating SSL connection\n");
+      exit_error = 1;
+   }
+
+   if (exit_error == 0){
       /* Need to do this if we want to have the option of dealing
        * with self-signed certs
        */
       SSL_set_verify(ssl_connection, SSL_VERIFY_NONE, 0);
-
-      /*Get the network address and command to be used*/
-      dpip_tag = a_Dpip_dsh_read_token(sh, 1);
-
-      MSG("dpip_tag = %s\n", dpip_tag);
-	       
-      cmd = a_Dpip_get_attr(dpip_tag, "cmd");
-      proxy_url = a_Dpip_get_attr(dpip_tag, "proxy_url");
-      proxy_connect =
-                  a_Dpip_get_attr(dpip_tag, "proxy_connect");
-      url = a_Dpip_get_attr(dpip_tag, "url");
-
-      gemini_query = malloc(strlen(url) + 10);
-
-      if(!strchr(url+strlen("gemini://"), '/')) {
-	snprintf(gemini_query, strlen(url) + 10, "%s/\r\n", url);
-      } else {
-	snprintf(gemini_query, strlen(url) + 10, "%s\r\n", url);
-      }
-
-      if(strstr(gemini_query, "?q=")) { // input query delete extra piece "?q=" -> "?"
-	char *repl;
-
-	for(repl=gemini_query; *repl != '?'; repl++) {}
-	repl++;
-	for(; *repl; repl++) {
-	  *repl = *(repl+2);
-	}
-	
-      }
-      
-      if (!(check_cert = a_Dpip_get_attr(dpip_tag, "check_cert"))) {
-         /* allow older dillo versions use this dpi */
-         check_cert = dStrdup("true");
-      }
-
-      if (!url) {
-	MSG("***Value of url is NULL"
-                    " - cannot continue\n");
-         exit_error = 1;
-      }
    }
 
-   if (exit_error == 0){
-      char *connect_url = proxy_url ? proxy_url : url;
+   return exit_error ? NULL : ssl_connection;
+}
 
-      network_socket = get_network_connection(connect_url);
-      if (network_socket<0){
-         MSG("Network socket create error\n");
-         exit_error = 1;
-      }
+/*
+ * This function opens a socket to an URL for the SSL connection
+ */
+static int open_ssl_connection(SSL *ssl_connection, char *url,
+                               char *proxy_url, char *proxy_connect,
+                               int check_cert)
+{
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+   int network_socket = -1;
+
+   network_socket = get_network_connection(proxy_url ? proxy_url : url);
+   if (network_socket<0){
+      MSG("Network socket create error\n");
+      exit_error = 1;
    }
 
    if (exit_error == 0 && proxy_connect != NULL) {
+      /* Connect using proxy */
       ssize_t St;
       const char *p = proxy_connect;
       int writelen = strlen(proxy_connect);
@@ -322,6 +309,7 @@ static void yes_ssl_support(void)
             writelen -= St;
          }
       }
+
       if (exit_error == 0) {
          const size_t buflen = 200;
          char buf[buflen];
@@ -382,125 +370,236 @@ static void yes_ssl_support(void)
 
    /*Use handle error function to decide what to do*/
    if (exit_error == 0){
-      if (strcmp(check_cert, "true") == 0 &&
-          handle_certificate_problem(ssl_connection) < 0){
+      if (check_cert && handle_certificate_problem(ssl_connection) < 0){
          MSG("Certificate verification error\n");
          exit_error = 1;
       }
    }
 
-   if (exit_error == 0) {
-     char *d_cmd, *tmp;
+   return exit_error ? -1 : network_socket;
+}
 
-      fprintf(stderr, "Gemini Request = %s\n", gemini_query);
+/*
+ *  This function performs a Gemini request and
+ *  returns the response header and code
+ */
+int gemini_send_request(SSL *ssl_connection, char *query,
+                        char *buf, size_t size)
+{
+   int gemini_code = -1;
 
-      /*Send query we want*/
-      SSL_write(ssl_connection, gemini_query, (int)strlen(gemini_query));
+   fprintf(stderr, "Gemini Request = %s\n", query);
+
+   /* Send query we want */
+   SSL_write(ssl_connection, query, (int)strlen(query));
       
-      /*Analyse response from server*/
+   /* Read header line */
+   if(SSL_read_line(ssl_connection, buf, size) < 3) {
+      /* Header line too short... */
+      return -1;
+   }
 
-      /*Read header line*/
-      
-      memset(buf, 0, sizeof(buf));
-      SSL_read_line(ssl_connection, buf, 4096);
+   /* Parse Gemini code */
+   gemini_code = (buf[0] - '0') * 10 + (buf[1] - '0');
 
-      for(tmp=buf; *tmp; tmp++) {
-	if(*tmp == '\r' || *tmp == '\n')
-	  *tmp = '\0';
+   /* Clear header end of line */
+   while(*buf) {
+      if(*buf == '\r' || *buf == '\n') *buf = '\0';
+      buf++;
+   }
+
+   fprintf(stderr, "HEADER LINE = %s\n", buf);
+
+   return gemini_code;
+}
+
+/*
+ *  This function does all of the work with SSL
+ */
+static void yes_ssl_support(void)
+{
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+   SSL_CTX * ssl_context = NULL;
+   SSL * ssl_connection = NULL;
+
+   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *gemini_query = NULL,
+        *proxy_url = NULL, *proxy_connect = NULL, *check_cert = NULL;
+   char buf[4096], outbuf[4096*4];
+   int ret = 0;
+   int network_socket = -1;
+
+   int gemini_code = -1;
+
+   MSG("{In gemini.filter.dpi}\n");
+
+   /* Create context and SSL object */
+   if ((ssl_context = init_ssl()) == NULL){
+      MSG("Error creating SSL context\n");
+      exit_error = 1;
+   }
+
+   /* Init an SSL connection */
+   if (exit_error == 0){
+      if ((ssl_connection = init_ssl_connection(ssl_context)) == NULL){
+         MSG("Error creating SSL connection\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Parse connection data */
+   if (exit_error == 0){
+      /*Get the network address and command to be used*/
+      dpip_tag = a_Dpip_dsh_read_token(sh, 1);
+
+      MSG("dpip_tag = %s\n", dpip_tag);
+	       
+      cmd = a_Dpip_get_attr(dpip_tag, "cmd");
+      proxy_url = a_Dpip_get_attr(dpip_tag, "proxy_url");
+      proxy_connect =
+                  a_Dpip_get_attr(dpip_tag, "proxy_connect");
+      url = a_Dpip_get_attr(dpip_tag, "url");
+
+      gemini_query = malloc(strlen(url) + 10);
+
+      if(!strchr(url+strlen("gemini://"), '/')) {
+	snprintf(gemini_query, strlen(url) + 10, "%s/\r\n", url);
+      } else {
+	snprintf(gemini_query, strlen(url) + 10, "%s\r\n", url);
+      }
+
+      if(strstr(gemini_query, "?q=")) { // input query delete extra piece "?q=" -> "?"
+	char *repl;
+
+	for(repl=gemini_query; *repl != '?'; repl++) {}
+	repl++;
+	for(; *repl; repl++) {
+	  *repl = *(repl+2);
+	}
+	
       }
       
-      fprintf(stderr, "HEADER LINE = %s\n", buf);
+      if (!(check_cert = a_Dpip_get_attr(dpip_tag, "check_cert"))) {
+         /* allow older dillo versions use this dpi */
+         check_cert = dStrdup("true");
+      }
+
+      if (!url) {
+	MSG("***Value of url is NULL"
+                    " - cannot continue\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Open the SSL connection to a server */
+   if (exit_error == 0){
+      network_socket = open_ssl_connection(ssl_connection, url,
+                                           proxy_url, proxy_connect,
+                                           strcmp(check_cert, "true") == 0);
+      if (network_socket<0){
+         MSG("Network socket create error\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Perform the Gemini request */
+   if (exit_error == 0) {
+      gemini_code = gemini_send_request(ssl_connection, gemini_query,
+                                        buf, sizeof(buf));
+      if(gemini_code < 0) {
+         MSG("Error parsing server reponse\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Read the Gemini response */
+   if (exit_error == 0) {
+      char *d_cmd;
 
       /*Send dpi command*/
       d_cmd = a_Dpip_build_cmd("cmd=%s url=%s", "start_send_page", url);
       a_Dpip_dsh_write_str(sh, 1, d_cmd);
       dFree(d_cmd);
 
-      if(buf[0] == '1' && buf[1] == '0') { // search
+      switch(gemini_code) {
 
-	  snprintf(buf2, sizeof(buf2),
-		   "HTTP/1.1 200 OK\r\n"
-		   "Content-Type: text/html; charset=UTF-8\r\n\r\n");
+      case 10: // search
 
-	  fprintf(stderr, "TRANS = %s", buf2);
+         snprintf(outbuf, sizeof(outbuf),
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: text/html; charset=UTF-8\r\n\r\n");
 
-	  a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
+         a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
 
-	  snprintf(buf2, sizeof(buf2),
-		   "<body><form action=\"\">"
-		   "<label for=\"q\">Search:</label><br>"
-		   "<input type=\"text\" id=\"q\" name=\"q\"><br>"
-		   "</form></body>");
+         snprintf(outbuf, sizeof(outbuf),
+                  "<body><form action=\"\">"
+                  "<label for=\"q\">Search:</label><br>"
+                  "<input type=\"text\" id=\"q\" name=\"q\"><br>"
+                  "</form></body>");
 
-	  a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
-	  
-      }
+         a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
+         
+         break;
       
-      else if(buf[0] == '3' && buf[1] == '1') { // redirect
+      case 31: // redirect
 
-	 snprintf(buf2, sizeof(buf2),
-		  "HTTP/1.1 301 Moved Permanently\r\n"
-		  "Location: %s\r\n\r\n", buf + 3);
+         snprintf(outbuf, sizeof(outbuf),
+                 "HTTP/1.1 301 Moved Permanently\r\n"
+                 "Location: %s\r\n\r\n", buf + 3);
 
-	 fprintf(stderr, "TRANS = %s", buf2);
+         a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
 
-	 a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
+         break;
 
-      }
+      case 51: // not found
 
-      else if(buf[0] == '5' && buf[1] == '1') { // not found
+         snprintf(outbuf, sizeof(outbuf),
+                  "HTTP/1.1 404 Not Found\r\n"
+                  "Content-Type: text/html; charset=UTF-8\r\n"
+                  "Content-Length: %zu\r\n\r\n%s", strlen(buf), buf);
 
-	  snprintf(buf2, sizeof(buf2),
-		   "HTTP/1.1 404 Not Found\r\n"
-		   "Content-Type: text/html; charset=UTF-8\r\n"
-		   "Content-Length: %zu\r\n\r\n%s", strlen(buf), buf);
-
-	  fprintf(stderr, "TRANS = %s", buf2);
-
-	  a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
-      }
-
-      else { //if(buf[0] == '2' && buf[1] == '0') { // ok
-
-	if(!strncmp(buf + 3, "text/gemini", strlen("text/gemini"))) {
-
-	   /*Send HTTP OK header*/
-	   snprintf(buf2, sizeof(buf2),
-		    "HTTP/1.1 200 OK\r\n"
-		    "Content-Type: text/gemini; charset=UTF-8\r\n\r\n");
-
-	   fprintf(stderr, "TRANS = %s", buf2);
-
-	   a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
-
-	   /*Send remaining data*/
-
-	   while ((ret = SSL_read_line(ssl_connection, buf, 4096)) > 0 ){
-
-	     a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
-
-	   }
-
-	}
-
-	else {
-
-	   /*Send HTTP OK header*/
-	   snprintf(buf2, sizeof(buf2),
-		    "HTTP/1.1 200 OK\r\n"
-		    "Content-Type: %s\r\n\r\n", buf + 3);
-
-	   fprintf(stderr, "TRANS = %s", buf2);
-
-	   a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
-
-	   /*Send remaining data*/
+         a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
       
-	   while ((ret = SSL_read(ssl_connection, buf, 4096)) > 0 ){
-	     a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
-	   }
-	  
-	}
+         break;
+
+      case 20: // ok
+      default:
+
+         if(!strncmp(buf + 3, "text/gemini", strlen("text/gemini"))) {
+
+            /*Send HTTP OK header*/
+            snprintf(outbuf, sizeof(outbuf),
+                     "HTTP/1.1 200 OK\r\n"
+                     "Content-Type: text/gemini; charset=UTF-8\r\n\r\n");
+
+            a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
+
+            /*Send remaining data*/
+
+            while ((ret = SSL_read_line(ssl_connection, buf, 4096)) > 0 ){
+               a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
+            }
+
+         } else {
+
+            /*Send HTTP OK header*/
+            snprintf(outbuf, sizeof(outbuf),
+                     "HTTP/1.1 200 OK\r\n"
+                     "Content-Type: %s\r\n\r\n", buf + 3);
+
+            a_Dpip_dsh_write(sh, 1, outbuf, strlen(outbuf));
+
+            /*Send remaining data*/
+      
+            while ((ret = SSL_read(ssl_connection, buf, 4096)) > 0 ){
+               a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
+            }
+
+         }
+
+         break;
 
       }
 
@@ -1008,36 +1107,70 @@ static void no_ssl_support(void)
 
 
 /*---------------------------------------------------------------------------*/
-int main(void)
-{
-   char *dpip_tag;
 
-   /* Initialize the SockHandler for this filter dpi */
-   sh = a_Dpip_dsh_new(STDIN_FILENO, STDOUT_FILENO, 8*1024);
-
-   /* Authenticate our client... */
-   if (!(dpip_tag = a_Dpip_dsh_read_token(sh, 1)) ||
-       a_Dpip_check_auth(dpip_tag) < 0) {
-      MSG("can't authenticate request: %s\n", dStrerror(errno));
-      a_Dpip_dsh_close(sh);
-      return 1;
-   }
-   dFree(dpip_tag);
+int download(const char *gemini_url, const char *output_filename) {
 
 #ifdef ENABLE_SSL
-   yes_ssl_support();
+      //yes_ssl_support();
 #else
-   no_ssl_support();
+      //no_ssl_support();
 #endif
 
-   /* Finish the SockHandler */
-   a_Dpip_dsh_close(sh);
-   a_Dpip_dsh_free(sh);
-
-   dFree(root_url);
-
-   MSG("{ exiting gemini.dpi}\n");
+   fprintf(stderr, "Error: file download not implemented yet\n");
 
    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+   char *dpip_tag;
+   int i;
+   
+   if(argc > 1) {
+      /* Downloader behaviour */
+
+      for(i=1; i<argc; i++) {
+         if(!strncmp(argv[i], "gemini://", sizeof("gemini://")-1)) break;
+      }
+
+      if(i+1<argc) {
+         /* Found URL to download */
+         return download(argv[i], argv[i+1]);
+      } else {
+         fprintf(stderr, "usage: %s gemini_url output_filename\n", argv[0]);
+         return 1;
+      }
+      
+   } else {
+      /* Standard DPI behaviour */
+
+      /* Initialize the SockHandler for this filter dpi */
+      sh = a_Dpip_dsh_new(STDIN_FILENO, STDOUT_FILENO, 8*1024);
+
+      /* Authenticate our client... */
+      if (!(dpip_tag = a_Dpip_dsh_read_token(sh, 1)) ||
+          a_Dpip_check_auth(dpip_tag) < 0) {
+         MSG("can't authenticate request: %s\n", dStrerror(errno));
+         a_Dpip_dsh_close(sh);
+         return 1;
+      }
+      dFree(dpip_tag);
+
+#ifdef ENABLE_SSL
+      yes_ssl_support();
+#else
+      no_ssl_support();
+#endif
+
+      /* Finish the SockHandler */
+      a_Dpip_dsh_close(sh);
+      a_Dpip_dsh_free(sh);
+
+      dFree(root_url);
+
+      MSG("{ exiting gemini.dpi}\n");
+
+      return 0;
+   }
 }
 
