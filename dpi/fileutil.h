@@ -63,6 +63,11 @@ void FileUtil_dillodir_add(DilloDir *Ddir, char *full_path, struct stat sb);
 void FileUtil_dillodir_free(DilloDir *Ddir);
 
 /*
+ * Extract the resource part of an URI.
+ */
+char *FileUtil_get_resource(const char *dpiname, const char *orig);
+
+/*
  * Make a file URL into a human (and machine) readable path.
  * The idea is to always have a path that starts with only one slash.
  * Embedded slashes are ignored.

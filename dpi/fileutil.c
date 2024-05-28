@@ -130,6 +130,28 @@ static int FileUtil_parse_hex_octet(const char *s)
 }
 
 /*
+ * Extract the resource part of an URI.
+ */
+char *FileUtil_get_resource(const char *dpiname, const char *orig)
+{
+   char *str = (char *) orig;
+
+   dReturn_val_if (orig == NULL, NULL);
+
+   /* Make sure the string starts with dpiname + ":" */
+   if (dStrnAsciiCasecmp(str, dpiname, strlen(dpiname)) != 0)
+      return NULL;
+   str += strlen(dpiname);
+   
+   if (dStrnAsciiCasecmp(str, ":", 1) != 0)
+      return NULL;
+
+   str += 1;
+   
+   return dStrdup(str);
+}
+
+/*
  * Make a file URL into a human (and machine) readable path.
  * The idea is to always have a path that starts with only one slash.
  * Embedded slashes are ignored.

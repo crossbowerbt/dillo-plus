@@ -57,6 +57,11 @@
 #define MAN_ERR        16     /* Operation error */
 
 typedef enum {
+   man_arg,
+   man_file
+} ManpageType;
+
+typedef enum {
    st_start = 10,
    st_dpip,
    st_http,
@@ -81,14 +86,12 @@ typedef struct {
    FormatState fstate;
    int err_code;
    int flags;
-   int old_style;
 } ClientInfo;
 
 /*
  * Global variables
  */
 static int DPIBYE = 0;
-static int OLD_STYLE = 0;
 /* A list for the clients we are serving */
 static Dlist *Clients;
 /* Set of filedescriptors we're working on */
@@ -98,10 +101,11 @@ fd_set read_set, write_set;
  * Open a pipe to a man process with the specified cmdline arguments
  */
 FILE *Man_open(const char *args, const char *manpage) {
-   int pid1 = 0, pid2 = 0;
+   int pid1 = 0, pid2 = 0, pid3 = 0;
    int pipe_1[2];
    int pipe_2[2];
    int pipe_3[2];
+   int pipe_4[2];
 
    if (pipe(pipe_1) < 0) {
       return NULL;
@@ -121,6 +125,16 @@ FILE *Man_open(const char *args, const char *manpage) {
       return NULL;
    }
 
+   if (pipe(pipe_4) < 0) {
+      close(pipe_1[0]);
+      close(pipe_1[1]);
+      close(pipe_2[0]);
+      close(pipe_2[1]);
+      close(pipe_3[0]);
+      close(pipe_3[1]);
+      return NULL;
+   }
+
    pid1 = fork();
 
    if (pid1 == -1) {
@@ -130,6 +144,8 @@ FILE *Man_open(const char *args, const char *manpage) {
       close(pipe_2[1]);
       close(pipe_3[0]);
       close(pipe_3[1]);
+      close(pipe_4[0]);
+      close(pipe_4[1]);
       return NULL;
    }
 
@@ -142,6 +158,22 @@ FILE *Man_open(const char *args, const char *manpage) {
       close(pipe_2[1]);
       close(pipe_3[0]);
       close(pipe_3[1]);
+      close(pipe_4[0]);
+      close(pipe_4[1]);
+      return NULL;
+   }
+
+   if(pid1 != 0 && pid2 != 0) pid3 = fork();
+
+   if (pid3 == -1) {
+      close(pipe_1[0]);
+      close(pipe_1[1]);
+      close(pipe_2[0]);
+      close(pipe_2[1]);
+      close(pipe_3[0]);
+      close(pipe_3[1]);
+      close(pipe_4[0]);
+      close(pipe_4[1]);
       return NULL;
    }
 
@@ -156,6 +188,9 @@ FILE *Man_open(const char *args, const char *manpage) {
 
       close(pipe_3[1]);
       close(pipe_3[0]);
+
+      close(pipe_4[1]);
+      close(pipe_4[0]);
 
       // redirect stdout
       if (pipe_2[1] != STDOUT_FILENO) {
@@ -185,10 +220,13 @@ FILE *Man_open(const char *args, const char *manpage) {
       close(fileno(stdout));
 
       close(pipe_1[1]);
-      close(pipe_1[0]);      
+      close(pipe_1[0]);
 
       close(pipe_2[1]);
       close(pipe_3[0]);
+
+      close(pipe_4[1]);
+      close(pipe_4[0]);
 
       // redirect stdout
       if (pipe_3[1] != STDOUT_FILENO) {
@@ -211,6 +249,42 @@ FILE *Man_open(const char *args, const char *manpage) {
       exit(127);
    }
 
+   if (pid3 == 0) {
+      // child 3
+
+      close(fileno(stdin));
+      close(fileno(stdout));
+
+      close(pipe_1[1]);
+      close(pipe_1[0]);
+
+      close(pipe_2[1]);
+      close(pipe_2[0]);
+
+      close(pipe_3[1]);
+      close(pipe_4[0]);
+
+      // redirect stdout
+      if (pipe_4[1] != STDOUT_FILENO) {
+	dup2(pipe_4[1], STDOUT_FILENO);
+	close(pipe_4[1]);
+      }
+
+      // redirect stdin
+      if (pipe_3[0] != STDIN_FILENO) {
+	dup2(pipe_3[0], STDIN_FILENO);
+	close(pipe_3[0]);
+      }
+
+      // launch cmd
+      const char* argp[] = {"sed", "s/</\\&lt;/g", NULL};
+      execvp("sed", (char**) argp);
+
+      // if the function returns an error has occurred
+      perror("execvp");
+      exit(127);
+   }
+
    // parent
    
    close(pipe_1[0]);
@@ -218,8 +292,10 @@ FILE *Man_open(const char *args, const char *manpage) {
    close(pipe_2[0]);
    close(pipe_1[1]); // do not write to child1 stdin
    close(pipe_3[1]);
+   close(pipe_3[0]);
+   close(pipe_4[1]);
    
-   return fdopen(pipe_3[0], "r");
+   return fdopen(pipe_4[0], "r");
 }
 
 /*
@@ -286,13 +362,27 @@ static void Man_send_error_page(ClientInfo *client)
  * Prepare to send HTTP headers and then the file itself.
  */
 static int Man_prepare_send_file(ClientInfo *client,
-                                  const char *manpage,
-                                  const char *orig_url)
+                                 char *manpage,
+                                 const char *orig_url,
+                                 ManpageType type)
 {
    FILE *man;
    int res = -1;
+   char *arg = "--";
+   unsigned i, len = strlen(manpage);
 
-   if (!(man = Man_open("--", manpage))) {
+   if(type == man_arg) {
+      for(i=0; manpage[i] != '(' && i < len; i++) ;
+      if(manpage[i] == '(') {
+         manpage[i] = '\0';
+         i++;
+         arg = manpage + i;
+         for(; manpage[i] != ')' && i < len; i++) ;
+         if(manpage[i] == ')') manpage[i] = '\0';
+      }
+   }
+
+   if (!(man = Man_open(arg, manpage))) {
       /* prepare an error message */
       res = errno;
    } else {
@@ -309,7 +399,7 @@ static int Man_prepare_send_file(ClientInfo *client,
 }
 
 /*
- * Parse path to get archive filename and inner filename (if any)
+ * Parse path to get manpage filename
  */
 static int Man_parse_path(char *path, char **manpage) {
    char c;
@@ -363,13 +453,17 @@ static void Man_get(ClientInfo *client, char *filename,
    char *manpage;
 
    if (!Man_parse_path(filename, &manpage)) {
-      /* parse and stat failed, prepare a file-not-found error. */
-      res = ENOENT;
-   } else {
+      /* is a manpage arg */
       client->manpage = dStrdup(manpage);
 
       /* set up for reading an inner archive file */
-      res = Man_prepare_send_file(client, manpage, orig_url);
+      res = Man_prepare_send_file(client, manpage, orig_url, man_arg);
+   } else {
+      /* is a file path */
+      client->manpage = dStrdup(manpage);
+
+      /* set up for reading an inner archive file */
+      res = Man_prepare_send_file(client, manpage, orig_url, man_file);
    }
    if (res != 0) {
       Man_prepare_send_error_page(client, res, orig_url);
@@ -414,6 +508,7 @@ static int Man_send_file(ClientInfo *client)
       client->state = st_http;
 
    } else if (client->state == st_http) {
+      a_Dpip_dsh_printf(client->sh, 1, "<title>Man %s</title>\n", client->manpage);
       a_Dpip_dsh_printf(client->sh, 1, "<pre>");
       client->state = st_pre_content;
    } else if (client->state == st_pre_content) {
@@ -436,6 +531,9 @@ static int Man_send_file(ClientInfo *client)
             /* preprocessing line */
             if(isupper(buf[0]) && isupper(buf[1])) {
                a_Dpip_dsh_printf(client->sh, 1, "<strong>");
+            }
+            if(buf[0] != ' ' && client->fstate == fs_in_see_also) {
+               client->fstate = fs_start;
             }
 
             /* write line content */
@@ -473,6 +571,8 @@ static int Man_send_file(ClientInfo *client)
                   lstart = i;
                }
 
+               a_Dpip_dsh_printf(client->sh, 1, "\n");
+
             } else {
                st = a_Dpip_dsh_trywrite(client->sh, buf, st2);
                client->flags |= (st == -3) ? MAN_ERR : 0;
@@ -484,8 +584,6 @@ static int Man_send_file(ClientInfo *client)
             }
             if(!strncmp(buf, "SEE ALSO", 8)) {
                client->fstate = fs_in_see_also;
-            } else if(client->fstate == fs_in_see_also) {
-               client->fstate = fs_start;
             }
 
          }
@@ -526,7 +624,6 @@ static ClientInfo *Man_add_client(int sock_fd)
    new_client->state = 0;
    new_client->err_code = 0;
    new_client->flags = MAN_READ;
-   new_client->old_style = OLD_STYLE;
 
    dList_append(Clients, new_client);
    return new_client;
@@ -554,7 +651,7 @@ static void Man_remove_client(ClientInfo *client)
  */
 static void Man_serve_client(void *data, int f_write)
 {
-   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *path;
+   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *path, *resource;
    ClientInfo *client = data;
    int st;
 
@@ -581,6 +678,7 @@ static void Man_serve_client(void *data, int f_write)
             cmd = a_Dpip_get_attr(dpip_tag, "cmd");
             url = a_Dpip_get_attr(dpip_tag, "url");
             path = FileUtil_normalize_path("man", url);
+            resource = FileUtil_get_resource("man", url);
             if (cmd) {
                if (strcmp(cmd, "DpiBye") == 0) {
                   DPIBYE = 1;
@@ -588,6 +686,8 @@ static void Man_serve_client(void *data, int f_write)
                   client->flags |= MAN_DONE;
                } else if (path) {
                   Man_get(client, path, url);
+               } else if(resource) {
+                  Man_get(client, resource, url);
                } else {
                   client->flags |= MAN_ERR;
                   MSG("ERROR: URL was %s\n", url);
