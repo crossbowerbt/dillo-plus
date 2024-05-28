@@ -46,7 +46,10 @@ int MyInput::handle(int e)
             return 0;
          }
       } else if (modifier == FL_CTRL) {
-         if (k == 'a' || k == 'e') {
+         if (k == 'A') {
+            position(size(), 0);
+            return 1;
+         } if (k == 'a' || k == 'e') {
             position(k == 'a' ? 0 : size());
             return 1;
          } else if (k == 'k') {
