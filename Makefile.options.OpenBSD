@@ -4,8 +4,8 @@ AR ?= ar
 ARFLAGS ?= cru
 RANLIB ?= ranlib
 
-CC ?= gcc
-CXX ?= g++
+CC ?= cc
+CXX ?= c++
 
 INSTALL ?= /usr/bin/install
 INSTALL_SH = ../install-sh
