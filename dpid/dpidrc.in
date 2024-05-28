@@ -2,6 +2,7 @@ dpi_dir=@libdir@/dillo/dpi
 
 proto.file=file/file.dpi
 proto.zip=zip/zip.dpi
+proto.man=man/man.dpi
 proto.ftp=ftp/ftp.filter.dpi
 proto.gemini=gemini/gemini.filter.dpi
 proto.gopher=gopher/gopher.filter.dpi
