@@ -650,20 +650,20 @@ static int Zip_send_file(ClientInfo *client)
          client->flags |= (st == -3) ? ZIP_ERR : 0;
       } else {
          /* no pending data, let's send new data */
-         do {
-            st2 = fread(buf, 1, LBUF, client->zip);
-         } while (!feof(client->zip));
+         st2 = fread(buf, 1, LBUF, client->zip);
          if (st2 < 0) {
             MSG("\nERROR while reading from file '%s': %s\n\n",
                 client->inner_filename, dStrerror(errno));
             client->flags |= ZIP_ERR;
-         } else if (st2 == 0) {
-            client->state = st_content;
-            client->flags |= ZIP_DONE;
          } else {
             /* ok to write */
             st = a_Dpip_dsh_trywrite(client->sh, buf, st2);
             client->flags |= (st == -3) ? ZIP_ERR : 0;
+         }
+	 
+	 if (feof(client->zip)) {
+            client->state = st_content;
+            client->flags |= ZIP_DONE;
          }
       }
    }
