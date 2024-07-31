@@ -35,7 +35,7 @@ To make it easier reading articles from the web, and also to rearrange large pag
 
 ## Additional content types
 
-Support for rendering pages and local files written in the **gemini**, **gopher**, **markdown** and *rss* formats has been added.
+Support for rendering pages and local files written in the **gemini**, **gopher**, **markdown** and **rss** formats has been added.
 
 ## Additional DPIs
 
