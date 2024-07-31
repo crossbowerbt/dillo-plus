@@ -147,9 +147,9 @@ static int a_Misc_get_content_type_from_data2(void *Data, size_t Size,
 /*---------------------------------------------------------------------------*/
 
 /*
- * Build a shell command using wget for this URL.
+ * Build a shell command using the ftp tool for this URL.
  */
-static void make_wget_argv(char *url)
+static void make_ftp_tool_argv(char *url)
 {
    char *esc_url;
 
@@ -163,11 +163,20 @@ static void make_wget_argv(char *url)
    /* avoid malicious SMTP relaying with FTP urls */
    Filter_smtp_hack(esc_url);
 
+#if(FTP_USE_WGET == 1)
    dl_argv[0] = "wget";
    dl_argv[1] = "-t1";  /* try once, default is 20 */
    dl_argv[2] = "-O-";
    dl_argv[3] = esc_url;
    dl_argv[4] = NULL;
+#else
+   dl_argv[0] = "ftp";
+   dl_argv[1] = "-r20";  /* try once, default is 20 */
+   dl_argv[2] = "-o-";
+   dl_argv[3] = "-a";
+   dl_argv[4] = esc_url;
+   dl_argv[5] = NULL;
+#endif
 }
 
 /*
@@ -186,7 +195,7 @@ static int try_ftp_transfer(char *url)
    Dstr *dbuf = dStr_sized_new(READ_SZ);
    pid_t ch_pid;
    int aborted = 0;
-   int DataPipe[2];
+   int DataPipe[2], InputPipe[2];
 
    MSG("try_ftp_transfer: url=%s\n", url);
 
@@ -194,15 +203,21 @@ static int try_ftp_transfer(char *url)
       MSG("pipe, %s\n", dStrerror(errno));
       return 0;
    }
+   
+   if (pipe(InputPipe) < 0) {
+      MSG("pipe, %s\n", dStrerror(errno));
+      return 0;
+   }
 
    /* Prepare args for execvp() */
-   make_wget_argv(url);
+   make_ftp_tool_argv(url);
 
    /* Start the child process */
    if ((ch_pid = fork()) == 0) {
       /* child */
-      /* start wget */
-      close(DataPipe[0]);
+      /* start ftp cmd */
+  	  close(InputPipe[1]);
+      dup2(InputPipe[0], 0); /* stdin */
       dup2(DataPipe[1], 1); /* stdout */
       execvp(dl_argv[0], dl_argv);
       _exit(1);
@@ -211,7 +226,10 @@ static int try_ftp_transfer(char *url)
       exit(1);
    } else {
       /* father continues below */
-      close(DataPipe[1]);
+	  close(InputPipe[0]);
+	  write(InputPipe[1], "ls\n", 3);
+	  close(InputPipe[1]);
+	  close(DataPipe[1]);
    }
 
    /* Read/Write the real data */
@@ -256,17 +274,92 @@ static int try_ftp_transfer(char *url)
 
          /* Send HTTP header. */
          a_Dpip_dsh_write_str(sh, 0, "Content-type: ");
+#if(FTP_USE_WGET == 1)
          a_Dpip_dsh_write_str(sh, 0, mime_type);
          a_Dpip_dsh_write_str(sh, 1, "\r\n\r\n");
+#else
+         if(strlen(url) > 5 && url[strlen(url)-1] == '/') {
+            /* is a directory listing and we must generate
+               the HTML page for it */
+            a_Dpip_dsh_write_str(sh, 0, "text/html");
+            a_Dpip_dsh_write_str(sh, 1, "\r\n\r\n");
+            a_Dpip_dsh_write_str(sh, 1, "<!DOCTYPE html>");
+            a_Dpip_dsh_printf(sh, 1, "<head><title>Index of %s</title></head>", url);
+            a_Dpip_dsh_printf(sh, 1, "<h1>Index of %s</h1>", url);
+            a_Dpip_dsh_write_str(sh, 1, "<hr>");
+            a_Dpip_dsh_write_str(sh, 1, "<pre>");
+         } else {
+            a_Dpip_dsh_write_str(sh, 0, mime_type);
+            a_Dpip_dsh_write_str(sh, 1, "\r\n\r\n");
+         }
+#endif
          has_html_header = 1;
       }
 
       if (!aborted && dbuf->len) {
+#if(FTP_USE_WGET == 1)
          a_Dpip_dsh_write(sh, 1, dbuf->str, dbuf->len);
+# else
+         if(strlen(url) > 5 && url[strlen(url)-1] == '/') {
+            /* parse and reformat line */
+            int i, span, in_dir=0, fieldnum=0;
+            for(i=0; i<dbuf->len; i++) {
+               span = 0;
+
+               if(fieldnum==0 && dbuf->str[i] == 'd') {
+                  /* detect directory, needed later to assemble the href */
+                  in_dir=1;
+               } else if(dbuf->str[i] == ' ') {
+                  /* output spaces and increment field count */
+                  while(dbuf->str[i+span] == ' ' && i<dbuf->len) span++;
+                  a_Dpip_dsh_write(sh, 1, dbuf->str+i, span);
+                  i+=span;
+                  span=0;
+                  fieldnum++;
+               } else if(dbuf->str[i] == '\n') {
+                  /* reset field count on newline */
+                  fieldnum=0;
+                  in_dir=0;
+               }
+
+               while(dbuf->str[i+span] != ' ' && dbuf->str[i+span] != '\n' && i<dbuf->len) span++;
+
+               if(span) {
+                  /* output field */
+                  if(fieldnum==8) {
+                     /* last field is an href */
+                     while(dbuf->str[i+span] != '\n' && i<dbuf->len) span++;
+                     a_Dpip_dsh_write(sh, 1, "<a href=\"", 9);
+                     a_Dpip_dsh_write(sh, 1, dbuf->str+i, span);
+                     if(in_dir) a_Dpip_dsh_write(sh, 1, "/", 1);
+                     a_Dpip_dsh_write(sh, 1, "\">", 2);
+                     a_Dpip_dsh_write(sh, 1, dbuf->str+i, span);
+                     if(in_dir) a_Dpip_dsh_write(sh, 1, "/", 1);
+                     a_Dpip_dsh_write(sh, 1, "</a>", 4);
+                  } else {
+                     /* normal field */
+                     a_Dpip_dsh_write(sh, 1, dbuf->str+i, span);
+                  }
+                  i+=span-1;
+               } else if(i<dbuf->len) {
+                  a_Dpip_dsh_write(sh, 1, dbuf->str+i, 1);
+               }
+            }
+         } else {
+            a_Dpip_dsh_write(sh, 1, dbuf->str, dbuf->len);
+         }
+#endif
          nb += dbuf->len;
          dStr_truncate(dbuf, 0);
       }
    } while (n > 0 && !aborted);
+
+#if(FTP_USE_WGET == 0)
+   if(strlen(url) > 5 && url[strlen(url)-1] == '/') {
+      /* close the generated HTML page */
+      a_Dpip_dsh_write_str(sh, 1, "</pre>");
+   }
+#endif
 
    dStr_free(dbuf, 1);
    return (no_such_file ? -1 : (aborted ? -2 : nb));
@@ -282,7 +375,7 @@ int main(int argc, char **argv)
    int st, rc;
    char *p, *d_cmd;
 
-   /* wget may need to write a temporary file... */
+   /* ftp tool may need to write a temporary file... */
    rc = chdir("/tmp");
    if (rc == -1) {
       MSG("paths: error changing directory to /tmp: %s\n",

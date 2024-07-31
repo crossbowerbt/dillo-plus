@@ -19,7 +19,7 @@ function gen_file {
 }
 
 cat  >+CONTENTS <<EOF
-@name dillo-plus-3.2.3-custom
+@name dillo-plus-3.3.0-custom
 @version 10
 @arch amd64
 $(gen_file "" +DESC)
@@ -61,12 +61,14 @@ lib/dillo/dpi/cookies/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/cookies/cookies.dpi)
 lib/dillo/dpi/datauri/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/datauri/datauri.filter.dpi)
-lib/dillo/dpi/dls/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/dls/dls.filter.dpi)
 lib/dillo/dpi/downloads/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/downloads/downloads.dpi)
 lib/dillo/dpi/file/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/file/file.dpi)
+lib/dillo/dpi/zip/
+@bin $(gen_file "/usr/local/" lib/dillo/dpi/zip/zip.dpi)
+lib/dillo/dpi/man/
+@bin $(gen_file "/usr/local/" lib/dillo/dpi/man/man.dpi)
 lib/dillo/dpi/ftp/
 @bin $(gen_file "/usr/local/" lib/dillo/dpi/ftp/ftp.filter.dpi)
 lib/dillo/dpi/gemini/
@@ -86,14 +88,5 @@ $(gen_file "/usr/local/" etc/dillo/dpidrc)
 $(gen_file "/usr/local/" etc/dillo/dillorc)
 $(gen_file "/usr/local/" etc/dillo/style.css)
 $(gen_file "/usr/local/" etc/dillo/style_reader_mode.css)
-lib/dillo/dls/
-@bin $(gen_file "/usr/local/" lib/dillo/dls/default.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/test.dls)
-$(gen_file "/usr/local/" lib/dillo/dls/not_executable.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/zip.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/epub.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/rss.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/telegram.dls)
-@bin $(gen_file "/usr/local/" lib/dillo/dls/aggregator.dls)
 EOF
 

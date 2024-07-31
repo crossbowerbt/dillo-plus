@@ -2,7 +2,7 @@ include ../Makefile.options
 
 CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"' -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"'
 
-all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi ftp.filter.dpi dls.filter.dpi gemini.filter.dpi gopher.filter.dpi hello.filter.dpi vsource.filter.dpi
+all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi zip.dpi man.dpi ftp.filter.dpi gemini.filter.dpi gopher.filter.dpi hello.filter.dpi vsource.filter.dpi
 
 bookmarks.o: bookmarks.c
 	$(COMPILE) -c bookmarks.c
@@ -26,19 +26,34 @@ datauri.filter.dpi: datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o datauri.filter.dpi datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 downloads_dpi-downloads.o: downloads.cc
-	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -DDOWNLOADER_TOOL='"$(DOWNLOADER_TOOL)"' -DDOWNLOADER_USER_AGENT_ARG='"$(DOWNLOADER_USER_AGENT_ARG)"' -DDOWNLOADER_CONTINUE_ARG='"$(DOWNLOADER_CONTINUE_ARG)"' -DDOWNLOADER_LOAD_COOKIES_ARG='"$(DOWNLOADER_LOAD_COOKIES_ARG)"' -DDOWNLOADER_OUTPUT_FILENAME_ARG='"$(DOWNLOADER_OUTPUT_FILENAME_ARG)"' -o downloads_dpi-downloads.o -c downloads.cc
+	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"' -DDOWNLOADER_TOOL='"$(DOWNLOADER_TOOL)"' -DDOWNLOADER_USER_AGENT_ARG='"$(DOWNLOADER_USER_AGENT_ARG)"' -DDOWNLOADER_CONTINUE_ARG='"$(DOWNLOADER_CONTINUE_ARG)"' -DDOWNLOADER_LOAD_COOKIES_ARG='"$(DOWNLOADER_LOAD_COOKIES_ARG)"' -DDOWNLOADER_OUTPUT_FILENAME_ARG='"$(DOWNLOADER_OUTPUT_FILENAME_ARG)"' -o downloads_dpi-downloads.o -c downloads.cc
 
 downloads.dpi: downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a  ../dlib/libDlib.a
 	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) $(LIBFLTK_LDFLAGS) -o downloads.dpi downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
+fileutil.o: fileutil.c
+	$(COMPILE) -c fileutil.c
+
 file.o: file.c
 	$(COMPILE) -c file.c
 
-file.dpi: file.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-	$(COMPILE) -o file.dpi file.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+file.dpi: file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+	$(COMPILE) -o file.dpi file.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+
+zip.o: zip.c
+	$(COMPILE) -DZIP_USE_7Z='$(ZIP_USE_7Z)' -c zip.c
+
+zip.dpi: zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+	$(COMPILE) -o zip.dpi zip.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+
+man.o: man.c
+	$(COMPILE) -c man.c
+
+man.dpi: man.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
+	$(COMPILE) -o man.dpi man.o fileutil.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 ftp.o: ftp.c
-	$(COMPILE) -c ftp.c
+	$(COMPILE) -DFTP_USE_WGET='$(FTP_USE_WGET)' -c ftp.c
 
 ftp.filter.dpi: ftp.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o ftp.filter.dpi ftp.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
@@ -48,12 +63,6 @@ hello.o: hello.c
 
 hello.filter.dpi: hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o hello.filter.dpi hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-
-dls.o: dls.c
-	$(COMPILE) $(CXXFLAGS_EXTRA) -c dls.c
-
-dls.filter.dpi: dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
-	$(COMPILE) $(HTTPS_LDFLAGS) -o dls.filter.dpi dls.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 gemini.o: gemini.c
 	$(COMPILE) -DCA_CERTS_FILE='"$(CA_CERTS_FILE)"' -c gemini.c
@@ -87,10 +96,12 @@ install: all
 	$(INSTALL) -c downloads.dpi "$(DILLO_LIBDIR)/dpi/downloads/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/file/"
 	$(INSTALL) -c file.dpi "$(DILLO_LIBDIR)/dpi/file/"
+	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/zip/"
+	$(INSTALL) -c zip.dpi "$(DILLO_LIBDIR)/dpi/zip/"
+	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/man/"
+	$(INSTALL) -c man.dpi "$(DILLO_LIBDIR)/dpi/man/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/ftp/"
 	$(INSTALL) -c ftp.filter.dpi "$(DILLO_LIBDIR)/dpi/ftp/"
-	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/dls/"
-	$(INSTALL) -c dls.filter.dpi "$(DILLO_LIBDIR)/dpi/dls/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/gemini/"
 	$(INSTALL) -c gemini.filter.dpi "$(DILLO_LIBDIR)/dpi/gemini/"
 	$(INSTALL_SH) -c -d "$(DILLO_LIBDIR)/dpi/gopher/"
@@ -106,8 +117,9 @@ uninstall:
 	rm -f "$(DILLO_LIBDIR)/dpi/datauri/datauri.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/downloads/downloads.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/file/file.pdi"
+	rm -f "$(DILLO_LIBDIR)/dpi/zip/zip.dpi"
+	rm -f "$(DILLO_LIBDIR)/dpi/man/man.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/ftp/ftp.filter.dpi"
-	rm -f "$(DILLO_LIBDIR)/dpi/dls/dls.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/gemini/gemini.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/gopher/gopher.filter.dpi"
 	rm -f "$(DILLO_LIBDIR)/dpi/hello/hello.filter.dpi"

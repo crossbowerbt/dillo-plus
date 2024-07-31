@@ -1,6 +1,6 @@
 include ../Makefile.options
 
-CXXFLAGS_EXTRA = -DDILLO_SYSCONF='"$(DILLO_ETCDIR)"' -DDILLO_DOCDIR='"$(DILLO_DOCDIR)"'
+CXXFLAGS_EXTRA = -DDILLO_SYSCONF='"$(DILLO_ETCDIR)"' -DDOC_PATH='"$(DOC_PATH)"'
 
 all: recurse_into_IO dillo
 

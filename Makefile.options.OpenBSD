@@ -4,8 +4,8 @@ AR ?= ar
 ARFLAGS ?= cru
 RANLIB ?= ranlib
 
-CC ?= gcc
-CXX ?= g++
+CC ?= cc
+CXX ?= c++
 
 INSTALL ?= /usr/bin/install
 INSTALL_SH = ../install-sh
@@ -45,6 +45,9 @@ DOWNLOADER_USER_AGENT_ARG = -U
 DOWNLOADER_CONTINUE_ARG = -C
 DOWNLOADER_LOAD_COOKIES_ARG = -c
 DOWNLOADER_OUTPUT_FILENAME_ARG = -o
+
+ZIP_USE_7Z = 1
+FTP_USE_WGET = 0
 
 # == INSTALL PATHS ==
 

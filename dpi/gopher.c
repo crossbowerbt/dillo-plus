@@ -141,52 +141,42 @@ static int get_network_connection(char * url)
    return s;
 }
 
-static void gopher_main(void)
+/*
+ * This function parses the Gopher URL format used by dillo
+ */
+static int gopher_parse_url(char *url, char *type, int *url_proto_len,
+                            char *query, size_t max_query_size)
 {
-   /* The following variable will be set to 1 in the event of
-    * an error and skip any further processing
-    */
-   int exit_error = 0;
+   *type = '1';
+   *url_proto_len = strlen("gopher://");
 
-   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *gopher_query = NULL,
-        *proxy_url = NULL, *proxy_connect = NULL;
-   char buf[4096], buf2[4096*4];
-   int ret = 0;
-   int network_socket = -1;
+   /* Example of Gopher URL to parse:
+      gopher://1::gopher.club:70/phlogs/ */
 
-   char gopher_type = '1';
-   int url_proto_len = strlen("gopher://");
+   if(strlen(url) + 10 >= max_query_size) {
+      MSG("Error: URL too long\n");
+      return 0;
+   }
 
-   MSG("{In gopher.filter.dpi}\n");
-
-   /*Get the network address and command to be used*/
-   dpip_tag = a_Dpip_dsh_read_token(sh, 1);
-
-   MSG("dpip_tag = %s\n", dpip_tag);
-       
-   cmd = a_Dpip_get_attr(dpip_tag, "cmd");
-   proxy_url = a_Dpip_get_attr(dpip_tag, "proxy_url");
-   proxy_connect =
-      a_Dpip_get_attr(dpip_tag, "proxy_connect");
-   url = a_Dpip_get_attr(dpip_tag, "url");
-
-   gopher_query = malloc(strlen(url) + 10);
-
+   /* Isolate Gopher query */
    if(!strchr(url+strlen("gopher://"), '/')) {
-      snprintf(gopher_query, strlen(url) + 10, "%s/\r\n", url);
+      /* add trailing backslash if missing */
+      snprintf(query, max_query_size, "%s/\r\n", url);
    } else {
-      snprintf(gopher_query, strlen(url) + 10, "%s\r\n", url);
+      snprintf(query, max_query_size, "%s\r\n", url);
    }
 
-   if(strstr(gopher_query, "::")) { // get gopher type
-      gopher_type = strstr(gopher_query, "::")[-1];
-      url_proto_len += 3;
+   /* Parse Gopher type (if present) */
+   if(strstr(query, "::")) {
+      *type = strstr(query, "::")[-1];
+      *url_proto_len += 3;
    }
 
-   if(strstr(gopher_query, "?q=")) { // input query convert extra piece to tab "?q=" -> "\t"
+   /* Parse query input (if present) */
+   if(strstr(query, "?q=")) { // convert extra piece to tab "?q=" -> "\t"
       char *repl;
 
-      for(repl=gopher_query; *repl != '?'; repl++) {}
+      for(repl=query; *repl != '?'; repl++) {}
       *repl = '\t';
       repl++;
       for(; *repl; repl++) {
@@ -194,23 +184,30 @@ static void gopher_main(void)
       }
      
    }
+   
+   return 1;
+}
 
-   if (!url) {
-      MSG("***Value of url is NULL"
-          " - cannot continue\n");
+/*
+ * This function opens a connection to a remote server
+ */
+static int gopher_open_connection(char *url, int url_proto_len,
+                                  char *proxy_url, char *proxy_connect)
+{
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+   int network_socket = -1;
+   
+   /* Open the socket */
+   network_socket = get_network_connection(proxy_url ? proxy_url : (url + url_proto_len));
+   if (network_socket<0){
+      MSG("Network socket create error\n");
       exit_error = 1;
    }
-
-   if (exit_error == 0){
-      char *connect_url = proxy_url ? proxy_url : (url + url_proto_len);
-
-      network_socket = get_network_connection(connect_url);
-      if (network_socket<0){
-         MSG("Network socket create error\n");
-         exit_error = 1;
-      }
-   }
-
+   
+   /* Setup the proxy */
    if (exit_error == 0 && proxy_connect != NULL) {
       ssize_t St;
       const char *p = proxy_connect;
@@ -262,17 +259,82 @@ static void gopher_main(void)
          dStr_free(reply, 1);
       }
    }
+   
+   return exit_error ? -1 : network_socket;
+}
 
-   if (exit_error == 0) {
-      char *d_cmd, *query_piece;
+static void gopher_main(void)
+{
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
+
+   char *dpip_tag = NULL, *cmd = NULL, *url = NULL,
+        *proxy_url = NULL, *proxy_connect = NULL;
+   char buf[4096], buf2[4096*4];
+   int ret = 0;
+   int network_socket = -1;
+
+   char gopher_query[2048];
+   char gopher_type = '1';
+   int url_proto_len = 0;
+
+   MSG("{In gopher.filter.dpi}\n");
+
+   /*Get the network address and command to be used*/
+   dpip_tag = a_Dpip_dsh_read_token(sh, 1);
+
+   MSG("dpip_tag = %s\n", dpip_tag);
+       
+   cmd = a_Dpip_get_attr(dpip_tag, "cmd");
+   proxy_url = a_Dpip_get_attr(dpip_tag, "proxy_url");
+   proxy_connect =
+      a_Dpip_get_attr(dpip_tag, "proxy_connect");
+   url = a_Dpip_get_attr(dpip_tag, "url");
+   
+   if (!url) {
+      MSG("***Value of url is NULL"
+          " - cannot continue\n");
+      exit_error = 1;
+   }
+
+   /* Parse Gopher URL */
+   if (exit_error == 0){
+      ret = gopher_parse_url(url, &gopher_type, &url_proto_len,
+                             gopher_query, sizeof(gopher_query));
+
+      if (ret == 0){
+         MSG("Error parsing URL\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Open Gopher connection */
+   if (exit_error == 0){
+      network_socket = gopher_open_connection(url, url_proto_len,
+                                              proxy_url, proxy_connect);
+
+      if (network_socket<0){
+         MSG("Error opening the connection\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Send Gopher query */
+   if (exit_error == 0){
+      char *query_piece;
 
       fprintf(stderr, "Gopher Request = %s\n", gopher_query);
 
-      query_piece = strchr(gopher_query+strlen("gopher://"), '/');
-
-      /*Send query we want*/
+      query_piece = strchr(gopher_query+url_proto_len, '/');
       write(network_socket, query_piece, (int)strlen(query_piece));
-      
+   }
+
+   /* Read Gopher response */
+   if (exit_error == 0) {
+      char *d_cmd;
+
       /*Send dpi command*/
       d_cmd = a_Dpip_build_cmd("cmd=%s url=%s", "start_send_page", url);
       a_Dpip_dsh_write_str(sh, 1, d_cmd);
@@ -325,16 +387,12 @@ static void gopher_main(void)
                   "Content-Type: application/octet-stream\r\n\r\n");
       }
       
-      fprintf(stderr, "TRANS = %s", buf2);
-
       a_Dpip_dsh_write(sh, 1, buf2, strlen(buf2));
 
       /*Send data*/
 
       while ((ret = read(network_socket, buf, 4096)) > 0 ){
-
          a_Dpip_dsh_write(sh, 1, buf, (size_t)ret);
-
       }
 
    }
@@ -343,7 +401,6 @@ static void gopher_main(void)
    dFree(dpip_tag);
    dFree(cmd);
    dFree(url);
-   dFree(gopher_query);
    dFree(proxy_url);
    dFree(proxy_connect);
 
@@ -355,32 +412,134 @@ static void gopher_main(void)
 }
 
 /*---------------------------------------------------------------------------*/
-int main(void)
-{
-   char *dpip_tag;
 
-   /* Initialize the SockHandler for this filter dpi */
-   sh = a_Dpip_dsh_new(STDIN_FILENO, STDOUT_FILENO, 8*1024);
+int download(char *url, char *output_filename,
+             char *proxy_url, char *proxy_connect, int check_cert) {
+   /* The following variable will be set to 1 in the event of
+    * an error and skip any further processing
+    */
+   int exit_error = 0;
 
-   /* Authenticate our client... */
-   if (!(dpip_tag = a_Dpip_dsh_read_token(sh, 1)) ||
-       a_Dpip_check_auth(dpip_tag) < 0) {
-      MSG("can't authenticate request: %s\n", dStrerror(errno));
-      a_Dpip_dsh_close(sh);
-      return 1;
+   char buf[4096];
+   int ret = 0;
+   int network_socket = -1;
+
+   char gopher_query[2048];
+   char gopher_type = '1';
+   int url_proto_len = 0;
+
+   FILE *outfile = NULL;
+
+   /* Open output file */
+   if((outfile = fopen(output_filename, "w")) == NULL) {
+      MSG("Error opening output file\n");
+      exit_error = 1;
    }
-   dFree(dpip_tag);
 
-   gopher_main();
+   /* Parse Gopher URL */
+   if (exit_error == 0){
+      ret = gopher_parse_url(url, &gopher_type, &url_proto_len,
+                             gopher_query, sizeof(gopher_query));
 
-   /* Finish the SockHandler */
-   a_Dpip_dsh_close(sh);
-   a_Dpip_dsh_free(sh);
+      if (ret == 0){
+         MSG("Error parsing URL\n");
+         exit_error = 1;
+      }
+   }
 
-   dFree(root_url);
+   /* Open Gopher connection */
+   if (exit_error == 0){
+      network_socket = gopher_open_connection(url, url_proto_len,
+                                              proxy_url, proxy_connect);
 
-   MSG("{ exiting gopher.dpi}\n");
+      if (network_socket<0){
+         MSG("Error opening the connection\n");
+         exit_error = 1;
+      }
+   }
+
+   /* Send Gopher query */
+   if (exit_error == 0){
+      char *query_piece;
+
+      fprintf(stderr, "Gopher Request = %s\n", gopher_query);
+
+      query_piece = strchr(gopher_query+url_proto_len, '/');
+      write(network_socket, query_piece, (int)strlen(query_piece));
+   }
+
+   /* Read Gopher response */
+   if (exit_error == 0) {
+
+      /*Send data*/
+
+      while ((ret = read(network_socket, buf, 4096)) > 0 ){
+         fwrite(buf, 1, (size_t)ret, outfile);
+      }
+
+   }
+
+   /* Begin cleanup of all resources used */
+   if (network_socket != -1){
+      dClose(network_socket);
+      network_socket = -1;
+   }
+   if(outfile != NULL){
+      fclose(outfile);
+      outfile = NULL;
+   }
 
    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+   char *dpip_tag;
+   int i = 0;
+   
+   if(argc > 1) {
+      /* Downloader behaviour */
+
+      for(i=1; i<argc; i++) {
+         if(!strncmp(argv[i], "gopher://", sizeof("gopher://")-1)) break;
+      }
+
+      if(i+1<argc) {
+
+         /* Found URL to download */
+         return download(argv[i], argv[i+1], NULL, NULL, 0);
+
+      } else {
+         fprintf(stderr, "usage: %s gopher_url output_filename\n", argv[0]);
+         return 1;
+      }
+      
+   } else {
+      /* Standard DPI behaviour */
+
+      /* Initialize the SockHandler for this filter dpi */
+      sh = a_Dpip_dsh_new(STDIN_FILENO, STDOUT_FILENO, 8*1024);
+
+      /* Authenticate our client... */
+      if (!(dpip_tag = a_Dpip_dsh_read_token(sh, 1)) ||
+          a_Dpip_check_auth(dpip_tag) < 0) {
+         MSG("can't authenticate request: %s\n", dStrerror(errno));
+         a_Dpip_dsh_close(sh);
+         return 1;
+      }
+      dFree(dpip_tag);
+
+      gopher_main();
+
+      /* Finish the SockHandler */
+      a_Dpip_dsh_close(sh);
+      a_Dpip_dsh_free(sh);
+
+      dFree(root_url);
+
+      MSG("{ exiting gopher.dpi}\n");
+
+      return 0;
+   }
 }
 
