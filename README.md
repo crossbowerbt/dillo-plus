@@ -42,12 +42,12 @@ Support for rendering pages and local files written in the **gemini**, **gopher*
 To implement some advanced features, like **epubs** and **manpages** reading, a serie of additional DPI modules has been added by default to the browser.
 
 Current additional DPI are:
-- **File**: file browser able to render files according to their type, with some improvements oover the original dillo DPI (URL protocol [file://](file://))
-- **Zip**: file browser for zip archives able to render compressed files according to their type, including HTML files (and their links and referenced resources) to easily visualize EPub ebooks (URL protocol [zip://](zip://))
-- **Man**: man page viewer with man links support, very handy on a *nix system to quickly navigate the docs (URL protocol [man://](man://))
-- **Ftp**: file browser for the FTP protocol which also supports the OpenBSD ftp client and not only wget (URL protocol [ftp://](ftp://))
-- **Gemini**: browser for the Gemini protocol (URL protocol [gemini://](gemini://))
-- **Gopher**: browser for the Gopher protocol (URL protocol [gopher://](gopher://))
+- **File**: file browser able to render files according to their type, with some improvements oover the original dillo DPI (URL protocol *file://*)
+- **Zip**: file browser for zip archives able to render compressed files according to their type, including HTML files (and their links and referenced resources) to easily visualize EPub ebooks (URL protocol *zip://*)
+- **Man**: man page viewer with man links support, very handy on a *nix system to quickly navigate the docs (URL protocol *man://*)
+- **Ftp**: file browser for the FTP protocol which also supports the OpenBSD ftp client and not only wget (URL protocol *ftp://*)
+- **Gemini**: browser for the Gemini protocol (URL protocol *gemini://*)
+- **Gopher**: browser for the Gopher protocol (URL protocol *gopher://*)
 
 Here are some screenshots of the Epub reader:
 
