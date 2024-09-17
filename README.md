@@ -39,10 +39,10 @@ Support for rendering pages and local files written in the **gemini**, **gopher*
 
 ## Additional DPIs
 
-To implement some advanced features, like **epubs** and **manpages** reading, a serie of additional DPI modules has been added by default to the browser.
+To implement some advanced features, like **epubs** and **manpages** reading, a series of additional DPI modules has been added by default to the browser.
 
-Current additional DPI are:
-- **File**: file browser able to render files according to their type, with some improvements oover the original dillo DPI (URL protocol *file://*)
+Current additional DPIs are:
+- **File**: file browser able to render files according to their type, with some improvements over the original dillo DPI (URL protocol *file://*)
 - **Zip**: file browser for zip archives able to render compressed files according to their type, including HTML files (and their links and referenced resources) to easily visualize EPub ebooks (URL protocol *zip://*)
 - **Man**: man page viewer with man links support, very handy on a *nix system to quickly navigate the docs (URL protocol *man://*)
 - **Ftp**: file browser for the FTP protocol which also supports the OpenBSD ftp client and not only wget (URL protocol *ftp://*)
@@ -106,7 +106,7 @@ To modify these quick searches, refer to this link.
 
 ## External media player
 
-Dillo+ does not play media, such as audio and video, in the browser.  Instead you can run media using your preferred desktop media player.  The benefit is that playback will  usually be more streamlined, without jitter.  Your media player might also have options, such as video caching of live streams, recording, streaming and downconverting.
+Dillo+ does not play media, such as audio and video, in the browser.  Instead you can run media using your preferred desktop media player.  The benefit is that playback will usually be more streamlined, without jitter.  Your media player might also have options, such as video caching of live streams, recording, streaming and downconverting.
 
 [![screenshot](screenshots/media_playing.png)](screenshots/media_playing.png))
 
