@@ -1,5 +1,7 @@
 #!/bin/sh
 
+BINNAME=dillo-plus
+
 function get_sha {
 	sha256 -b "$1" | cut -d ' ' -f 4
 }
@@ -49,44 +51,45 @@ $(gen_file "" +DESC)
 @wantlib ssl.55.0
 @wantlib z.7.0
 @cwd /usr/local
-@bin $(gen_file "/usr/local/" bin/dillo)
+@bin $(gen_file "/usr/local/" bin/$BINNAME)
 @bin $(gen_file "/usr/local/" bin/dillo-install-hyphenation)
 @bin $(gen_file "/usr/local/" bin/dpid)
 @bin $(gen_file "/usr/local/" bin/dpidc)
-lib/dillo/
-lib/dillo/dpi/
-lib/dillo/dpi/bookmarks/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/bookmarks/bookmarks.dpi)
-lib/dillo/dpi/cookies/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/cookies/cookies.dpi)
-lib/dillo/dpi/datauri/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/datauri/datauri.filter.dpi)
-lib/dillo/dpi/downloads/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/downloads/downloads.dpi)
-lib/dillo/dpi/file/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/file/file.dpi)
-lib/dillo/dpi/zip/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/zip/zip.dpi)
-lib/dillo/dpi/man/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/man/man.dpi)
-lib/dillo/dpi/ftp/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/ftp/ftp.filter.dpi)
-lib/dillo/dpi/gemini/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/gemini/gemini.filter.dpi)
-lib/dillo/dpi/gopher/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/gopher/gopher.filter.dpi)
-lib/dillo/dpi/hello/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/hello/hello.filter.dpi)
-lib/dillo/dpi/vsource/
-@bin $(gen_file "/usr/local/" lib/dillo/dpi/vsource/vsource.filter.dpi)
-@man $(gen_file "/usr/local/" man/man1/dillo.1)
-share/doc/dillo/
-$(gen_file "/usr/local/" share/doc/dillo/user_help.html)
-$(gen_file "/usr/local/" share/doc/dillo/Cookies.txt)
-etc/dillo/
-$(gen_file "/usr/local/" etc/dillo/dpidrc)
-$(gen_file "/usr/local/" etc/dillo/dillorc)
-$(gen_file "/usr/local/" etc/dillo/style.css)
-$(gen_file "/usr/local/" etc/dillo/style_reader_mode.css)
+lib/$BINNAME/
+lib/$BINNAME/dpi/
+lib/$BINNAME/dpi/bookmarks/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/bookmarks/bookmarks.dpi)
+lib/$BINNAME/dpi/cookies/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/cookies/cookies.dpi)
+lib/$BINNAME/dpi/datauri/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/datauri/datauri.filter.dpi)
+lib/$BINNAME/dpi/downloads/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/downloads/downloads.dpi)
+lib/$BINNAME/dpi/file/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/file/file.dpi)
+lib/$BINNAME/dpi/zip/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/zip/zip.dpi)
+lib/$BINNAME/dpi/man/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/man/man.dpi)
+lib/$BINNAME/dpi/ftp/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/ftp/ftp.filter.dpi)
+lib/$BINNAME/dpi/gemini/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/gemini/gemini.filter.dpi)
+lib/$BINNAME/dpi/gopher/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/gopher/gopher.filter.dpi)
+lib/$BINNAME/dpi/hello/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/hello/hello.filter.dpi)
+lib/$BINNAME/dpi/vsource/
+@bin $(gen_file "/usr/local/" lib/$BINNAME/dpi/vsource/vsource.filter.dpi)
+@man $(gen_file "/usr/local/" man/man1/$BINNAME.1)
+share/doc/$BINNAME/
+$(gen_file "/usr/local/" share/doc/$BINNAME/user_help.html)
+$(gen_file "/usr/local/" share/doc/$BINNAME/Cookies.txt)
+etc/$BINNAME/
+$(gen_file "/usr/local/" etc/$BINNAME/dpidrc)
+$(gen_file "/usr/local/" etc/$BINNAME/dillorc)
+$(gen_file "/usr/local/" etc/$BINNAME/bm.txt)
+$(gen_file "/usr/local/" etc/$BINNAME/style.css)
+$(gen_file "/usr/local/" etc/$BINNAME/style_reader_mode.css)
 EOF
 

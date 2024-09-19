@@ -11,7 +11,7 @@ dpidc: dpidc.o ../dpip/libDpip.a  ../dlib/libDlib.a
 	$(LINK) dpidc.o ../dpip/libDpip.a  ../dlib/libDlib.a
 
 dpidrc: dpidrc.in
-	sed -e "s|[@]libdir[@]|$(LIBDIR)|" ./dpidrc.in > dpidrc
+	sed -e "s|[@]libdir[@]|$(LIBDIR)|" -e "s|[@]binname[@]|$(BINNAME)|" ./dpidrc.in > dpidrc
 
 dpi.o: dpi.h dpi.c
 	$(COMPILE) $(CFLAGS_EXTRA) -c dpi.c

@@ -5,7 +5,7 @@ libDpip.a: dpip.o
 	$(RANLIB) libDpip.a
 
 dpip.o: dpip.h dpip.c
-	$(COMPILE) -c dpip.c
+	$(COMPILE) -DBINNAME='"$(BINNAME)"' -c dpip.c
 
 all: libDpip.a
 
