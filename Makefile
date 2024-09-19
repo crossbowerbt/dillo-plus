@@ -13,6 +13,8 @@ all: config.h
 	@(cd src; make all)
 	@echo Making all in doc
 	@(cd doc; make all)
+	@echo Making all in dist
+	@(cd dist; make all)
 	@echo Making all in dpid
 	@(cd dpid; make all)
 	@echo Making all in dpi
@@ -35,6 +37,8 @@ clean:
 	@(cd src; make clean)
 	@echo Cleaning in doc
 	@(cd doc; make clean)
+	@echo Cleaning in dist
+	@(cd dist; make clean)
 	@echo Cleaning in dpid
 	@(cd dpid; make clean)
 	@echo Cleaning in dpi
@@ -55,6 +59,8 @@ install: all
 	@(cd src; make install)
 	@echo Making install in doc
 	@(cd doc; make install)
+	@echo Making install in dist
+	@(cd dist; make install)
 	@echo Making install in dpid
 	@(cd dpid; make install)
 	@echo Making install in dpi
@@ -65,6 +71,7 @@ install: all
 	$(INSTALL) -c dillo-install-hyphenation "$(DILLO_BINDIR)"
 	./install-sh -c -d "$(DILLO_ETCDIR)"
 	$(INSTALL) -c -m 644 dillorc "$(DILLO_ETCDIR)"
+	$(INSTALL) -c -m 644 bm.txt "$(DILLO_ETCDIR)"
 	$(INSTALL) -c -m 644 style.css "$(DILLO_ETCDIR)"
 	$(INSTALL) -c -m 644 style_reader_mode.css "$(DILLO_ETCDIR)"
 
@@ -81,6 +88,8 @@ uninstall:
 	@(cd src; make uninstall)
 	@echo Making uninstall in doc
 	@(cd doc; make uninstall)
+	@echo Making uninstall in dist
+	@(cd dist; make uninstall)
 	@echo Making uninstall in dpid
 	@(cd dpid; make uninstall)
 	@echo Making uninstall in dpi
@@ -89,5 +98,6 @@ uninstall:
 	#@(cd test; make uninstall)
 	rm -f "$(DILLO_BINDIR)/dillo-install-hyphenation"
 	rm -f "$(DILLO_ETCDIR)/dillorc"
+	rm -f "$(DILLO_ETCDIR)/bm.txt"
 	rm -f "$(DILLO_ETCDIR)/style.css"
 	rm -f "$(DILLO_ETCDIR)/style_reader_mode.css"

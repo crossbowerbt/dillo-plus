@@ -246,7 +246,7 @@ static int Cookie_control_init(void)
    bool_t enabled = FALSE;
 
    /* Get a file pointer */
-   filename = dStrconcat(dGethomedir(), "/.dillo/cookiesrc", NULL);
+   filename = dStrconcat(dGethomedir(), "/." BINNAME "/cookiesrc", NULL);
    stream = Cookies_fopen(filename, "DEFAULT DENY\n");
    dFree(filename);
 

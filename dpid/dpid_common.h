@@ -20,9 +20,9 @@
 #define MSG(...)  printf("[dpid]: " __VA_ARGS__)
 #define MSG_ERR(...)  fprintf(stderr, "[dpid]: " __VA_ARGS__)
 
-#define dotDILLO_DPI ".dillo/dpi"
-#define dotDILLO_DPIDRC ".dillo/dpidrc"
-#define dotDILLO_DPID_COMM_KEYS ".dillo/dpid_comm_keys"
+#define dotDILLO_DPI "." BINNAME "/dpi"
+#define dotDILLO_DPIDRC "." BINNAME "/dpidrc"
+#define dotDILLO_DPID_COMM_KEYS "." BINNAME "/dpid_comm_keys"
 
 #define ERRMSG(CALLER, CALLED, ERR)\
  errmsg(CALLER, CALLED, ERR, __FILE__, __LINE__)

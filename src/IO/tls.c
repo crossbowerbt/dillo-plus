@@ -248,7 +248,7 @@ static void Tls_load_certificates(SSL_CTX *ssl_context)
       }
    }
 
-   userpath = dStrconcat(dGethomedir(), "/.dillo/certs/", NULL);
+   userpath = dStrconcat(dGethomedir(), "/." BINNAME "/certs/", NULL);
    Tls_load_certificates_from_path(ssl_context, userpath);
    dFree(userpath);
 

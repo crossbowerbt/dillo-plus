@@ -1,15 +1,15 @@
 include ../Makefile.options
 
-CXXFLAGS_EXTRA = -DDILLO_SYSCONF='"$(DILLO_ETCDIR)"' -DDOC_PATH='"$(DOC_PATH)"'
+CXXFLAGS_EXTRA = -DDILLO_SYSCONF='"$(DILLO_ETCDIR)"' -DDOC_PATH='"$(DOC_PATH)"' -DBINNAME='"$(BINNAME)"'
 
-all: recurse_into_IO dillo
+all: recurse_into_IO $(BINNAME)
 
 recurse_into_IO:
 	@echo "Making all in IO"
 	@(cd IO; make)
 
-dillo.o: dillo.cc
-	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c dillo.cc
+$(BINNAME).o: $(BINNAME).cc
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c $(BINNAME).cc
 
 paths.o: paths.cc paths.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c paths.cc
@@ -156,17 +156,17 @@ xembed.o: xembed.cc xembed.hh
 	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) -c xembed.cc
 
 
-dillo: dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
-	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) $(LDFLAGS) $(DILLO_LDFLAGS) $(HTTPS_LDFLAGS) -o dillo dillo.o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
+$(BINNAME): $(BINNAME).o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
+	$(CXXCOMPILE) $(CXXFLAGS_EXTRA) $(LIBFLTK_CXXFLAGS) $(LIBPNG16_CXXFLAGS) $(LDFLAGS) $(DILLO_LDFLAGS) $(HTTPS_LDFLAGS) -o $(BINNAME) $(BINNAME).o paths.o tipwin.o ui.o uicmd.o bw.o cookies.o auth.o md5.o digest.o colors.o misc.o history.o hsts.o prefs.o prefsparser.o keys.o url.o bitvec.o klist.o chain.o utf8.o timeout.o dialog.o web.o nav.o cache.o decode.o dicache.o capi.o domain.o css.o cssparser.o styleengine.o plain.o html.o form.o table.o bookmark.o dns.o gif.o jpeg.o png.o imgbuf.o image.o menu.o dpiapi.o findbar.o xembed.o ../dlib/libDlib.a ../dpip/libDpip.a IO/libDiof.a ../dw/libDw-widgets.a ../dw/libDw-fltk.a ../dw/libDw-core.a ../lout/liblout.a
 
 clean:
-	rm -f *.o *.a dillo
+	rm -f *.o *.a $(BINNAME)
 	@echo "Making clean in IO"
 	@(cd IO; make clean)
 
 install: all
 	$(INSTALL_SH) -c -d "$(DILLO_BINDIR)"
-	$(INSTALL) -c dillo "$(DILLO_BINDIR)"
+	$(INSTALL) -c $(BINNAME) "$(DILLO_BINDIR)"
 
 uninstall:
-	rm -f "$(DILLO_BINDIR)/dillo"
+	rm -f "$(DILLO_BINDIR)/$(BINNAME)"

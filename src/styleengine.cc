@@ -1054,7 +1054,7 @@ void StyleEngine::init () {
 
 void StyleEngine::buildUserStyle () {
    Dstr *style;
-   char *filename = dStrconcat(dGethomedir(), "/.dillo/style.css", NULL);
+   char *filename = dStrconcat(dGethomedir(), "/." BINNAME "/style.css", NULL);
    const char *sys_filename = DILLO_SYSCONF "style.css";
 
    if ((style = a_Misc_file2dstr(filename))) {
