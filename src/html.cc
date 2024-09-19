@@ -4695,7 +4695,12 @@ static int Gemini_write_raw(DilloHtml *html, char *buf, int bufsize, int Eof)
             buf[buf_index] = ch; /* restore the correct char */
             Html_process_tag(html, par_open, strlen(par_open));
             Html_process_tag(html, link_open, strlen(link_open));
-            token_start = buf_index;
+
+            /* check if there is text, otherwise use the link URL as text */
+            while (buf_index < bufsize && isspace(buf[buf_index]) && buf[buf_index] != '\n')
+               buf_index++;
+            if(buf[buf_index] != '\n') token_start = buf_index;
+            else buf_index = token_start;
          }
 
          else if (NEXT1CH('\n')) {
