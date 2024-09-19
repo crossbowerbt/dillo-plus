@@ -1,11 +1,11 @@
 include ../Makefile.options
 
-CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"' -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"'
+CXXFLAGS_EXTRA = -DDILLO_BINDIR='"$(DILLO_BINDIR)"' -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"' -DBINNAME='"$(BINNAME)"'
 
 all: bookmarks.dpi cookies.dpi datauri.filter.dpi downloads.dpi file.dpi zip.dpi man.dpi ftp.filter.dpi gemini.filter.dpi gopher.filter.dpi hello.filter.dpi vsource.filter.dpi
 
 bookmarks.o: bookmarks.c
-	$(COMPILE) -c bookmarks.c
+	$(COMPILE) -DBINNAME='"$(BINNAME)"' -c bookmarks.c
 
 dpiutil.o: dpiutil.c dpiutil.h
 	$(COMPILE) -c dpiutil.c
@@ -14,7 +14,7 @@ bookmarks.dpi: bookmarks.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o bookmarks.dpi bookmarks.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 cookies.o: cookies.c
-	$(COMPILE) -c cookies.c
+	$(COMPILE) -DBINNAME='"$(BINNAME)"' -c cookies.c
 
 cookies.dpi: cookies.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o cookies.dpi cookies.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
@@ -26,7 +26,7 @@ datauri.filter.dpi: datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o datauri.filter.dpi datauri.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 downloads_dpi-downloads.o: downloads.cc
-	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"' -DDOWNLOADER_TOOL='"$(DOWNLOADER_TOOL)"' -DDOWNLOADER_USER_AGENT_ARG='"$(DOWNLOADER_USER_AGENT_ARG)"' -DDOWNLOADER_CONTINUE_ARG='"$(DOWNLOADER_CONTINUE_ARG)"' -DDOWNLOADER_LOAD_COOKIES_ARG='"$(DOWNLOADER_LOAD_COOKIES_ARG)"' -DDOWNLOADER_OUTPUT_FILENAME_ARG='"$(DOWNLOADER_OUTPUT_FILENAME_ARG)"' -o downloads_dpi-downloads.o -c downloads.cc
+	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) -DDILLO_LIBDIR='"$(DILLO_LIBDIR)"' -DDOWNLOADER_TOOL='"$(DOWNLOADER_TOOL)"' -DDOWNLOADER_USER_AGENT_ARG='"$(DOWNLOADER_USER_AGENT_ARG)"' -DDOWNLOADER_CONTINUE_ARG='"$(DOWNLOADER_CONTINUE_ARG)"' -DDOWNLOADER_LOAD_COOKIES_ARG='"$(DOWNLOADER_LOAD_COOKIES_ARG)"' -DDOWNLOADER_OUTPUT_FILENAME_ARG='"$(DOWNLOADER_OUTPUT_FILENAME_ARG)"' -DBINNAME='"$(BINNAME)"' -o downloads_dpi-downloads.o -c downloads.cc
 
 downloads.dpi: downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a  ../dlib/libDlib.a
 	$(CXXCOMPILE) $(LIBFLTK_CFLAGS) $(LIBFLTK_LDFLAGS) -o downloads.dpi downloads_dpi-downloads.o  dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
@@ -65,7 +65,7 @@ hello.filter.dpi: hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) -o hello.filter.dpi hello.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 
 gemini.o: gemini.c
-	$(COMPILE) -DCA_CERTS_FILE='"$(CA_CERTS_FILE)"' -c gemini.c
+	$(COMPILE) -DCA_CERTS_FILE='"$(CA_CERTS_FILE)"' -DBINNAME='"$(BINNAME)"' -c gemini.c
 
 gemini.filter.dpi: gemini.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(COMPILE) $(HTTPS_LDFLAGS) -o gemini.filter.dpi gemini.o dpiutil.o ../dpip/libDpip.a ../dlib/libDlib.a

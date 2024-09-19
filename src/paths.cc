@@ -27,7 +27,7 @@
 static char* oldWorkingDir = NULL;
 
 /*
- * Changes current working directory to /tmp and creates ~/.dillo
+ * Changes current working directory to /tmp and creates home config dir
  * if not exists.
  */
 void Paths::init(void)
@@ -44,7 +44,7 @@ void Paths::init(void)
           dStrerror(errno));
    }
 
-   path = dStrconcat(dGethomedir(), "/.dillo", NULL);
+   path = dStrconcat(dGethomedir(), "/." BINNAME, NULL);
    if (stat(path, &st) == -1) {
       if (errno == ENOENT) {
          MSG("paths: Creating directory '%s/'\n", path);
@@ -82,7 +82,7 @@ void Paths::free(void)
 FILE *Paths::getPrefsFP(const char *rcFile)
 {
    FILE *fp;
-   char *path = dStrconcat(dGethomedir(), "/.dillo/", rcFile, NULL);
+   char *path = dStrconcat(dGethomedir(), "/." BINNAME "/", rcFile, NULL);
    char *path2 = dStrconcat(DILLO_SYSCONF, rcFile, NULL);
 
    if (!(fp = fopen(path, "r"))) {

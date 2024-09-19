@@ -1,6 +1,6 @@
 include ../Makefile.options
 
-CFLAGS_EXTRA = -DDPIDRC_SYS='"$(DPIDRC_SYS)"'
+CFLAGS_EXTRA = -DDPIDRC_SYS='"$(DPIDRC_SYS)"' -DBINNAME='"$(BINNAME)"'
 
 all: dpid dpidc dpidrc
 

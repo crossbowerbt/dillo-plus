@@ -721,7 +721,7 @@ static void Bms_check_import(void)
 
 
    if (access(BmFile, F_OK) != 0) {
-      OldBmFile = dStrconcat(dGethomedir(), "/.dillo/bookmarks.html", NULL);
+      OldBmFile = dStrconcat(dGethomedir(), "/." BINNAME "/bookmarks.html", NULL);
       if (access(OldBmFile, F_OK) == 0) {
          dStr_sprintf(dstr, cmd1, BmFile);
          rc = system(dstr->str);
@@ -1762,7 +1762,7 @@ int main(void) {
    /* Initialize local data */
    B_bms = dList_new(512);
    B_secs = dList_new(32);
-   BmFile = dStrconcat(dGethomedir(), "/.dillo/bm.txt", NULL);
+   BmFile = dStrconcat(dGethomedir(), "/." BINNAME "/bm.txt", NULL);
    /* some OSes may need this... */
    address_size = sizeof(struct sockaddr_un);
 

@@ -1,8 +1,8 @@
-.TH dillo 1 "December 20, 2014" "" "USER COMMANDS"
+.TH dillo 1 "May 28, 2015" "" "USER COMMANDS"
 .SH NAME
-dillo \- web browser
+%BINNAME% \- web browser
 .SH SYNOPSIS
-.B dillo
+.B %BINNAME%
 .RI [ OPTION ]...
 .RB [ \-\- ]
 .RI [ URL | FILE ]...
@@ -11,7 +11,7 @@ dillo \- web browser
 Dillo is a lightweight graphical web browser that aims to be secure.
 It handles HTTP internally, and FILE, FTP, and
 DATA URIs are handled through a plugin system (dpi). In addition,
-.I INSECURE
+.I EXPERIMENTAL
 HTTPS support can be enabled. Both FTP and Dillo's download manager use the
 .BR wget (1)
 downloader.
@@ -25,7 +25,7 @@ no support for javascript or video.
 .PP
 In order to use the hyphenation feature, pattern files from CTAN need to
 be installed to
-.IR /usr/local/lib/dillo/hyphenation/ .
+.IR /usr/local/lib/%BINNAME%/hyphenation/ .
 This can be done with the script
 .IR dillo-install-hyphenation .
 Call it with ISO-639-1 language codes as arguments, or without arguments
@@ -68,7 +68,7 @@ Error in command line arguments.
 User's home directory.
 .TP
 .B http_proxy
-URL of proxy to send HTTP traffic through.
+URL of proxy to send HTTP/HTTPS traffic through.
 .SH FILES
 .TP
 .I dpid
@@ -77,38 +77,38 @@ Dillo plugin daemon
 .I dpidc
 Control program for dpid.
 .TP
-.I ~/.dillo/bm.txt
+.I ~/.%BINNAME%/bm.txt
 User bookmarks
 .TP
-.I ~/.dillo/certs/
+.I ~/.%BINNAME%/certs/
 Saved certificates for HTTPS.
 .TP
-.I ~/.dillo/cookies.txt
+.I ~/.%BINNAME%/cookies.txt
 Stored cookies
 .TP
-.I ~/.dillo/cookiesrc
+.I ~/.%BINNAME%/cookiesrc
 Cookie settings
 .TP
-.I ~/.dillo/dillorc
+.I ~/.%BINNAME%/dillorc
 Configuration file.
 .TP
-.I ~/.dillo/domainrc
+.I ~/.%BINNAME%/domainrc
 Rules for cross-domain requests.
 .TP
-.I ~/.dillo/dpid_comm_keys
+.I ~/.%BINNAME%/dpid_comm_keys
 Keys used in dpi daemon communication.
 .TP
-.I ~/.dillo/dpidrc
+.I ~/.%BINNAME%/dpidrc
 Contains name of directory containing dpis, and associates
 dpi files with protocols.
 .TP
-.I ~/.dillo/keysrc
+.I ~/.%BINNAME%/keysrc
 Keybindings.
 .TP
-.I ~/.dillo/style.css
+.I ~/.%BINNAME%/style.css
 User style sheet.
 .TP
-.I /usr/local/lib/dillo/hyphenation/
+.I /usr/local/lib/%BINNAME%/hyphenation/
 Hyphenation pattern files.
 .SH SEE ALSO
 .BR wget (1)

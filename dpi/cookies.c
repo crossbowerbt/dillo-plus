@@ -353,13 +353,13 @@ static void Cookies_init()
    }
 
    /* Get a stream for the cookies file */
-   filename = dStrconcat(dGethomedir(), "/.dillo/cookies.txt", NULL);
+   filename = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
    file_stream = Cookies_fopen(filename, "r+", cookies_txt_header_str);
 
    dFree(filename);
 
    if (!file_stream) {
-      MSG("ERROR: Can't open ~/.dillo/cookies.txt; disabling cookies\n");
+      MSG("ERROR: Can't open ~/." BINNAME "/cookies.txt; disabling cookies\n");
       return;
    }
 
@@ -1426,7 +1426,7 @@ static int Cookie_control_init(void)
    bool_t enabled = FALSE;
 
    /* Get a file pointer */
-   filename = dStrconcat(dGethomedir(), "/.dillo/cookiesrc", NULL);
+   filename = dStrconcat(dGethomedir(), "/." BINNAME "/cookiesrc", NULL);
    stream = Cookies_fopen(filename, "r", "DEFAULT DENY\n");
    dFree(filename);
 

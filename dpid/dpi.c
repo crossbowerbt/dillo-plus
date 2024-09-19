@@ -33,7 +33,7 @@
  */
 char *a_Dpi_sockdir_file(void)
 {
-   char *dpi_socket_dir, *dirfile_path = "/.dillo/dpi_socket_dir";
+   char *dpi_socket_dir, *dirfile_path = "/." BINNAME "/dpi_socket_dir";
 
    dpi_socket_dir = dStrconcat(dGethomedir(), dirfile_path, NULL);
    return dpi_socket_dir;
@@ -53,7 +53,7 @@ char *a_Dpi_rd_dpi_socket_dir(char *dirname)
    FILE *dir;
    char *sockdir = NULL, *rcpath;
 
-   rcpath = dStrconcat(dGethomedir(), "/.dillo", NULL);
+   rcpath = dStrconcat(dGethomedir(), "/." BINNAME, NULL);
 
    /* If .dillo does not exist it is an unrecoverable error */
    if (access(rcpath, F_OK) == -1) {

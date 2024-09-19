@@ -212,7 +212,7 @@ SSL_CTX *init_ssl(void)
    }
 
    if (exit_error == 0){
-      snprintf(buf, 4095, "%s/.dillo/certs/", dGethomedir());
+      snprintf(buf, 4095, "%s/." BINNAME "/certs/", dGethomedir());
       if (SSL_CTX_load_verify_locations(ssl_context, NULL, buf )==0){
          MSG("Error opening user x509 certificate location\n");
          exit_error = 1;
@@ -1001,13 +1001,13 @@ static int save_certificate_home(X509 * cert)
    int ret = 1;
 
    /*Attempt to create .dillo/certs blindly - check later*/
-   snprintf(buf,4096,"%s/.dillo/", dGethomedir());
+   snprintf(buf,4096,"%s/." BINNAME "/", dGethomedir());
    mkdir(buf, 01777);
-   snprintf(buf,4096,"%s/.dillo/certs/", dGethomedir());
+   snprintf(buf,4096,"%s/." BINNAME "/certs/", dGethomedir());
    mkdir(buf, 01777);
 
    do {
-      snprintf(buf, 4096, "%s/.dillo/certs/%lx.%u",
+      snprintf(buf, 4096, "%s/." BINNAME "/certs/%lx.%u",
                dGethomedir(), X509_subject_name_hash(cert), i);
 
       fp=fopen(buf, "r");

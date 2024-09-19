@@ -348,7 +348,7 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
       dl_argv[i++] = useragent;
       dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
       dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
-      dl_argv[i++] = dStrconcat(dGethomedir(), "/.dillo/cookies.txt", NULL);
+      dl_argv[i++] = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
       dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
       dl_argv[i++] = fullname;
       dl_argv[i++] = esc_url;

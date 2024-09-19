@@ -348,7 +348,7 @@ static int Dpi_start_dpid(void)
    pid = fork();
    if (pid == 0) {
       /* This is the child process.  Execute the command. */
-      char *path1 = dStrconcat(dGethomedir(), "/.dillo/dpid", NULL);
+      char *path1 = dStrconcat(dGethomedir(), "/." BINNAME "/dpid", NULL);
       dClose(st_pipe[0]);
       if (execl(path1, "dpid", (char*)NULL) == -1) {
          dFree(path1);
@@ -396,7 +396,7 @@ static int Dpi_read_comm_keys(int *port)
    char *fname, *rcline = NULL, *tail;
    int i, ret = -1;
 
-   fname = dStrconcat(dGethomedir(), "/.dillo/dpid_comm_keys", NULL);
+   fname = dStrconcat(dGethomedir(), "/." BINNAME "/dpid_comm_keys", NULL);
    if ((In = fopen(fname, "r")) == NULL) {
       MSG_ERR("[Dpi_read_comm_keys] %s\n", dStrerror(errno));
    } else if ((rcline = dGetline(In)) == NULL) {

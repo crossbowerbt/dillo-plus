@@ -51,15 +51,17 @@ FTP_USE_WGET = 0
 
 # == INSTALL PATHS ==
 
+BINNAME = dillo-plus
+
 PREFIX ?= /usr/local
 LIBDIR = $(PREFIX)/lib/
 
 DILLO_BINDIR = $(PREFIX)/bin/
-DILLO_LIBDIR = $(PREFIX)/lib/dillo/
-DILLO_ETCDIR = $(PREFIX)/etc/dillo/
+DILLO_LIBDIR = $(PREFIX)/lib/$(BINNAME)/
+DILLO_ETCDIR = $(PREFIX)/etc/$(BINNAME)/
 
 DPIDRC_SYS = $(DILLO_ETCDIR)/dpidrc
 
-DOC_PATH = $(PREFIX)/share/doc/dillo
+DOC_PATH = $(PREFIX)/share/doc/$(BINNAME)
 MAN_PATH = $(PREFIX)/share/man/man1
 

@@ -135,7 +135,7 @@ shapes: shapes.o ../dw/libDw-core.a ../lout/liblout.a
 	$(CXXCOMPILE) $(LIBFLTK_LDFLAGS) -o shapes shapes.o ../dw/libDw-core.a ../lout/liblout.a
 
 cookies.o: cookies.c
-	$(COMPILE) $(LIBFLTK_CXXFLAGS) -c cookies.c
+	$(COMPILE) $(LIBFLTK_CXXFLAGS) -DBINNAME='"$(BINNAME)"' -c cookies.c
 
 cookies: cookies.o ../dpip/libDpip.a ../dlib/libDlib.a
 	$(CXXCOMPILE) $(LIBFLTK_LDFLAGS) -o cookies cookies.o ../dpip/libDpip.a ../dlib/libDlib.a
