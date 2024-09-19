@@ -1,4 +1,4 @@
-dpi_dir=@libdir@/dillo/dpi
+dpi_dir=@libdir@/@binname@/dpi
 
 proto.file=file/file.dpi
 proto.zip=zip/zip.dpi

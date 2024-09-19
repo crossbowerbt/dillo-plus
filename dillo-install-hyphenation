@@ -45,7 +45,7 @@ if (-e $makefile) {
    }
 }
 
-$targetdir = "$prefix/lib/dillo/hyphenation";
+$targetdir = "$prefix/lib/dillo-plus/hyphenation";
 
 if (!GetOptions ("host=s" => \$host,
                  "basesourcedir=s" => \$basesourcedir,

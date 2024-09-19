@@ -207,7 +207,7 @@ int a_Dpip_check_auth(const char *auth_tag)
       return ret;
    }
 
-   fname = dStrconcat(dGethomedir(), "/.dillo/dpid_comm_keys", NULL);
+   fname = dStrconcat(dGethomedir(), "/." BINNAME "/dpid_comm_keys", NULL);
    if ((In = fopen(fname, "r")) == NULL) {
       MSG_ERR("[a_Dpip_check_auth] %s\n", dStrerror(errno));
    } else if ((rcline = dGetline(In)) == NULL) {
