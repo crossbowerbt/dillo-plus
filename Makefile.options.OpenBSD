@@ -63,5 +63,5 @@ DILLO_ETCDIR = $(PREFIX)/etc/$(BINNAME)/
 DPIDRC_SYS = $(DILLO_ETCDIR)/dpidrc
 
 DOC_PATH = $(PREFIX)/share/doc/$(BINNAME)
-MAN_PATH = $(PREFIX)/share/man/man1
+MAN_PATH = $(PREFIX)/man/man1
 
