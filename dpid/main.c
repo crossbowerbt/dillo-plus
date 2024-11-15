@@ -22,7 +22,7 @@
 #include <sys/stat.h>    /* for umask */
 
 #include "dpid_common.h"
-#include "dpid.h"
+#include "dpid-plus.h"
 #include "dpi.h"
 #include "dpi_socket_dir.h"
 #include "misc_new.h"

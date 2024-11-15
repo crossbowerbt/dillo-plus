@@ -348,14 +348,14 @@ static int Dpi_start_dpid(void)
    pid = fork();
    if (pid == 0) {
       /* This is the child process.  Execute the command. */
-      char *path1 = dStrconcat(dGethomedir(), "/." BINNAME "/dpid", NULL);
+      char *path1 = dStrconcat(dGethomedir(), "/." BINNAME "/dpid-plus", NULL);
       dClose(st_pipe[0]);
-      if (execl(path1, "dpid", (char*)NULL) == -1) {
+      if (execl(path1, "dpid-plus", (char*)NULL) == -1) {
          dFree(path1);
-         path1 = dStrconcat(DILLO_BINDIR, "dpid", NULL);
-         if (execl(path1, "dpid", (char*)NULL) == -1) {
+         path1 = dStrconcat(DILLO_BINDIR, "dpid-plus", NULL);
+         if (execl(path1, "dpid-plus", (char*)NULL) == -1) {
             dFree(path1);
-            if (execlp("dpid", "dpid", (char*)NULL) == -1) {
+            if (execlp("dpid-plus", "dpid-plus", (char*)NULL) == -1) {
                MSG("Dpi_start_dpid (child): %s\n", dStrerror(errno));
                if (Dpi_blocking_write(st_pipe[1], "ERROR", 5) == -1) {
                   MSG("Dpi_start_dpid (child): can't write to pipe.\n");
@@ -375,7 +375,7 @@ static int Dpi_start_dpid(void)
       /* This is the parent process, check our child status... */
       dClose(st_pipe[1]);
       if ((answer = Dpi_blocking_read(st_pipe[0])) != NULL) {
-         MSG("Dpi_start_dpid: can't start dpid\n");
+         MSG("Dpi_start_dpid: can't start dpid-plus\n");
          dFree(answer);
       } else {
          ret = 0;

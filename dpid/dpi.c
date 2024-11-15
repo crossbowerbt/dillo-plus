@@ -90,7 +90,7 @@ char *a_Dpi_srs(void)
 
    dirfile_path = a_Dpi_sockdir_file();
    sockdir = dStrstrip(a_Dpi_rd_dpi_socket_dir(dirfile_path));
-   srs_name = dStrconcat(sockdir, "/", "dpid.srs", NULL);
+   srs_name = dStrconcat(sockdir, "/", "dpid-plus.srs", NULL);
    dFree(sockdir);
    dFree(dirfile_path);
    return (srs_name);
