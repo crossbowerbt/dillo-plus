@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
        printf("Please enter the message: ");
        bzero(buffer,256);
        if (fgets(buffer,255,stdin) == NULL)
-          MSG_ERR("dpidc: Can't read the message\n");
+          MSG_ERR("dpidc-plus: Can't read the message\n");
     } else {
        MSG_ERR("main: Unknown operation '%s'\n", argv[1]);
        print_usage(argv[0]);
