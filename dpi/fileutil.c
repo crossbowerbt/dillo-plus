@@ -20,6 +20,9 @@
 #include <sys/time.h>
 #include <fcntl.h>
 
+#define __USE_XOPEN
+#include <time.h>
+
 #include "../dpip/dpip.h"
 #include "dpiutil.h"
 #include "d_size.h"
