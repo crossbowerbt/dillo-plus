@@ -17,7 +17,7 @@
  * Debugging macros
  */
 #define _MSG(...)
-#define MSG(...)  printf("[dpid]: " __VA_ARGS__)
+#define MSG(...)  printf("[dpid-plus]: " __VA_ARGS__)
 #define MSG_ERR(...)  fprintf(stderr, "[dpid]: " __VA_ARGS__)
 
 #define dotDILLO_DPI "." BINNAME "/dpi"

@@ -71,11 +71,11 @@ User's home directory.
 URL of proxy to send HTTP/HTTPS traffic through.
 .SH FILES
 .TP
-.I dpid
+.I dpid-plus
 Dillo plugin daemon
 .TP
-.I dpidc
-Control program for dpid.
+.I dpidc-plus
+Control program for dpid-plus.
 .TP
 .I ~/.%BINNAME%/bm.txt
 User bookmarks

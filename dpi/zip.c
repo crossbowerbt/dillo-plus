@@ -28,9 +28,11 @@
 #include <sys/un.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <time.h>
 #include <signal.h>
 #include <netinet/in.h>
+
+#define __USE_XOPEN
+#include <time.h>
 
 #include "../dpip/dpip.h"
 #include "dpiutil.h"

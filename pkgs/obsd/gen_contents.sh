@@ -53,8 +53,8 @@ $(gen_file "" +DESC)
 @cwd /usr/local
 @bin $(gen_file "/usr/local/" bin/$BINNAME)
 @bin $(gen_file "/usr/local/" bin/dillo-install-hyphenation)
-@bin $(gen_file "/usr/local/" bin/dpid)
-@bin $(gen_file "/usr/local/" bin/dpidc)
+@bin $(gen_file "/usr/local/" bin/dpid-plus)
+@bin $(gen_file "/usr/local/" bin/dpidc-plus)
 lib/$BINNAME/
 lib/$BINNAME/dpi/
 lib/$BINNAME/dpi/bookmarks/
