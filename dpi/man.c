@@ -454,6 +454,7 @@ static void Man_get(ClientInfo *client, char *filename,
 
    if (!Man_parse_path(filename, &manpage)) {
       /* is a manpage arg */
+      manpage = filename;
       client->manpage = dStrdup(manpage);
 
       /* set up for reading an inner archive file */
