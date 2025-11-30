@@ -2,6 +2,7 @@
 #define __DW_STYLE_HH__
 
 #include <stdint.h>
+#include <math.h>
 
 #ifndef __INCLUDED_FROM_DW_CORE_HH__
 #   error Do not include this file directly, use "core.hh" instead.
@@ -189,7 +190,7 @@ namespace core {
  *
  *      <ul>
  *      <li> dw::core::Widget::~Widget, dw::Textblock::~Textblock, by the
- *           HTML parser, when popping an element fom the stack, and
+ *           HTML parser, when popping an element from the stack, and
  *      <li> dw::core::Widget::setStyle, dw::Textblock::addText etc.,
  *           these methods overwrite an existing style.
  *      </ul>
@@ -261,14 +262,14 @@ enum VAlignType {
    VALIGN_SUB,
    VALIGN_SUPER,
    VALIGN_TEXT_TOP,
-   VALIGN_TEXT_BOTTOM,
+   VALIGN_TEXT_BOTTOM
 };
 
 enum TextTransform {
    TEXT_TRANSFORM_NONE,
    TEXT_TRANSFORM_CAPITALIZE,
    TEXT_TRANSFORM_UPPERCASE,
-   TEXT_TRANSFORM_LOWERCASE,
+   TEXT_TRANSFORM_LOWERCASE
 };
 
 /**
@@ -345,7 +346,7 @@ enum Position {
    POSITION_STATIC,
    POSITION_RELATIVE,
    POSITION_ABSOLUTE,
-   POSITION_FIXED,
+   POSITION_FIXED
 };
 
 enum TextDecoration {
@@ -361,7 +362,7 @@ enum WhiteSpace {
    WHITE_SPACE_PRE,
    WHITE_SPACE_NOWRAP,
    WHITE_SPACE_PRE_WRAP,
-   WHITE_SPACE_PRE_LINE,
+   WHITE_SPACE_PRE_LINE
 };
 
 enum FloatType {
@@ -472,7 +473,7 @@ inline double relLengthVal(Length l) { return (double)(l & ~3) / (1 << 18); }
  * Use this instead of perLengthVal, when possible.
  */
 inline int multiplyWithPerLength(int x, Length l) {
-   return x * perLengthVal_useThisOnlyForDebugging (l);
+   return (int) round((double) x * perLengthVal_useThisOnlyForDebugging (l));
 }
 
 /**

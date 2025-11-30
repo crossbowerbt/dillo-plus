@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007, 2012-2014 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2023-2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -553,7 +554,7 @@ void Textblock::notifySetParent ()
    numSizeReferences = 0;
    for (int i = 0; i < NUM_OOFM; i++) {
       if (oofContainer[i] != this) {
-         // avoid dublicates
+         // avoid duplicates
          bool found = false;
          for (int j = 0; !found && j < numSizeReferences; j++)
             if (oofContainer[i] == oofContainer[j])
@@ -638,7 +639,6 @@ void Textblock::sizeAllocateImpl (core::Allocation *allocation)
             /* align=top:
                childAllocation.y = line->top + allocation->y;
             */
-
             /* align=bottom (base line) */
             /* Commented lines break the n2 and n3 test cases at
              * https://dillo-browser.github.io/old/test/img/ */
@@ -1734,7 +1734,7 @@ void Textblock::drawLevel (core::View *view, core::Rectangle *area,
       break;
 
    case SL_OOF_REF:
-      // TODO Inefficient. Perhaps store OOF references in seperate
+      // TODO Inefficient. Perhaps store OOF references in separate
       // (much smaller!) list.
       for (int oofmIndex = 0; oofmIndex < NUM_OOFM; oofmIndex++) {
          for (int wordIndex = 0; wordIndex < words->size (); wordIndex++) {
@@ -1781,7 +1781,7 @@ Textblock::Word *Textblock::addWord (int width, int ascent, int descent,
 }
 
 /**
- * Basic initialization, which is neccessary before fillWord.
+ * Basic initialization, which is necessary before fillWord.
  */
 void Textblock::initWord (int wordNo)
 {
@@ -2543,7 +2543,7 @@ void Textblock::addWidget (core::Widget *widget, core::style::Style *style)
 }
 
 /**
- * Add an anchor to the page. "name" is copied, so no strdup is necessary for
+ * Add an anchor to the page. "name" is copied, so no dStrdup is necessary for
  * the caller.
  *
  * Return true on success, and false, when this anchor had already been
@@ -2735,7 +2735,7 @@ void Textblock::addParbreak (int space, core::style::Style *style)
    DBG_OBJ_ENTER ("construct.word", 0, "addParbreak", "%d, %p",
                   space, style);
    DBG_OBJ_MSG ("construct.word", 0,
-                "<i>No nesting! Strack trace may be incomplete.</i>");
+                "<i>No nesting! Stack trace may be incomplete.</i>");
    DBG_OBJ_LEAVE ();
 
    Word *word;
@@ -2909,7 +2909,7 @@ core::Widget *Textblock::getWidgetAtPointLevel (int x, int y, int level,
       break;
 
    case SL_OOF_REF:
-      // TODO Inefficient. Perhaps store OOF references in seperate
+      // TODO Inefficient. Perhaps store OOF references in separate
       // (much smaller!) list.
       for (int oofmIndex = NUM_OOFM; widgetAtPoint == NULL && oofmIndex >= 0;
            oofmIndex--) {

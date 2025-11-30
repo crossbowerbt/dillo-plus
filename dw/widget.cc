@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2023-2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -527,8 +528,12 @@ bool Widget::usesAvailHeight ()
 }
 
 /**
- *  \brief This method is a wrapper for Widget::sizeRequestImpl(); it calls
- *     the latter only when needed.
+ * \brief This method is a wrapper for Widget::sizeRequestImpl(); it calls
+ * the latter only when needed.
+ *
+ * Computes the size (Requisition) that the current widget wants. The output
+ * \param requisition has the final values which will be used to compute the
+ * widget allocation.
  */
 void Widget::sizeRequest (Requisition *requisition, int numPos,
                           Widget **references, int *x, int *y)
@@ -564,7 +569,7 @@ void Widget::sizeRequest (Requisition *requisition, int numPos,
       callImpl = true;
    else {
       // Even if RESIZE_QUEUED / NEEDS_RESIZE is not set, calling
-      // sizeRequestImpl is necessary when the relative positions passed here
+      // sizeRequestImpl is necessary when the relavive positions passed here
       // have changed.
       callImpl = !newRequisitionParams.isEquivalent (&requisitionParams);
    }
@@ -624,7 +629,7 @@ int Widget::getMinWidth (Extremes *extremes, bool forceValue)
          }
       }
 
-      // TODO Not completely clear whether this is feasable: Within
+      // TODO Not completely clear whether this is feasible: Within
       // the context of getAvailWidth(false) etc., getExtremes may not
       // be called. We ignore the minimal width then.
       if (extremes)
@@ -641,6 +646,9 @@ int Widget::getMinWidth (Extremes *extremes, bool forceValue)
 /**
  * Return available width including margin/border/padding
  * (extraSpace?), not only the content width.
+ *
+ * If the widget has a parent or a quasiParent, the width computation is
+ * delegated to the parent first, or the quasiParent later.
  */
 int Widget::getAvailWidth (bool forceValue)
 {
@@ -866,6 +874,16 @@ void Widget::correctExtremes (Extremes *extremes, bool useAdjustmentWidth)
    DBG_OBJ_LEAVE_VAL ("%d / %d", extremes->minWidth, extremes->maxWidth);
 }
 
+/** Computes a width value in pixels from cssValue.
+ *
+ * If cssValue is absolute, the absolute value is used.
+ * If cssValue is relative, then it is applied to refWidth.
+ * Otherwise, -1 is used.
+ *
+ * In any case, the returned value is clamped so that is not smaller
+ * than limitMinWidth.
+ *
+ */
 int Widget::calcWidth (style::Length cssValue, int refWidth, Widget *refWidget,
                        int limitMinWidth, bool forceValue)
 {
@@ -905,7 +923,26 @@ int Widget::calcWidth (style::Length cssValue, int refWidth, Widget *refWidget,
    return width;
 }
 
-// *finalWidth may be -1.
+/**
+ * Computes the final width if possible and constraints it by min-width and
+ * max-width.
+ *
+ * This function performs a very particular computation. It will try to find the
+ * fixed width of the style provided by taking the refWidth or refWidget as the
+ * reference to expand relative values.
+ *
+ * The value of *finalWidth is used to initialized the first value of width, so
+ * it can be used to initialize a width when the style sets the width property
+ * to auto.
+ *
+ * If both the initial *finalWidth and the style with are -1, the value will be
+ * left as is, even if min-width and max-width could constraint the size. For the
+ * width to be constrained, either the initial *finalWidth or the computed width
+ * should return an absolute value.
+ *
+ * \post If *finalWidth != -1 the computed *finalWidth value is guarantee not to
+ * be -1.
+ */
 void Widget::calcFinalWidth (style::Style *style, int refWidth,
                              Widget *refWidget, int limitMinWidth,
                              bool forceValue, int *finalWidth)
@@ -1099,7 +1136,11 @@ Widget *Widget::getExtremesReference (int index)
 
 /**
  * \brief Wrapper for Widget::sizeAllocateImpl, calls the latter only when
- *    needed.
+ * needed.
+ *
+ * Sets the allocation of the widget to \param allocation, which is the final
+ * size and position it will have on the canvas. This is usually called after
+ * the requisition size is determined in Widget::sizeRequest().
  */
 void Widget::sizeAllocate (Allocation *allocation)
 {
@@ -1482,7 +1523,7 @@ int Widget::getLevel ()
 }
 
 /**
- * \brief Get the level of the widget within the tree, regarting the
+ * \brief Get the level of the widget within the tree, regarding the
  * generators, not the parents.
  *
  * The root widget has the level 0.
@@ -1644,6 +1685,16 @@ int Widget::applyPerHeight (int containerHeight, style::Length perHeight)
       + boxDiffHeight ();
 }
 
+/**
+ * Computes the content width available of a child widget.
+ *
+ * @param child      The child widget of which the available width will be
+ *                   computed.
+ * @param forceValue If true, computes the width of the child with value
+ *                   "auto". Otherwise, it won't.
+ *
+ * @return The available width in pixels or -1.
+ */
 int Widget::getAvailWidthOfChild (Widget *child, bool forceValue)
 {
    // This is a halfway suitable implementation for all
@@ -1657,6 +1708,8 @@ int Widget::getAvailWidthOfChild (Widget *child, bool forceValue)
 
    if (child->getStyle()->width == style::LENGTH_AUTO) {
       DBG_OBJ_MSG ("resize", 1, "no specification");
+
+      /* We only compute when forceValue is true */
       if (forceValue)
          width = misc::max (getAvailWidth (true) - boxDiffWidth (), 0);
       else
@@ -1802,7 +1855,7 @@ void Widget::correctReqHeightOfChild (Widget *child, Requisition *requisition,
                                       void (*splitHeightFun) (int, int*, int*),
                                       bool allowDecreaseHeight)
 {
-   // TODO Correct height by extremes? (Height extemes?)
+   // TODO Correct height by extremes? (Height extremes?)
 
    assert (this == child->quasiParent || this == child->container);
 

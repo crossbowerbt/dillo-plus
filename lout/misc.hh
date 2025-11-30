@@ -1,3 +1,23 @@
+/*
+ * Dillo Widget
+ *
+ * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef __LOUT_MISC_HH__
 #define __LOUT_MISC_HH__
 
@@ -6,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "dlib/dlib.h"
 
 namespace lout {
 
@@ -446,7 +467,7 @@ public:
             numExtra += numInsert;
             resizeExtra ();
 
-            // Note: index refers to the *logical* adress, not to the
+            // Note: index refers to the *logical* address, not to the
             // *physical* one.
             int diff = index - this->startExtra - oldNumExtra;
             T *arrayMainI = arrayMain + this->startExtra;
@@ -586,7 +607,7 @@ public:
     * A copy is kept in the buffer, so the caller does not have to care
     * about memory management.
     */
-   inline void append(const char *str) { appendNoCopy(strdup(str)); }
+   inline void append(const char *str) { appendNoCopy(dStrdup(str)); }
    inline void appendInt(int n)
    { char buf[32]; sprintf (buf, "%d", n); append (buf); }
    inline void appendPointer(void *p)

@@ -48,7 +48,7 @@ public:
     *    Scrolling and Related. Only usesViewport must be
     *    implemented, if it returns false, the other methods
     *    are never called.
-    * ---------------­-----------­-----------------------------
+    * ---------------------------------------------------------
     */
 
    /**
@@ -73,7 +73,7 @@ public:
    virtual int getVScrollbarThickness () = 0;
 
    /**
-    * \brief Scroll the vieport to the given position.
+    * \brief Scroll the viewport to the given position.
     *
     * Does not have to be implemented, when usesViewport returns false.
     */

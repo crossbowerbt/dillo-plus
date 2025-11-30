@@ -64,7 +64,7 @@ public:
 };
 
 /**
- * \brief dw::core::Shape implemtation for simple rectangles.
+ * \brief dw::core::Shape implementation for simple rectangles.
  */
 class Rectangle: public Shape
 {
@@ -85,7 +85,7 @@ public:
 };
 
 /**
- * \brief dw::core::Shape implemtation for simple circles.
+ * \brief dw::core::Shape implementation for simple circles.
  */
 class Circle: public Shape
 {
@@ -99,7 +99,7 @@ public:
 };
 
 /**
- * \brief dw::core::Shape implemtation for polygons.
+ * \brief dw::core::Shape implementation for polygons.
  */
 class Polygon: public Shape
 {
@@ -224,7 +224,7 @@ struct Content
       ALL               = 0xff,
       REAL_CONTENT      = 0xff ^ (START | END),
       SELECTION_CONTENT = TEXT | BREAK, // WIDGET_* must be set additionally
-      ANY_WIDGET        = WIDGET_IN_FLOW | WIDGET_OOF_CONT | WIDGET_OOF_REF,
+      ANY_WIDGET        = WIDGET_IN_FLOW | WIDGET_OOF_CONT | WIDGET_OOF_REF
    };
 
    /* Content is embedded in struct Word therefore we

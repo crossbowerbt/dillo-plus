@@ -1,3 +1,23 @@
+/*
+ * Dillo Widget
+ *
+ * Copyright 2005-2013 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2025 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef __DW_PLATFORM_HH__
 #define __DW_PLATFORM_HH__
 
@@ -121,10 +141,11 @@ public:
     * is defined, which holds more platform dependent data.
     *
     * Also, this method must fill the attributes "font" (when needed),
-    * "ascent", "descent", "spaceSidth" and "xHeight". If "tryEverything"
-    * is true, several methods should be used to use another font, when
-    * the requested font is not available. Passing false is typically done,
-    * if the caller wants to test different variations.
+    * "ascent", "descent", "spaceSidth", "zeroWidth" and "xHeight". If
+    * "tryEverything" is true, several methods should be used to use
+    * another font, when the requested font is not available. Passing
+    * false is typically done, if the caller wants to test different
+    * variations.
     */
    virtual style::Font *createFont (style::FontAttrs *attrs,
                                     bool tryEverything) = 0;
@@ -147,7 +168,7 @@ public:
    virtual void cancelTooltip () = 0;
 
    /**
-    * \brief Create a (platform speficic) image buffer.
+    * \brief Create a (platform specific) image buffer.
     *
     * "gamma" is the value by which the image data is gamma-encoded.
     */

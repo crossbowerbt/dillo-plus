@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +52,7 @@ Embed::~Embed()
 void Embed::sizeRequestSimpl (Requisition *requisition)
 {
    resource->sizeRequest (requisition);
-   // TODO Correction should perhaps be left to the resouces.
+   // TODO Correction should perhaps be left to the resources.
    correctRequisition(requisition, core::splitHeightPreserveAscent, true, true);
 }
 
@@ -432,6 +433,7 @@ void ComplexButtonResource::correctRequisitionOfChild (Widget *child,
    // the relief has to be considered.
 
    if (style::isPerLength (child->getStyle()->width)) {
+      /* FIXME: Typo for getAvailWidth()? */
       int availWidth = getEmbed()->getAvailHeight (false);
       if (availWidth != -1) {
          int baseWidth = misc::max (availWidth

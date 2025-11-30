@@ -1,18 +1,21 @@
 /*
  * File: tls.c
  *
- * Update: Modified to use OpenSSL directly, without the mbed SSL dependency.
- * Original source copyright was (used as a template for the current code):
- *
  * Copyright (C) 2011 Benjamin Johnson <obeythepenguin@users.sourceforge.net>
  * (for the https code offered from dplus browser that formed the basis...)
  * Copyright 2016 corvid
+ * Copyright (C) 2023-2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
+ * As a special exception, permission is granted to link Dillo with the OpenSSL
+ * or LibreSSL library, and distribute the linked executables without
+ * including the source code for OpenSSL or LibreSSL in the source
+ * distribution. You must obey the GNU General Public License, version 3, in
+ * all respects for all of the code used other than OpenSSL or LibreSSL.
  */
 
 /*
@@ -95,7 +98,7 @@ static Dlist *fd_map;
 
 static void Tls_handshake_cb(int fd, void *vconnkey);
 
-/*
+/**
  * Compare by FD.
  */
 static int Tls_fd_map_cmp(const void *v1, const void *v2)
@@ -106,6 +109,9 @@ static int Tls_fd_map_cmp(const void *v1, const void *v2)
    return (fd != e->fd);
 }
 
+/**
+ * Allocate and add entry to fd_map.
+ */
 static void Tls_fd_map_add_entry(int fd, int connkey)
 {
    FdMapEntry_t *e = dNew0(FdMapEntry_t, 1);
@@ -121,7 +127,7 @@ static void Tls_fd_map_add_entry(int fd, int connkey)
 //MSG("ADD ENTRY %d %s\n", e->fd, URL_STR(sd->url));
 }
 
-/*
+/**
  * Remove and free entry from fd_map.
  */
 static void Tls_fd_map_remove_entry(int fd)
@@ -137,7 +143,7 @@ static void Tls_fd_map_remove_entry(int fd)
    }
 }
 
-/*
+/**
  * Return TLS connection information for a given file
  * descriptor, or NULL if no TLS connection was found.
  */
@@ -155,7 +161,7 @@ void *a_Tls_connection(int fd)
    return NULL;
 }
 
-/*
+/**
  * Add a new TLS connection information node.
  */
 static Conn_t *Tls_conn_new(int fd, const DilloUrl *url,
@@ -170,6 +176,9 @@ static Conn_t *Tls_conn_new(int fd, const DilloUrl *url,
    return conn;
 }
 
+/**
+ * Allocate and add entry to fd_map with generated connection key.
+ */
 static int Tls_make_conn_key(Conn_t *conn)
 {
    int key = a_Klist_insert(&conn_list, conn);
@@ -179,7 +188,7 @@ static int Tls_make_conn_key(Conn_t *conn)
    return key;
 }
 
-/*
+/**
  * Load certificates from a given filename.
  */
 static int Tls_load_certificates_from_file(SSL_CTX *ssl_context, const char *const filename)
@@ -193,7 +202,7 @@ static int Tls_load_certificates_from_file(SSL_CTX *ssl_context, const char *con
    return ret;
 }
 
-/*
+/**
  * Load certificates from a given pathname.
  */
 static int Tls_load_certificates_from_path(SSL_CTX *ssl_context, const char *const pathname)
@@ -207,7 +216,7 @@ static int Tls_load_certificates_from_path(SSL_CTX *ssl_context, const char *con
    return ret;
 }
 
-/*
+/**
  * Load trusted certificates.
  */
 static void Tls_load_certificates(SSL_CTX *ssl_context)
@@ -259,7 +268,7 @@ static void Tls_load_certificates(SSL_CTX *ssl_context)
    }
 }
 
-/*
+/**
  * Select safe ciphersuites.
  */
 static void Tls_set_cipher_list(SSL_CTX *ssl_context)
@@ -293,7 +302,7 @@ static void Tls_set_cipher_list(SSL_CTX *ssl_context)
  SSL_CTX_set_cipher_list(ssl_context, cipher_list);
 }
 
-/*
+/**
  * Initialize a new TLS context.
  */
 static SSL_CTX * Tls_context_new(void)
@@ -320,7 +329,7 @@ static SSL_CTX * Tls_context_new(void)
    return ssl_context;
 }
 
-/*
+/**
  * Initialize the TLS library.
  */
 void a_Tls_init(void)
@@ -343,7 +352,7 @@ void a_Tls_init(void)
    servers = dList_new(8);
 }
 
-/*
+/**
  * Ordered comparison of servers.
  */
 static int Tls_servers_cmp(const void *v1, const void *v2)
@@ -355,7 +364,8 @@ static int Tls_servers_cmp(const void *v1, const void *v2)
       cmp = s1->port - s2->port;
    return cmp;
 }
-/*
+
+/**
  * Ordered comparison of server with URL.
  */
 static int Tls_servers_by_url_cmp(const void *v1, const void *v2)
@@ -370,7 +380,7 @@ static int Tls_servers_by_url_cmp(const void *v1, const void *v2)
    return cmp;
 }
 
-/*
+/**
  * The purpose here is to permit a single initial connection to a server.
  * Once we have the certificate, know whether we like it -- and whether the
  * user accepts it -- HTTP can run through queued sockets as normal.
@@ -403,6 +413,9 @@ int a_Tls_connect_ready(const DilloUrl *url)
    return ret;
 }
 
+/**
+ * Get TLS cert status.
+ */
 static int Tls_cert_status(const DilloUrl *url)
 {
    Server_t *s = dList_find_sorted(servers, url, Tls_servers_by_url_cmp);
@@ -410,7 +423,7 @@ static int Tls_cert_status(const DilloUrl *url)
    return s ? s->cert_status : CERT_STATUS_NONE;
 }
 
-/*
+/**
  * Did we find problems with the certificate, and did the user proceed to
  * reject the connection?
  */
@@ -419,7 +432,7 @@ static int Tls_user_said_no(const DilloUrl *url)
    return Tls_cert_status(url) == CERT_STATUS_BAD;
 }
 
-/*
+/**
  * Did everything seem proper with the certificate -- no warnings to
  * click through?
  */
@@ -428,7 +441,7 @@ int a_Tls_certificate_is_clean(const DilloUrl *url)
    return Tls_cert_status(url) == CERT_STATUS_CLEAN;
 }
 
-/*
+/**
  * Generate dialog msg for expired cert.
  */
 static void Tls_cert_expired(const X509 *cert, Dstr *ds)
@@ -446,7 +459,7 @@ static void Tls_cert_expired(const X509 *cert, Dstr *ds)
                  year, mon, mday, hour, min, sec);
 }
 
-/*
+/**
  * Generate dialog msg when certificate is not for this host.
  */
 static void Tls_cert_cn_mismatch(const X509 *cert, Dstr *ds)
@@ -464,7 +477,7 @@ static void Tls_cert_cn_mismatch(const X509 *cert, Dstr *ds)
    OPENSSL_free(subj);
 }
 
-/*
+/**
  * Generate dialog msg when certificate is not trusted.
  */
 static void Tls_cert_trust_chain_failed(const X509 *cert, Dstr *ds)
@@ -480,7 +493,7 @@ static void Tls_cert_trust_chain_failed(const X509 *cert, Dstr *ds)
    OPENSSL_free(issuer);
 }
 
-/*
+/**
  * Generate dialog msg when certificate start date is in the future.
  */
 static void Tls_cert_not_valid_yet(const X509 *cert, Dstr *ds)
@@ -509,7 +522,7 @@ int get_cert_algorithm(const X509 *cert)
 }
 #endif
 
-/*
+/**
  * Generate dialog msg when certificate hash algorithm is not accepted.
  */
 static void Tls_cert_bad_hash(const X509 *cert, Dstr *ds)
@@ -531,7 +544,7 @@ static void Tls_cert_bad_hash(const X509 *cert, Dstr *ds)
                      "(%s).\n", hash);
 }
 
-/*
+/**
  * Generate dialog msg when public key algorithm (RSA, ECDSA) is not accepted.
  */
 static void Tls_cert_bad_pk_alg(const X509 *cert, Dstr *ds)
@@ -553,7 +566,7 @@ static void Tls_cert_bad_pk_alg(const X509 *cert, Dstr *ds)
                      "(%s).\n", algoname);
 }
 
-/*
+/**
  * Generate dialog msg when the public key is not acceptable. As of 2016,
  * this was triggered by RSA keys below 2048 bits, if I recall correctly.
  */
@@ -576,7 +589,7 @@ static void Tls_cert_bad_key(const X509 *cert, Dstr *ds)
                      "means it's too weak (%s).\n", algoname);
 }
 
-/*
+/**
  * Make a dialog msg containing warnings about problems with the certificate.
  */
 static char *Tls_make_bad_cert_msg(const X509 *cert, uint32_t flags)
@@ -671,7 +684,7 @@ static int Tls_cert_auth_cmp_by_name(const void *v1, const void *v2)
    return strcmp(c->name, name);
 }
 
-/*
+/**
  * Examine the certificate, and, if problems are detected, ask the user what
  * to do.
  * Return: -1 if connection should be canceled, or 0 if it should continue.
@@ -725,7 +738,7 @@ static int Tls_examine_certificate(SSL *ssl_connection, Server_t *srv)
    return ret;
 }
 
-/*
+/**
  * If the connection was closed before we got the certificate, we need to
  * reset state so that we'll try again.
  */
@@ -739,7 +752,7 @@ void a_Tls_reset_server_state(const DilloUrl *url)
    }
 }
 
-/*
+/**
  * Close an open TLS connection.
  */
 static void Tls_close_by_key(int connkey)
@@ -765,7 +778,7 @@ static void Tls_close_by_key(int connkey)
    }
 }
 
-/*
+/**
  * Connect, set a callback if it's still not completed. If completed, check
  * the certificate and report back to http.
  */
@@ -845,7 +858,7 @@ static void Tls_handshake_cb(int fd, void *vconnkey)
    Tls_handshake(fd, VOIDP2INT(vconnkey));
 }
 
-/*
+/**
  * Make TLS connection over a connect()ed socket.
  */
 void a_Tls_connect(int fd, const DilloUrl *url)
@@ -899,7 +912,7 @@ void a_Tls_connect(int fd, const DilloUrl *url)
    }
 }
 
-/*
+/**
  * Read data from an open TLS connection.
  */
 int a_Tls_read(void *conn, void *buf, size_t len)
@@ -915,7 +928,7 @@ int a_Tls_read(void *conn, void *buf, size_t len)
    return ret;
 }
 
-/*
+/**
  * Write data to an open TLS connection.
  */
 int a_Tls_write(void *conn, void *buf, size_t len)
@@ -968,7 +981,7 @@ static void Tls_fd_map_remove_all()
    }
 }
 
-/*
+/**
  * Clean up
  */
 void a_Tls_freeall(void)

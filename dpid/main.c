@@ -1,5 +1,8 @@
 /*
    Copyright (C) 2003  Ferdi Franceschini <ferdif@optusnet.com.au>
+   Copyright (C) 2020  Axel Beckert <abe@debian.org>
+   Copyright (C) 2023  Michal Grezl <walley@walley.org>
+   Copyright (C) 2025  Rodrigo Arias Mallo <rodarima@gmail.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +43,8 @@ fd_set sock_set;
 int srs_fd;
 
 
-/* Start a dpi filter plugin after accepting the pending connection
+
+/** Start a dpi filter plugin after accepting the pending connection
  * \Return
  * \li Child process ID on success
  * \li 0 on failure
@@ -175,7 +179,7 @@ static int get_command(Dsh *sh, char *dpi_tag)
    return (COMMAND);
 }
 
-/*
+/**
  * Check whether a dpi server is running
  */
 static int server_is_running(char *server_id)
@@ -192,7 +196,7 @@ static int server_is_running(char *server_id)
 }
 
 
-/*
+/**
  * Get MAX open FD limit (yes, it's tricky --Jcid).
  */
 static int get_open_max(void)
@@ -282,7 +286,7 @@ int main(void)
    (void) sigemptyset(&mask_none);
    (void) sigprocmask(SIG_SETMASK, &mask_none, NULL);
 
-   printf("dpid started\n");
+   printf("dpid started (found %d dpis)\n", numdpis);
 /* Start main loop */
    while (1) {
       do {

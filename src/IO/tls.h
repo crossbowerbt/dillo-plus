@@ -1,3 +1,23 @@
+/*
+ * File: tls.h
+ *
+ * Copyright (C) 2011 Benjamin Johnson <obeythepenguin@users.sourceforge.net>
+ * (for the https code offered from dplus browser that formed the basis...)
+ * Copyright 2016 corvid
+ * Copyright (C) 2023-2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * As a special exception, permission is granted to link Dillo with the OpenSSL
+ * or LibreSSL library, and distribute the linked executables without
+ * including the source code for OpenSSL or LibreSSL in the source
+ * distribution. You must obey the GNU General Public License, version 3, in
+ * all respects for all of the code used other than OpenSSL or LibreSSL.
+ */
+
 #ifndef __TLS_H__
 #define __TLS_H__
 

@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2024-2025 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 
 #include "core.hh"
 
+#include "dlib/dlib.h"
 #include "../lout/msg.h"
 #include "../lout/debug.hh"
 #include "../lout/misc.hh"
@@ -352,7 +354,7 @@ void Layout::detachWidget (Widget *widget)
    // be detached, and check "layout != NULL" at relevant points.
 
    // Could be replaced by a virtual method in Widget, like getWidgetAtPoint,
-   // if performace were really a problem.
+   // if performance were really a problem.
 
    widget->layout = NULL;
    Iterator *it =
@@ -503,8 +505,10 @@ void Layout::attachView (View *view)
 
 void Layout::detachView (View *view)
 {
-   if (this->view != view)
-      MSG_ERR("detachView: this->view: %p view %p\n", this->view, view);
+   if (this->view != view) {
+      MSG_ERR("detachView: this->view: %p view %p\n",
+            (void *) this->view, (void *) view);
+   }
 
    view->setLayout (NULL);
    platform->detachView (view);
@@ -732,7 +736,7 @@ void Layout::setAnchor (const char *anchor)
 
    if (requestedAnchor)
       free (requestedAnchor);
-   requestedAnchor = anchor ? strdup (anchor) : NULL;
+   requestedAnchor = anchor ? dStrdup (anchor) : NULL;
    updateAnchor ();
 }
 
@@ -751,7 +755,7 @@ char *Layout::addAnchor (Widget *widget, const char* name, int y)
       return NULL;
    else {
       Anchor *anchor = new Anchor ();
-      anchor->name = strdup (name);
+      anchor->name = dStrdup (name);
       anchor->widget = widget;
       anchor->y = y;
 

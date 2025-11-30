@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <math.h>
 
+#include "dlib/dlib.h"
 #include "core.hh"
 #include "../lout/msg.h"
 
@@ -426,7 +427,7 @@ Font::~Font ()
 
 void Font::copyAttrs (FontAttrs *attrs)
 {
-   name = strdup (attrs->name);
+   name = dStrdup (attrs->name);
    size = attrs->size;
    weight = attrs->weight;
    style = attrs->style;
@@ -773,6 +774,7 @@ static void drawBorderTop(View *view, Style *style,
       break;
    case BORDER_DOTTED:
       dotted = true;
+      /* fallthrough */
    case BORDER_DASHED:
       w = style->borderWidth.top;
       view->drawTypedLine(style->borderColor.top, shading,
@@ -782,6 +784,7 @@ static void drawBorderTop(View *view, Style *style,
    case BORDER_SOLID:
    case BORDER_INSET:
       inset = true;
+      /* fallthrough */
    case BORDER_OUTSET:
       if (style->borderStyle.top != BORDER_SOLID)
          shading = (inset) ? Color::SHADING_DARK : Color::SHADING_LIGHT;
@@ -801,6 +804,7 @@ static void drawBorderTop(View *view, Style *style,
       break;
    case BORDER_RIDGE:
       ridge = true;
+      /* fallthrough */
    case BORDER_GROOVE:
       d = style->borderWidth.top & 1;
       points[0].x = x1;
@@ -870,6 +874,7 @@ static void drawBorderBottom(View *view, Style *style,
       break;
    case BORDER_DOTTED:
       dotted = true;
+      /* fallthrough */
    case BORDER_DASHED:
       w = style->borderWidth.bottom;
       view->drawTypedLine(style->borderColor.bottom, shading,
@@ -879,6 +884,7 @@ static void drawBorderBottom(View *view, Style *style,
    case BORDER_SOLID:
    case BORDER_INSET:
       inset = true;
+      /* fallthrough */
    case BORDER_OUTSET:
       if (style->borderStyle.bottom != BORDER_SOLID)
          shading = (inset) ? Color::SHADING_LIGHT : Color::SHADING_DARK;
@@ -898,6 +904,7 @@ static void drawBorderBottom(View *view, Style *style,
       break;
    case BORDER_RIDGE:
       ridge = true;
+      /* fallthrough */
    case BORDER_GROOVE:
       w = style->borderWidth.bottom;
       d = w & 1;
@@ -969,6 +976,7 @@ static void drawBorderLeft(View *view, Style *style,
       break;
    case BORDER_DOTTED:
       dotted = true;
+      /* fallthrough */
    case BORDER_DASHED:
       w = style->borderWidth.left;
       view->drawTypedLine(style->borderColor.left, shading,
@@ -978,6 +986,7 @@ static void drawBorderLeft(View *view, Style *style,
    case BORDER_SOLID:
    case BORDER_INSET:
       inset = true;
+      /* fallthrough */
    case BORDER_OUTSET:
       if (style->borderStyle.left != BORDER_SOLID)
          shading = (inset) ? Color::SHADING_DARK : Color::SHADING_LIGHT;
@@ -996,6 +1005,7 @@ static void drawBorderLeft(View *view, Style *style,
       break;
    case BORDER_RIDGE:
       ridge = true;
+      /* fallthrough */
    case BORDER_GROOVE:
       w = style->borderWidth.left;
       d = w & 1;
@@ -1066,6 +1076,7 @@ static void drawBorderRight(View *view, Style *style,
       break;
    case BORDER_DOTTED:
       dotted = true;
+      /* fallthrough */
    case BORDER_DASHED:
       w = style->borderWidth.right;
       view->drawTypedLine(style->borderColor.right, shading,
@@ -1075,6 +1086,7 @@ static void drawBorderRight(View *view, Style *style,
    case BORDER_SOLID:
    case BORDER_INSET:
       inset = true;
+      /* fallthrough */
    case BORDER_OUTSET:
       if (style->borderStyle.right != BORDER_SOLID)
          shading = (inset) ? Color::SHADING_LIGHT : Color::SHADING_DARK;
@@ -1093,6 +1105,7 @@ static void drawBorderRight(View *view, Style *style,
       break;
    case BORDER_RIDGE:
       ridge = true;
+      /* fallthrough */
    case BORDER_GROOVE:
       w = style->borderWidth.right;
       d = w & 1;
@@ -1195,7 +1208,7 @@ void drawBorder (View *view, Layout *layout, Rectangle *area,
  * "heightRef" define the reference area, which is important for the
  * tiling of background images (for position 0%/0%, a tile is set at
  * xRef/yRef; for position 100%/100%, a tile is set at xRef +
- * widthRef/yRef + widthRef). See calls for more informations; in most
+ * widthRef/yRef + widthRef). See calls for more information; in most
  * cases, these boxes are identical (padding box). All these
  * coordinates are given in canvas coordinates.
  *
@@ -1203,7 +1216,7 @@ void drawBorder (View *view, Layout *layout, Rectangle *area,
  * canvas, not on top of other areas; this is only true for the
  * toplevel widget itself (not parts of its contents). Toplevel widget
  * background colors are already set as viewport background color, so
- * that drawing again is is not neccessary, but some time can be
+ * that drawing again is is not necessary, but some time can be
  * saved.
  *
  * Otherwise, the caller should not try to increase the performance by
@@ -1213,7 +1226,7 @@ void drawBorder (View *view, Layout *layout, Rectangle *area,
  * style->backgroundColor may simply used. However, when drawing is
  * inversed, and style->backgroundColor is undefined (NULL), a
  * background color defined higher in the hierarchy (which is not
- * accessable here) must be used.
+ * accessible here) must be used.
  *
  * (Background *images* are never drawn inverse.)
  */
@@ -1419,6 +1432,7 @@ void numtostr (int num, char *buf, int buflen, ListStyleType listStyleType)
    case LIST_STYLE_TYPE_LOWER_ALPHA:
    case LIST_STYLE_TYPE_LOWER_LATIN:
       start_ch = 'a';
+      /* fallthrough */
    case LIST_STYLE_TYPE_UPPER_ALPHA:
    case LIST_STYLE_TYPE_UPPER_LATIN:
       i0 = num - 1;
@@ -1433,6 +1447,7 @@ void numtostr (int num, char *buf, int buflen, ListStyleType listStyleType)
       break;
    case LIST_STYLE_TYPE_LOWER_ROMAN:
       low = true;
+      /* fallthrough */
    case LIST_STYLE_TYPE_UPPER_ROMAN:
       i0 = num;
       i1 = i0/10; i2 = i1/10; i3 = i2/10;

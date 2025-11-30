@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +21,7 @@
 
 
 #include "image.hh"
+#include "dlib/dlib.h"
 #include "../lout/msg.h"
 #include "../lout/misc.hh"
 #include "../lout/debug.hh"
@@ -148,7 +150,7 @@ Image::Image(const char *altText)
 {
    DBG_OBJ_CREATE ("dw::Image");
    registerName ("dw::Image", &CLASS_ID);
-   this->altText = altText ? strdup (altText) : NULL;
+   this->altText = altText ? dStrdup (altText) : NULL;
    altTextWidth = -1; // not yet calculated
    buffer = NULL;
    bufWidth = bufHeight = -1;

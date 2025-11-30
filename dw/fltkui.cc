@@ -2,6 +2,7 @@
  * Dillo Widget
  *
  * Copyright 2005-2007 Sebastian Geerken <sgeerken@dillo.org>
+ * Copyright 2025 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@
 #include "fltkcore.hh"
 #include "fltkflatview.hh"
 #include "fltkcomplexbutton.hh"
+#include "dlib/dlib.h"
 #include "../lout/msg.h"
 #include "../lout/misc.hh"
 
@@ -41,7 +43,7 @@
 static Fl_Color fltkui_dimmed(Fl_Color c, Fl_Color bg)
 {
    return fl_color_average(c, bg, .33f);
-};
+}
 
 //----------------------------------------------------------------------------
 /*
@@ -77,7 +79,7 @@ CustInput2::CustInput2 (int x, int y, int w, int h, const char* l) :
    placeholder = NULL;
    showing_placeholder = false;
    usual_color = FL_BLACK;      /* just init until widget style is set */
-};
+}
 
 /*
  * Show normal text.
@@ -112,7 +114,7 @@ void CustInput2::set_placeholder(const char *str)
 {
    if (placeholder)
       free(placeholder);
-   placeholder = strdup(str);
+   placeholder = dStrdup(str);
 
    if ((Fl::focus() != this) && !*value()) {
       show_placeholder();
@@ -237,7 +239,7 @@ CustTextEditor::CustTextEditor (int x, int y, int w, int h, const char* l) :
    buffer(new Fl_Text_Buffer());
    usual_color = FL_BLACK;      /* just init until widget style is set */
    text_copy = NULL;
-};
+}
 
 CustTextEditor::~CustTextEditor ()
 {
@@ -279,7 +281,7 @@ void CustTextEditor::set_placeholder(const char *str)
 {
    if (placeholder)
       free(placeholder);
-   placeholder = strdup(str);
+   placeholder = dStrdup(str);
 
    if ((Fl::focus() != this) && buffer()->length() == 0) {
       show_placeholder();
@@ -318,7 +320,7 @@ char* CustTextEditor::value()
     */
    if (text_copy)
       free(text_copy);
-   text_copy = showing_placeholder ? strdup("") : buffer()->text();
+   text_copy = showing_placeholder ? dStrdup("") : buffer()->text();
    return text_copy;
 }
 
@@ -463,7 +465,7 @@ void FltkResource::detachView (FltkView *view)
 {
    if (this->view != view)
       MSG_ERR("FltkResource::detachView: this->view: %p view: %p\n",
-              this->view, view);
+              (void *) this->view, (void *) view);
    this->view = NULL;
 }
 
@@ -628,7 +630,7 @@ FltkLabelButtonResource::FltkLabelButtonResource (FltkPlatform *platform,
                                                   const char *label):
    FltkSpecificResource <dw::core::ui::LabelButtonResource> (platform)
 {
-   this->label = strdup (label);
+   this->label = dStrdup (label);
    init (platform);
 }
 
@@ -720,7 +722,7 @@ const char *FltkLabelButtonResource::getLabel ()
 void FltkLabelButtonResource::setLabel (const char *label)
 {
    free((char *)this->label);
-   this->label = strdup (label);
+   this->label = dStrdup (label);
 
    widget->label (this->label);
    queueResize (true);
@@ -869,9 +871,9 @@ FltkEntryResource::FltkEntryResource (FltkPlatform *platform, int size,
 {
    this->size = size;
    this->password = password;
-   this->label = label ? strdup(label) : NULL;
+   this->label = label ? dStrdup(label) : NULL;
    this->label_w = 0;
-   this->placeholder = placeholder ? strdup(placeholder) : NULL;
+   this->placeholder = placeholder ? dStrdup(placeholder) : NULL;
 
    initText = NULL;
    editable = false;
@@ -997,7 +999,7 @@ void FltkEntryResource::setText (const char *text)
 {
    if (initText)
       free((char *)initText);
-   initText = strdup (text);
+   initText = dStrdup (text);
 
    ((CustInput2*)widget)->value (initText);
 }
@@ -1055,7 +1057,7 @@ FltkMultiLineTextResource::FltkMultiLineTextResource (FltkPlatform *platform,
       MSG_WARN("numRows = %d is set to 1.\n", numRows);
       numRows = 1;
    }
-   this->placeholder = placeholder ? strdup(placeholder) : NULL;
+   this->placeholder = placeholder ? dStrdup(placeholder) : NULL;
 
    init (platform);
 }
@@ -1495,7 +1497,7 @@ void FltkOptionMenuResource::addItem (const char *str,
 {
    Fl_Menu_Item *item = newItem();
 
-   item->text = strdup(str);
+   item->text = dStrdup(str);
 
    if (enabled == false)
       item->flags = FL_MENU_INACTIVE;
@@ -1516,7 +1518,7 @@ void FltkOptionMenuResource::pushGroup (const char *name, bool enabled)
 {
    Fl_Menu_Item *item = newItem();
 
-   item->text = strdup(name);
+   item->text = dStrdup(name);
 
    if (enabled == false)
       item->flags = FL_MENU_INACTIVE;
