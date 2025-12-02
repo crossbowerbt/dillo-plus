@@ -3,12 +3,17 @@
  * HTTP Strict Transport Security
  *
  * Copyright 2015 corvid
+ * Copyright (C) 2023 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
+ */
+
+/** @file
+ * HTTP Strict Transport Security
  */
 
 /* To preload hosts, as of 2015, chromium is the list keeper:
@@ -47,7 +52,7 @@ static void Hsts_free_policy(HstsData_t *p)
    dFree(p);
 }
 
-void a_Hsts_freeall()
+void a_Hsts_freeall(void)
 {
    if (prefs.http_strict_transport_security) {
       HstsData_t *policy;
@@ -61,7 +66,7 @@ void a_Hsts_freeall()
    }
 }
 
-/*
+/**
  * Compare function for searching a domain node by domain string
  */
 static int Domain_node_domain_str_cmp(const void *v1, const void *v2)
@@ -86,7 +91,7 @@ static void Hsts_remove_policy(HstsData_t *policy)
    }
 }
 
-/*
+/**
  * Return the time_t for a future time.
  */
 static time_t Hsts_future_time(long seconds_from_now)
@@ -106,7 +111,7 @@ static time_t Hsts_future_time(long seconds_from_now)
    return ret;
 }
 
-/*
+/**
  * Compare function for searching domains.
  */
 static int Domain_node_cmp(const void *v1, const void *v2)
@@ -133,7 +138,7 @@ static void Hsts_set_policy(const char *host, long max_age, bool_t subdomains)
    policy->expires_at = exp;
 }
 
-/*
+/**
  * Read the next attribute.
  */
 static char *Hsts_parse_attr(const char **header_str)
@@ -154,7 +159,7 @@ static char *Hsts_parse_attr(const char **header_str)
    return dStrndup(str, len);
 }
 
-/*
+/**
  * Get the value in *header_str.
  */
 static char *Hsts_parse_value(const char **header_str)
@@ -181,7 +186,7 @@ static char *Hsts_parse_value(const char **header_str)
    return dStrndup(str, len);
 }
 
-/*
+/**
  * Advance past any value.
  */
 static void Hsts_eat_value(const char **str)
@@ -190,12 +195,12 @@ static void Hsts_eat_value(const char **str)
       *str += strcspn(*str, ";");
 }
 
-/*
- * The reponse for this url had an HSTS header, so let's take action.
+/**
+ * The response for this url had an HSTS header, so let's take action.
  */
 void a_Hsts_set(const char *header, const DilloUrl *url)
 {
-   long max_age;
+   long max_age = 0;
    const char *host = URL_HOST(url);
    bool_t max_age_valid = FALSE, subdomains = FALSE;
 

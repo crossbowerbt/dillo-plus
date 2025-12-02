@@ -3,6 +3,7 @@
  *
  * Copyright 2004 Sebastian Geerken <sgeerken@dillo.org>
  * Copyright 2008-2009 Johannes Hofmann <Johannes.Hofmann@gmx.de>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -288,11 +289,11 @@ const CssPropertyInfo Css_property_info[CSS_PROPERTY_LAST] = {
 typedef struct {
    const char *symbol;
    enum {
-      CSS_SHORTHAND_MULTIPLE,   /* [ p1 || p2 || ...], the property pi is
+      CSS_SHORTHAND_MULTIPLE,   /**< [ p1 || p2 || ...], the property pi is
                                  * determined  by the type */
-      CSS_SHORTHAND_DIRECTIONS, /* <t>{1,4} */
-      CSS_SHORTHAND_BORDER,     /* special, used for 'border' */
-      CSS_SHORTHAND_FONT,       /* special, used for 'font' */
+      CSS_SHORTHAND_DIRECTIONS, /**< <t>{1,4} */
+      CSS_SHORTHAND_BORDER,     /**< special, used for 'border' */
+      CSS_SHORTHAND_FONT        /**< special, used for 'font' */
    } type;
    const CssPropertyName *properties; /* CSS_SHORTHAND_MULTIPLE:
                                        *   must be terminated by
@@ -469,7 +470,7 @@ CssParser::CssParser(CssContext *context, CssOrigin origin,
    nextToken ();
 }
 
-/*
+/**
  * Gets the next character from the buffer, or EOF.
  */
 int CssParser::getChar()
@@ -487,7 +488,7 @@ int CssParser::getChar()
    return c;
 }
 
-/*
+/**
  * Undoes the last getChar().
  */
 void CssParser::ungetChar()
@@ -495,7 +496,7 @@ void CssParser::ungetChar()
    bufptr--;
 }
 
-/*
+/**
  * Skip string str if it is found in the input buffer.
  * If string is found leave bufptr pointing to last matched char.
  * If not wind back. The first char is passed as parameter c
@@ -1088,7 +1089,7 @@ bool CssParser::parseValue(CssPropertyName prop,
    case CSS_TYPE_BACKGROUND_POSITION:
       // 'background-position' consists of one or two values: vertical and
       // horizontal position; in most cases in this order. However, as long it
-      // is unambigous, the order can be switched: "10px left" and "left 10px"
+      // is unambiguous, the order can be switched: "10px left" and "left 10px"
       // are both possible and have the same effect. For this reason, all
       // possibilities are tested in parallel.
 
@@ -1102,7 +1103,7 @@ bool CssParser::parseValue(CssPropertyName prop,
       for (i = 0; i < 2; i++) {
          CssValueType typeTmp;
          // tokenMatchesProperty will, for CSS_PROPERTY_BACKGROUND_POSITION,
-         // work on both parts, since they are exchangable.
+         // work on both parts, since they are exchangeable.
          if (tokenMatchesProperty (CSS_PROPERTY_BACKGROUND_POSITION,
                                    &typeTmp)) {
             h[i] = ttype != CSS_TK_SYMBOL ||
@@ -1212,7 +1213,7 @@ bool CssParser::parseWeight()
    return false;
 }
 
-/*
+/**
  * bsearch(3) compare function for searching properties
  */
 static int Css_property_info_cmp(const void *a, const void *b)
@@ -1222,7 +1223,7 @@ static int Css_property_info_cmp(const void *a, const void *b)
 }
 
 
-/*
+/**
  * bsearch(3) compare function for searching shorthands
  */
 static int Css_shorthand_info_cmp(const void *a, const void *b)
@@ -1231,7 +1232,7 @@ static int Css_shorthand_info_cmp(const void *a, const void *b)
                       ((CssShorthandInfo *) b)->symbol);
 }
 
-/*
+/**
  * excludes some properties that may break reader mode
  */
 static int safeCss(CssPropertyName prop) {

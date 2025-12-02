@@ -1,7 +1,21 @@
+/*
+ * File: image.hh
+ *
+ * Copyright (C) 2005-2007 Jorge Arellano Cid <jcid@dillo.org>,
+ *                         Sebastian Geerken  <sgeerken@dillo.org>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __IMAGE_HH__
 #define __IMAGE_HH__
 
-// The DilloImage data-structure and methods
+/** @file
+ * The DilloImage data-structure and methods */
 
 
 #ifdef __cplusplus
@@ -16,7 +30,7 @@ extern "C" {
  * Defines
  */
 
-/* Arbitrary maximum for image size (to avoid image size-crafting attacks). */
+/** Arbitrary maximum for image size. To avoid image size-crafting attacks. */
 #define IMAGE_MAX_AREA (6000 * 6000)
 
 /*
@@ -35,12 +49,12 @@ typedef enum {
 
 /* These will reflect the Image's "state" */
 typedef enum {
-   IMG_Empty,      /* Just created the entry */
-   IMG_SetParms,   /* Parameters set */
-   IMG_SetCmap,    /* Color map set */
-   IMG_Write,      /* Feeding the entry */
-   IMG_Close,      /* Whole image got! */
-   IMG_Abort       /* Image transfer aborted */
+   IMG_Empty,      /**< Just created the entry */
+   IMG_SetParms,   /**< Parameters set */
+   IMG_SetCmap,    /**< Color map set */
+   IMG_Write,      /**< Feeding the entry */
+   IMG_Close,      /**< Whole image got! */
+   IMG_Abort       /**< Image transfer aborted */
 } ImageState;
 
 struct _DilloImage {
@@ -55,7 +69,7 @@ struct _DilloImage {
    uint_t ScanNumber;       /* Current decoding scan */
    ImageState State;        /* Processing status */
 
-   int RefCount;            /* Reference counter */
+   int RefCount;            /**< Reference counter */
 };
 
 

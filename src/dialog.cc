@@ -9,7 +9,9 @@
  * (at your option) any later version.
  */
 
-// UI dialogs
+/** @file
+ * UI dialogs
+ */
 
 #include <math.h> // for rint()
 
@@ -30,6 +32,7 @@
 #include "dialog.hh"
 #include "misc.h"
 #include "prefs.h"
+#include "dlib/dlib.h"
 
 /*
  * Local Data
@@ -44,8 +47,8 @@ static int choice_answer;
  */
 
 //----------------------------------------------------------------------------
-/*
- * Used to enable CTRL+{a,e,d,k} in search dialog (for start,end,del,cut)
+/**
+ * Used to enable CTRL+{a,e,d,k} in search dialog (for start,end,del,cut).
  * TODO: bind down arrow to a search engine selection list.
  */
 class CustInput3 : public Fl_Input {
@@ -82,7 +85,7 @@ int CustInput3::handle(int e)
    return Fl_Input::handle(e);
 }
 
-/*
+/**
  * Used to make the ENTER key activate the CustChoice
  */
 class CustChoice2 : public Fl_Choice {
@@ -120,7 +123,7 @@ int EnterButton::handle(int e)
 //----------------------------------------------------------------------------
 
 
-/*
+/**
  * Display a message in a popup window.
  */
 void a_Dialog_msg(const char *title, const char *msg)
@@ -132,7 +135,7 @@ void a_Dialog_msg(const char *title, const char *msg)
 }
 
 
-/*
+/**
  * Callback for a_Dialog_input()
  */
 static void input_cb(Fl_Widget *button, void *number)
@@ -141,11 +144,11 @@ static void input_cb(Fl_Widget *button, void *number)
   button->window()->hide();
 }
 
-/*
+/**
  * Dialog for one line of Input with a message.
  * avoids the sound bell in fl_input(), and allows customization
  *
- * Return value: string on success, NULL upon Cancel or Close window
+ * @return string on success, NULL upon Cancel or Close window
  */
 const char *a_Dialog_input(const char *title, const char *msg)
 {
@@ -191,7 +194,7 @@ const char *a_Dialog_input(const char *title, const char *msg)
           source = (char *)dList_nth_data(prefs.search_urls, i);
           if (!source || a_Misc_parse_search_url(source, &label, &url) < 0)
              continue;
-          pm[j++].label(FL_NORMAL_LABEL, strdup(label));
+          pm[j++].label(FL_NORMAL_LABEL, dStrdup(label));
        }
     }
     ch->tooltip("Select search engine");
@@ -226,7 +229,7 @@ const char *a_Dialog_input(const char *title, const char *msg)
    return (input_answer == 1) ? input_str : NULL;
 }
 
-/*
+/**
  * Dialog for password
  */
 const char *a_Dialog_passwd(const char *title, const char *msg)
@@ -237,10 +240,10 @@ const char *a_Dialog_passwd(const char *title, const char *msg)
    return fl_password("%s", "", msg);
 }
 
-/*
+/**
  * Show the save file dialog.
  *
- * Return: pointer to chosen filename, or NULL on Cancel.
+ * @return pointer to chosen filename, or NULL on Cancel.
  */
 const char *a_Dialog_save_file(const char *title,
                                const char *pattern, const char *fname)
@@ -248,10 +251,10 @@ const char *a_Dialog_save_file(const char *title,
    return fl_file_chooser(title, pattern, fname);
 }
 
-/*
+/**
  * Show the select file dialog.
  *
- * Return: pointer to chosen filename, or NULL on Cancel.
+ * @return pointer to chosen filename, or NULL on Cancel.
  */
 const char *a_Dialog_select_file(const char *title,
                                  const char *pattern, const char *fname)
@@ -263,10 +266,10 @@ const char *a_Dialog_select_file(const char *title,
    return a_Dialog_save_file(title, pattern, fname);
 }
 
-/*
+/**
  * Show the open file dialog.
  *
- * Return: pointer to chosen filename, or NULL on Cancel.
+ * @return pointer to chosen filename, or NULL on Cancel.
  */
 char *a_Dialog_open_file(const char *title,
                          const char *pattern, const char *fname)
@@ -277,7 +280,7 @@ char *a_Dialog_open_file(const char *title,
    return (fc_name) ? a_Misc_escape_chars(fc_name, "% #") : NULL;
 }
 
-/*
+/**
  * Close text window.
  */
 static void text_window_close_cb(Fl_Widget *, void *vtd)
@@ -289,7 +292,7 @@ static void text_window_close_cb(Fl_Widget *, void *vtd)
    delete buf;
 }
 
-/*
+/**
  * Show a new window with the provided text
  */
 void a_Dialog_text_window(const char *title, const char *txt)
@@ -332,11 +335,11 @@ static void choice_cb(Fl_Widget *button, void *number)
   button->window()->hide();
 }
 
-/*
+/**
  * Make a question-dialog with a question and alternatives.
  * Last parameter must be NULL.
  *
- * Return value: 0 = dialog was cancelled, >0 = selected alternative.
+ * @return 0 = dialog was cancelled, >0 = selected alternative.
  */
 int a_Dialog_choice(const char *title, const char *msg, ...)
 {
@@ -405,7 +408,7 @@ static void Dialog_user_password_cb(Fl_Widget *button, void *)
    button->window()->hide();
 }
 
-/*
+/**
  * Make a user/password dialog.
  * Call the callback with the result (OK or not) and the given user and
  *   password if OK.

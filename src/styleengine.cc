@@ -2,6 +2,7 @@
  * File: styleengine.cc
  *
  * Copyright 2008-2009 Johannes Hofmann <Johannes.Hofmann@gmx.de>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@ using namespace dw::core::style;
  * of StyleImage is deleted, possibly when the cache client is still
  * active.
  *
- * \todo Not neccessary for dw::Image? (dw::Image also implements
+ * \todo Not necessary for dw::Image? (dw::Image also implements
  * lout::signal::ObservedObject.)
  */
 class StyleImageDeletionReceiver:

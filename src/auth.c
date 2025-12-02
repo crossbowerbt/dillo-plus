@@ -612,7 +612,7 @@ static void Auth_do_auth_dialog_cb(const char *user, const char *password,
    dStrshred((char *)password);
 }
 
-/*
+/**
  * Return: Nonzero if we got new credentials from the user and everything
  * seems fine.
  */

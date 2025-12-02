@@ -2,6 +2,7 @@
  * File: uicmd.cc
  *
  * Copyright (C) 2005-2011 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2024-2025 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,7 +10,10 @@
  * (at your option) any later version.
  */
 
-// Functions/Methods for commands triggered from the UI
+/**
+ * @file
+ * Functions/Methods for commands triggered from the UI
+ */
 
 
 #include <string.h>
@@ -43,6 +47,7 @@
 #include "msg.h"
 #include "prefs.h"
 #include "misc.h"
+#include "dlib/dlib.h"
 
 #include "dw/fltkviewport.hh"
 
@@ -54,7 +59,7 @@
 // Handy macro
 #define BW2UI(bw) ((UI*)((bw)->ui))
 
-// Platform idependent part
+// Platform independent part
 using namespace dw::core;
 // FLTK related
 using namespace dw::fltk;
@@ -65,7 +70,7 @@ using namespace dw::fltk;
  */
 static const char *save_dir = "";
 
-/*
+/**
  * Forward declarations
  */
 static BrowserWindow *UIcmd_tab_new(CustTabs *tabs, UI *old_ui, int focus);
@@ -79,7 +84,7 @@ static void UIcmd_set_window_labels(Fl_Window *win, const char *str);
  * CustTabs ---------------------------------------------------------------
  */
 
-/*
+/**
  * stores the respective UI pointer
  */
 class CustTabButton : public Fl_Button {
@@ -101,7 +106,7 @@ static int btn_cmp(const void *p1, const void *p2)
            (*(CustTabButton * const *)p2)->focus_num() );
 }
 
-/*
+/**
  * Allows fine control of the tabbed interface
  */
 class CustTabs : public Fl_Group {
@@ -181,7 +186,7 @@ public:
    void set_tab_label(UI *ui, const char *title);
 };
 
-/*
+/**
  * Callback for mouse click
  */
 static void tab_btn_cb (Fl_Widget *w, void *cb_data)
@@ -199,7 +204,7 @@ static void tab_btn_cb (Fl_Widget *w, void *cb_data)
    }
 }
 
-/*
+/**
  * Callback for the close-tab button
  */
 static void close_tab_btn_cb (Fl_Widget *, void *cb_data)
@@ -250,7 +255,7 @@ int CustTabs::handle(int e)
    return (ret) ? ret : Fl_Group::handle(e);
 }
 
-/*
+/**
  * Create a new tab with its own UI
  */
 UI *CustTabs::add_new_tab(UI *old_ui, int focus)
@@ -307,7 +312,7 @@ UI *CustTabs::add_new_tab(UI *old_ui, int focus)
    return new_ui;
 }
 
-/*
+/**
  * Remove tab by UI
  */
 void CustTabs::remove_tab(UI *ui)
@@ -364,8 +369,8 @@ int CustTabs::get_btn_idx(UI *ui)
    return -1;
 }
 
-/*
- * Keep active tab visible
+/**
+ * Keep active tab visible.
  * (Pack children have unusable x() coordinate)
  */
 void CustTabs::update_pack_offset()
@@ -397,8 +402,8 @@ void CustTabs::update_pack_offset()
    _MSG(" >>scr_x=%d btn0_x=%d\n", scr_x, Pack->child(0)->x());
 }
 
-/*
- * Make cbtn's tab the active one
+/**
+ * Make cbtn's tab the active one.
  */
 void CustTabs::switch_tab(CustTabButton *cbtn)
 {
@@ -458,7 +463,7 @@ void CustTabs::next_tab()
       switch_tab((CustTabButton*)Pack->child((idx+1<num_tabs()) ? idx+1 : 0));
 }
 
-/*
+/**
  * Set this UI's tab button label
  */
 void CustTabs::set_tab_label(UI *ui, const char *label)
@@ -509,7 +514,7 @@ static void win_cb (Fl_Widget *w, void *cb_data) {
          a_UIcmd_close_bw(a_UIcmd_get_bw_by_widget(tabs->wizard()->value()));
 }
 
-/*
+/**
  * Given a UI or UI child widget, return its bw.
  */
 BrowserWindow *a_UIcmd_get_bw_by_widget(void *v_wid)
@@ -524,7 +529,7 @@ BrowserWindow *a_UIcmd_get_bw_by_widget(void *v_wid)
    return NULL;
 }
 
-/*
+/**
  * Create a new UI and its associated BrowserWindow data structure.
  * Use style from v_ui. If non-NULL it must be of type UI*.
  */
@@ -568,7 +573,7 @@ BrowserWindow *a_UIcmd_browser_window_new(int ww, int wh,
    return new_bw;
 }
 
-/*
+/**
  * Set the window name and icon name.
  */
 static void UIcmd_set_window_labels(Fl_Window *win, const char *str)
@@ -580,7 +585,7 @@ static void UIcmd_set_window_labels(Fl_Window *win, const char *str)
    win->label(copy, copy);
 }
 
-/*
+/**
  * Create a new Tab button, UI and its associated BrowserWindow data
  * structure.
  */
@@ -627,7 +632,7 @@ static BrowserWindow *UIcmd_tab_new(CustTabs *tabs, UI *old_ui, int focus)
    return new_bw;
 }
 
-/*
+/**
  * Close one browser window
  */
 void a_UIcmd_close_bw(void *vbw)
@@ -648,7 +653,7 @@ void a_UIcmd_close_bw(void *vbw)
    a_Bw_free(bw);
 }
 
-/*
+/**
  * Close all the browser windows
  */
 void a_UIcmd_close_all_bw(void *)
@@ -665,7 +670,7 @@ void a_UIcmd_close_all_bw(void *)
          a_UIcmd_close_bw((void*)bw);
 }
 
-/*
+/**
  * Return a search string of the suffix if str starts with a
  * prefix of a search engine name and a blank
  */
@@ -697,7 +702,7 @@ static char *UIcmd_find_search_str(const char *str)
    return url;
 }
 
-/*
+/**
  * Open a new URL in the given browser window.
  *
  * our custom "file:" URIs are normalized here too.
@@ -742,7 +747,7 @@ void a_UIcmd_open_urlstr(void *vbw, const char *urlstr)
    dFree(search_urlstr);
 }
 
-/*
+/**
  * Open a new URL in the given browser window
  */
 void a_UIcmd_open_url(BrowserWindow *bw, const DilloUrl *url)
@@ -772,7 +777,7 @@ static void UIcmd_open_url_nbw(BrowserWindow *new_bw, const DilloUrl *url)
    }
 }
 
-/*
+/**
  * Open a new URL in a new browser window
  */
 void a_UIcmd_open_url_nw(BrowserWindow *bw, const DilloUrl *url)
@@ -786,7 +791,7 @@ void a_UIcmd_open_url_nw(BrowserWindow *bw, const DilloUrl *url)
    UIcmd_open_url_nbw(new_bw, url);
 }
 
-/*
+/**
  * Open a new URL in a new tab in the same browser window
  */
 void a_UIcmd_open_url_nt(void *vbw, const DilloUrl *url, int focus)
@@ -797,7 +802,7 @@ void a_UIcmd_open_url_nt(void *vbw, const DilloUrl *url, int focus)
    UIcmd_open_url_nbw(new_bw, url);
 }
 
-/*
+/**
  * Send the browser back to previous page
  */
 void a_UIcmd_back(void *vbw)
@@ -805,7 +810,7 @@ void a_UIcmd_back(void *vbw)
    a_Nav_back((BrowserWindow*)vbw);
 }
 
-/*
+/**
  * Popup the navigation menu of the Back button
  */
 void a_UIcmd_back_popup(void *vbw, int x, int y)
@@ -813,7 +818,7 @@ void a_UIcmd_back_popup(void *vbw, int x, int y)
    a_Menu_history_popup((BrowserWindow*)vbw, x, y, -1);
 }
 
-/*
+/**
  * Send the browser to next page in the history list
  */
 void a_UIcmd_forw(void *vbw)
@@ -821,7 +826,7 @@ void a_UIcmd_forw(void *vbw)
    a_Nav_forw((BrowserWindow*)vbw);
 }
 
-/*
+/**
  * Popup the navigation menu of the Forward button
  */
 void a_UIcmd_forw_popup(void *vbw, int x, int y)
@@ -829,7 +834,7 @@ void a_UIcmd_forw_popup(void *vbw, int x, int y)
    a_Menu_history_popup((BrowserWindow*)vbw, x, y, 1);
 }
 
-/*
+/**
  * Send the browser to home URL
  */
 void a_UIcmd_home(void *vbw)
@@ -837,7 +842,7 @@ void a_UIcmd_home(void *vbw)
    a_UIcmd_open_url((BrowserWindow*)vbw, prefs.home);
 }
 
-/*
+/**
  * Reload current URL
  */
 void a_UIcmd_reload(void *vbw)
@@ -845,7 +850,7 @@ void a_UIcmd_reload(void *vbw)
    a_Nav_reload((BrowserWindow*)vbw);
 }
 
-/*
+/**
  * Repush current URL
  */
 void a_UIcmd_repush(void *vbw)
@@ -853,7 +858,7 @@ void a_UIcmd_repush(void *vbw)
    a_Nav_repush((BrowserWindow*)vbw);
 }
 
-/*
+/**
  * Zero-delay URL redirection.
  */
 void a_UIcmd_redirection0(void *vbw, const DilloUrl *url)
@@ -861,7 +866,7 @@ void a_UIcmd_redirection0(void *vbw, const DilloUrl *url)
    a_Nav_redirection0((BrowserWindow*)vbw, url);
 }
 
-/*
+/**
  * Return a suitable filename for a given URL path.
  */
 static char *UIcmd_make_save_filename(const DilloUrl *url)
@@ -911,7 +916,7 @@ static char *UIcmd_make_save_filename(const DilloUrl *url)
    return name;
 }
 
-/*
+/**
  * Set the default directory for saving files.
  */
 void a_UIcmd_init(void)
@@ -927,7 +932,7 @@ void a_UIcmd_init(void)
    }
 }
 
-/*
+/**
  * Check a file to save to.
  */
 static int UIcmd_save_file_check(const char *name)
@@ -949,7 +954,7 @@ static int UIcmd_save_file_check(const char *name)
    }
 }
 
-/*
+/**
  * Save a URL
  */
 static void UIcmd_save(BrowserWindow *bw, const DilloUrl *url,
@@ -984,7 +989,7 @@ static void UIcmd_save(BrowserWindow *bw, const DilloUrl *url,
    }
 }
 
-/*
+/**
  * Save current URL
  */
 void a_UIcmd_save(void *vbw)
@@ -997,7 +1002,7 @@ void a_UIcmd_save(void *vbw)
    }
 }
 
-/*
+/**
  * Select a file
  */
 const char *a_UIcmd_select_file()
@@ -1005,7 +1010,7 @@ const char *a_UIcmd_select_file()
    return a_Dialog_select_file("Dillo: Select a File", NULL, NULL);
 }
 
-/*
+/**
  * Stop network activity on this bw.
  * The stop button was pressed: stop page (and images) downloads.
  */
@@ -1019,7 +1024,7 @@ void a_UIcmd_stop(void *vbw)
    a_UIcmd_set_buttons_sens(bw);
 }
 
-/*
+/**
  * Popup the tools menu
  */
 void a_UIcmd_tools(void *vbw, int x, int y)
@@ -1027,7 +1032,7 @@ void a_UIcmd_tools(void *vbw, int x, int y)
    a_Menu_tools_popup((BrowserWindow*)vbw, x, y);
 }
 
-/*
+/**
  * Open URL with dialog chooser
  */
 void a_UIcmd_open_file(void *vbw)
@@ -1045,7 +1050,7 @@ void a_UIcmd_open_file(void *vbw)
    }
 }
 
-/*
+/**
  * Returns a newly allocated string holding a search url generated from
  * a string of keywords (separated by blanks) and the current search_url.
  * The search string is urlencoded.
@@ -1082,7 +1087,7 @@ static char *UIcmd_make_search_str(const char *str)
    return search_url;
 }
 
-/*
+/**
  * Get a query from a dialog and open it
  */
 void a_UIcmd_search_dialog(void *vbw)
@@ -1096,7 +1101,7 @@ void a_UIcmd_search_dialog(void *vbw)
    }
 }
 
-/*
+/**
  * Get password for user
  */
 const char *a_UIcmd_get_passwd(const char *user)
@@ -1109,7 +1114,7 @@ const char *a_UIcmd_get_passwd(const char *user)
    return passwd;
 }
 
-/*
+/**
  * Save link URL
  */
 void a_UIcmd_save_link(BrowserWindow *bw, const DilloUrl *url)
@@ -1117,7 +1122,7 @@ void a_UIcmd_save_link(BrowserWindow *bw, const DilloUrl *url)
    UIcmd_save(bw, url, "Dillo: Save Link as File");
 }
 
-/*
+/**
  * Request the bookmarks page
  */
 void a_UIcmd_book(void *vbw)
@@ -1127,7 +1132,7 @@ void a_UIcmd_book(void *vbw)
    a_Url_free(url);
 }
 
-/*
+/**
  * Add a bookmark for a certain URL
  */
 void a_UIcmd_add_bookmark(BrowserWindow *bw, const DilloUrl *url)
@@ -1136,7 +1141,7 @@ void a_UIcmd_add_bookmark(BrowserWindow *bw, const DilloUrl *url)
 }
 
 
-/*
+/**
  * Popup the page menu
  */
 void a_UIcmd_page_popup(void *vbw, bool_t has_bugs, void *v_cssUrls)
@@ -1146,7 +1151,7 @@ void a_UIcmd_page_popup(void *vbw, bool_t has_bugs, void *v_cssUrls)
    a_Menu_page_popup(bw, url, has_bugs, v_cssUrls);
 }
 
-/*
+/**
  * Popup the link menu
  */
 void a_UIcmd_link_popup(void *vbw, const DilloUrl *url)
@@ -1154,7 +1159,7 @@ void a_UIcmd_link_popup(void *vbw, const DilloUrl *url)
    a_Menu_link_popup((BrowserWindow*)vbw, url);
 }
 
-/*
+/**
  * Pop up the image menu
  */
 void a_UIcmd_image_popup(void *vbw, const DilloUrl *url, bool_t loaded_img,
@@ -1163,7 +1168,7 @@ void a_UIcmd_image_popup(void *vbw, const DilloUrl *url, bool_t loaded_img,
    a_Menu_image_popup((BrowserWindow*)vbw, url, loaded_img, page_url,link_url);
 }
 
-/*
+/**
  * Pop up the form menu
  */
 void a_UIcmd_form_popup(void *vbw, const DilloUrl *url, void *vform,
@@ -1172,7 +1177,7 @@ void a_UIcmd_form_popup(void *vbw, const DilloUrl *url, void *vform,
    a_Menu_form_popup((BrowserWindow*)vbw, url, vform, showing_hiddens);
 }
 
-/*
+/**
  * Pop up the file menu
  */
 void a_UIcmd_file_popup(void *vbw, void *v_wid)
@@ -1180,7 +1185,7 @@ void a_UIcmd_file_popup(void *vbw, void *v_wid)
    a_Menu_file_popup((BrowserWindow*)vbw, v_wid);
 }
 
-/*
+/**
  * Copy url string to paste buffer
  */
 void a_UIcmd_copy_urlstr(BrowserWindow *bw, const char *urlstr)
@@ -1189,7 +1194,7 @@ void a_UIcmd_copy_urlstr(BrowserWindow *bw, const char *urlstr)
    layout->copySelection(urlstr);
 }
 
-/*
+/**
  * Ask the vsource dpi to show this URL's source
  */
 void a_UIcmd_view_page_source(BrowserWindow *bw, const DilloUrl *url)
@@ -1224,7 +1229,7 @@ void a_UIcmd_view_page_source(BrowserWindow *bw, const DilloUrl *url)
    dFree(major);
 }
 
-/*
+/**
  * Show the browser window's HTML errors in a text window
  */
 void a_UIcmd_view_page_bugs(void *vbw)
@@ -1238,7 +1243,7 @@ void a_UIcmd_view_page_bugs(void *vbw)
    }
 }
 
-/*
+/**
  * Popup the bug meter menu
  */
 void a_UIcmd_bugmeter_popup(void *vbw)
@@ -1248,7 +1253,7 @@ void a_UIcmd_bugmeter_popup(void *vbw)
    a_Menu_bugmeter_popup(bw, a_History_get_url(NAV_TOP_UIDX(bw)));
 }
 
-/*
+/**
  * Make a list of URL indexes for the history popup
  * based on direction (-1 = back, 1 = forward)
  */
@@ -1273,7 +1278,7 @@ int *a_UIcmd_get_history(BrowserWindow *bw, int direction)
    return hlist;
 }
 
-/*
+/**
  * Jump to a certain URL in the navigation stack.
  */
 void a_UIcmd_nav_jump(BrowserWindow *bw, int offset, int new_bw)
@@ -1283,7 +1288,7 @@ void a_UIcmd_nav_jump(BrowserWindow *bw, int offset, int new_bw)
 
 // UI binding functions -------------------------------------------------------
 
-/*
+/**
  * Return browser window width and height
  */
 void a_UIcmd_get_wh(BrowserWindow *bw, int *w, int *h)
@@ -1293,7 +1298,7 @@ void a_UIcmd_get_wh(BrowserWindow *bw, int *w, int *h)
    _MSG("a_UIcmd_wh: w=%d, h=%d\n", *w, *h);
 }
 
-/*
+/**
  * Get the scroll position (x, y offset pair)
  */
 void a_UIcmd_get_scroll_xy(BrowserWindow *bw, int *x, int *y)
@@ -1306,7 +1311,7 @@ void a_UIcmd_get_scroll_xy(BrowserWindow *bw, int *x, int *y)
    }
 }
 
-/*
+/**
  * Set the scroll position ({x, y} offset pair)
  */
 void a_UIcmd_set_scroll_xy(BrowserWindow *bw, int x, int y)
@@ -1318,7 +1323,7 @@ void a_UIcmd_set_scroll_xy(BrowserWindow *bw, int x, int y)
    }
 }
 
-/*
+/**
  * Set the scroll position by fragment (from URL)
  */
 void a_UIcmd_set_scroll_by_fragment(BrowserWindow *bw, const char *f)
@@ -1330,7 +1335,7 @@ void a_UIcmd_set_scroll_by_fragment(BrowserWindow *bw, const char *f)
    }
 }
 
-/*
+/**
  * Pass scrolling command to dw.
  */
 void a_UIcmd_scroll(BrowserWindow *bw, int icmd)
@@ -1366,7 +1371,7 @@ void a_UIcmd_scroll(BrowserWindow *bw, int icmd)
    }
 }
 
-/*
+/**
  * Get location's text
  */
 char *a_UIcmd_get_location_text(BrowserWindow *bw)
@@ -1374,7 +1379,7 @@ char *a_UIcmd_get_location_text(BrowserWindow *bw)
    return dStrdup(BW2UI(bw)->get_location());
 }
 
-/*
+/**
  * Set location's text
  */
 void a_UIcmd_set_location_text(void *vbw, const char *text)
@@ -1383,7 +1388,7 @@ void a_UIcmd_set_location_text(void *vbw, const char *text)
    BW2UI(bw)->set_location(text);
 }
 
-/*
+/**
  * Set the page progress bar
  * cmd: 0 Deactivate, 1 Update, 2 Clear
  */
@@ -1392,7 +1397,7 @@ void a_UIcmd_set_page_prog(BrowserWindow *bw, size_t nbytes, int cmd)
    BW2UI(bw)->set_page_prog(nbytes, cmd);
 }
 
-/*
+/**
  * Set the images progress bar
  * cmd: 0 Deactivate, 1 Update, 2 Clear
  */
@@ -1405,7 +1410,7 @@ void a_UIcmd_set_img_prog(BrowserWindow *bw, int n_img, int t_img, int cmd)
 #endif
 }
 
-/*
+/**
  * Set the bug meter progress label
  */
 void a_UIcmd_set_bug_prog(BrowserWindow *bw, int n_bug)
@@ -1413,7 +1418,7 @@ void a_UIcmd_set_bug_prog(BrowserWindow *bw, int n_bug)
    BW2UI(bw)->set_bug_prog(n_bug);
 }
 
-/*
+/**
  * Set the page title in the tab label and window titlebar.
  * (Update window titlebar for the current tab only)
  */
@@ -1435,7 +1440,7 @@ void a_UIcmd_set_page_title(BrowserWindow *bw, const char *label)
    }
 }
 
-/*
+/**
  * Set a printf-like status string on the bottom of the dillo window.
  * Beware: The safe way to set an arbitrary string is
  *         a_UIcmd_set_msg(bw, "%s", str)
@@ -1451,7 +1456,7 @@ void a_UIcmd_set_msg(BrowserWindow *bw, const char *format, ...)
    dStr_free(ds, 1);
 }
 
-/*
+/**
  * Set the sensitivity of back/forw/stop buttons.
  */
 void a_UIcmd_set_buttons_sens(BrowserWindow *bw)
@@ -1470,7 +1475,7 @@ void a_UIcmd_set_buttons_sens(BrowserWindow *bw)
    BW2UI(bw)->button_set_sens(UI_FORW, sens);
 }
 
-/*
+/**
  * Toggle control panel
  */
 void a_UIcmd_panels_toggle(BrowserWindow *bw)
@@ -1478,7 +1483,7 @@ void a_UIcmd_panels_toggle(BrowserWindow *bw)
    BW2UI(bw)->panels_toggle();
 }
 
-/*
+/**
  * Search for next/previous occurrence of key.
  */
 void a_UIcmd_findtext_search(BrowserWindow *bw, const char *key,
@@ -1500,7 +1505,7 @@ void a_UIcmd_findtext_search(BrowserWindow *bw, const char *key,
    }
 }
 
-/*
+/**
  * Reset text search state.
  */
 void a_UIcmd_findtext_reset(BrowserWindow *bw)
@@ -1511,7 +1516,7 @@ void a_UIcmd_findtext_reset(BrowserWindow *bw)
    a_UIcmd_set_msg(bw, "");
 }
 
-/*
+/**
  * Tell the UI to hide/show the findbar
  */
 void a_UIcmd_findbar_toggle(BrowserWindow *bw, int on)
@@ -1519,7 +1524,7 @@ void a_UIcmd_findbar_toggle(BrowserWindow *bw, int on)
    BW2UI(bw)->findbar_toggle(on);
 }
 
-/*
+/**
  * Focus the rendered area.
  */
 void a_UIcmd_focus_main_area(BrowserWindow *bw)
@@ -1527,7 +1532,7 @@ void a_UIcmd_focus_main_area(BrowserWindow *bw)
    BW2UI(bw)->focus_main();
 }
 
-/*
+/**
  * Focus the location bar.
  */
 void a_UIcmd_focus_location(void *vbw)

@@ -2,6 +2,7 @@
  * File: url.c
  *
  * Copyright (C) 2001-2009 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,7 +10,7 @@
  * (at your option) any later version.
  */
 
-/*
+/** @file
  * Parse and normalize all URL's inside Dillo.
  *  - <scheme> <authority> <path> <query> and <fragment> point to 'buffer'.
  *  - 'url_string' is built upon demand (transparent to the caller).
@@ -37,7 +38,7 @@
  *  abs_path    = "/" path_segments
  *
  *  Notes:
- *    - "undefined" means "preceeding separator does not appear".
+ *    - "undefined" means "preceding separator does not appear".
  *    - path is never "undefined" though it may be "empty".
  */
 
@@ -57,7 +58,7 @@ static const char *HEX = "0123456789ABCDEF";
 #define URL_STR_FIELD_I_CMP(s1,s2) \
    (s1) && (s2) ? dStrAsciiCasecmp(s1,s2) : !(s1) && !(s2) ? 0 : (s1) ? 1 : -1
 
-/*
+/**
  * Return the url as a string.
  * (initializing 'url_string' field if necessary)
  */
@@ -90,7 +91,7 @@ char *a_Url_str(const DilloUrl *u)
    return url->url_string->str;
 }
 
-/*
+/**
  * Return the hostname as a string.
  * (initializing 'hostname' and 'port' fields if necessary)
  * Note: a similar approach can be taken for user:password auth.
@@ -130,7 +131,7 @@ const char *a_Url_hostname(const DilloUrl *u)
    return url->hostname;
 }
 
-/*
+/**
  *  Create a DilloUrl object and initialize it.
  *  (buffer, scheme, authority, path, query and fragment).
  */
@@ -201,8 +202,8 @@ static DilloUrl *Url_object_new(const char *uri_str)
    return url;
 }
 
-/*
- *  Free a DilloUrl
+/**
+ *  Free a DilloUrl.
  *  Do nothing if the argument is NULL
  */
 void a_Url_free(DilloUrl *url)
@@ -218,7 +219,7 @@ void a_Url_free(DilloUrl *url)
    }
 }
 
-/*
+/**
  * Resolve the URL as RFC3986 suggests.
  */
 static Dstr *Url_resolve_relative(const char *RelStr,
@@ -346,10 +347,11 @@ done:
    return SolvedUrl;
 }
 
-/*
+/**
  *  Transform (and resolve) an URL string into the respective DilloURL.
  *  If URL  =  "http://dillo.sf.net:8080/index.html?long#part2"
  *  then the resulting DilloURL should be:
+ *  @code
  *  DilloURL = {
  *     url_string         = "http://dillo.sf.net:8080/index.html?long#part2"
  *     scheme             = "http"
@@ -363,13 +365,14 @@ done:
  *     data               = Dstr * ("")
  *     ismap_url_len      = 0
  *  }
+ *  @endcode
  *
  *  Return NULL if URL is badly formed.
  */
 DilloUrl* a_Url_new(const char *url_str, const char *base_url)
 {
    DilloUrl *url;
-   char *urlstr = (char *)url_str;  /* auxiliar variable, don't free */
+   char *urlstr = (char *)url_str;  /* auxiliary variable, don't free */
    char *p, *str1 = NULL, *str2 = NULL;
    Dstr *SolvedUrl;
    int i, n_ic, n_ic_spc;
@@ -453,7 +456,7 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
 }
 
 
-/*
+/**
  *  Duplicate a Url structure
  */
 DilloUrl* a_Url_dup(const DilloUrl *ori)
@@ -474,7 +477,7 @@ DilloUrl* a_Url_dup(const DilloUrl *ori)
    return url;
 }
 
-/*
+/**
  *  Compare two Url's to check if they're the same, or which one is bigger.
  *
  *  The fields which are compared here are:
@@ -503,7 +506,7 @@ int a_Url_cmp(const DilloUrl *A, const DilloUrl *B)
    return st;
 }
 
-/*
+/**
  * Set DilloUrl flags
  */
 void a_Url_set_flags(DilloUrl *u, int flags)
@@ -512,7 +515,7 @@ void a_Url_set_flags(DilloUrl *u, int flags)
       u->flags = flags;
 }
 
-/*
+/**
  * Set DilloUrl data (like POST info, etc.)
  */
 void a_Url_set_data(DilloUrl *u, Dstr **data)
@@ -524,8 +527,8 @@ void a_Url_set_data(DilloUrl *u, Dstr **data)
    }
 }
 
-/*
- * Set DilloUrl ismap coordinates
+/**
+ * Set DilloUrl ismap coordinates.
  * (this is optimized for not hogging the CPU)
  */
 void a_Url_set_ismap_coords(DilloUrl *u, char *coord_str)
@@ -543,7 +546,7 @@ void a_Url_set_ismap_coords(DilloUrl *u, char *coord_str)
    }
 }
 
-/*
+/**
  * Given an hex octet (e.g., e3, 2F, 20), return the corresponding
  * character if the octet is valid, and -1 otherwise
  */
@@ -561,7 +564,7 @@ static int Url_decode_hex_octet(const char *s)
    return -1;
 }
 
-/*
+/**
  * Parse possible hexadecimal octets in the URI path.
  * Returns a new allocated string.
  */
@@ -589,8 +592,8 @@ char *a_Url_decode_hex_str(const char *str)
    return new_str;
 }
 
-/*
- * Urlencode 'str'
+/**
+ * Urlencode 'str'.
  * -RL :: According to the RFC 1738, only alphanumerics, the special
  *        characters "$-_.+!*'(),", and reserved characters ";/?:@=&" used
  *        for their *reserved purposes* may be used unencoded within a URL.
@@ -632,7 +635,7 @@ char *a_Url_encode_hex_str(const char *str)
 }
 
 
-/*
+/**
  * RFC-3986 suggests this stripping when "importing" URLs from other media.
  * Strip: "URL:", enclosing < >, and embedded whitespace.
  * (We also strip illegal chars: 00-1F and 7F-FF)
@@ -659,7 +662,7 @@ char *a_Url_string_strip_delimiters(const char *str)
    return new_str;
 }
 
-/*
+/**
  * What type of host is this?
  */
 int a_Url_host_type(const char *host)
@@ -682,8 +685,8 @@ int a_Url_host_type(const char *host)
    return URL_HOST_NAME;
 }
 
-/*
- * How many internal dots are in the public portion of this hostname?
+/**
+ * How many internal dots are in the public portion of this hostname?.
  * e.g., for "www.dillo.org", it is one because everything under "dillo.org",
  * as a .org domain, is part of one organization.
  *
@@ -736,8 +739,8 @@ static uint_t Url_host_public_internal_dots(const char *host)
    return ret;
 }
 
-/*
- * Given a URL host string, return the portion that is public, i.e., the
+/**
+ * Given a URL host string, return the portion that is public. i.e., the
  * domain that is in a registry outside the organization.
  * For 'www.dillo.org', that would be 'dillo.org'.
  */

@@ -91,7 +91,7 @@ void CssPropertyList::apply (CssPropertyList *props) {
       if (props->ownerOfStrings &&
           (getRef (i)->type == CSS_TYPE_STRING ||
            getRef (i)->type == CSS_TYPE_SYMBOL))
-         value.strVal = strdup(value.strVal);
+         value.strVal = dStrdup(value.strVal);
 
       props->set ((CssPropertyName) getRef (i)->name,
                   (CssValueType) getRef (i)->type,
@@ -344,7 +344,7 @@ void CssRule::print () {
    props->print ();
 }
 
-/*
+/**
  * \brief Insert rule with increasing specificity.
  *
  * If two rules have the same specificity, the one that was added later

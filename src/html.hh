@@ -1,3 +1,15 @@
+/*
+ * File: html.hh
+ *
+ * Copyright (C) 2005-2009 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __HTML_HH__
 #define __HTML_HH__
 
@@ -7,7 +19,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*
+/**
  * Exported functions
  */
 void a_Html_load_images(void *v_html, DilloUrl *pattern);

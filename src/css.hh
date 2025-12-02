@@ -1,3 +1,15 @@
+/*
+ * File: css.hh
+ *
+ * Copyright (C) 2008-2014 Johannes Hofmann <Johannes.Hofmann@gmx.de>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __CSS_HH__
 #define __CSS_HH__
 
@@ -11,49 +23,49 @@ typedef enum {
    CSS_PRIMARY_AUTHOR,
    CSS_PRIMARY_AUTHOR_IMPORTANT,
    CSS_PRIMARY_USER_IMPORTANT,
-   CSS_PRIMARY_LAST,
+   CSS_PRIMARY_LAST
 } CssPrimaryOrder;
 
 typedef enum {
    CSS_ORIGIN_USER_AGENT,
    CSS_ORIGIN_USER,
-   CSS_ORIGIN_AUTHOR,
+   CSS_ORIGIN_AUTHOR
 } CssOrigin;
 
 typedef enum {
-   CSS_TYPE_INTEGER,            /* This type is only used internally, for x-*
+   CSS_TYPE_INTEGER,            /**< This type is only used internally, for x-*
                                    properties. */
-   CSS_TYPE_ENUM,               /* Value is i, if represented by
+   CSS_TYPE_ENUM,               /**< Value is i, if represented by
                                    enum_symbols[i]. */
-   CSS_TYPE_MULTI_ENUM,         /* For all enum_symbols[i], 1 << i are
+   CSS_TYPE_MULTI_ENUM,         /**< For all enum_symbols[i], 1 << i are
                                    combined. */
-   CSS_TYPE_LENGTH_PERCENTAGE,  /* <length> or <percentage>. Represented by
+   CSS_TYPE_LENGTH_PERCENTAGE,  /**< <length> or <percentage>. Represented by
                                    CssLength. */
-   CSS_TYPE_LENGTH,             /* <length>, represented as CssLength.
+   CSS_TYPE_LENGTH,             /**< <length>, represented as CssLength.
                                    Note: In some cases, CSS_TYPE_LENGTH is used
                                    instead of CSS_TYPE_LENGTH_PERCENTAGE,
                                    only because Dw cannot handle percentages
                                    in this particular case (e.g.
                                    'margin-*-width'). */
-   CSS_TYPE_SIGNED_LENGTH,      /* As CSS_TYPE_LENGTH but may be negative. */
+   CSS_TYPE_SIGNED_LENGTH,      /**< As CSS_TYPE_LENGTH but may be negative. */
    CSS_TYPE_LENGTH_PERCENTAGE_NUMBER,  /* <length> or <percentage>, or <number> */
-   CSS_TYPE_AUTO,               /* Represented as CssLength of type
+   CSS_TYPE_AUTO,               /**< Represented as CssLength of type
                                    CSS_LENGTH_TYPE_AUTO */
-   CSS_TYPE_COLOR,              /* Represented as integer. */
-   CSS_TYPE_FONT_WEIGHT,        /* this very special and only used by
+   CSS_TYPE_COLOR,              /**< Represented as integer. */
+   CSS_TYPE_FONT_WEIGHT,        /**< this very special and only used by
                                    'font-weight' */
-   CSS_TYPE_STRING,             /* <string> */
-   CSS_TYPE_SYMBOL,             /* Symbols, which are directly copied (as
+   CSS_TYPE_STRING,             /**< <string> */
+   CSS_TYPE_SYMBOL,             /**< Symbols, which are directly copied (as
                                    opposed to CSS_TYPE_ENUM and
                                    CSS_TYPE_MULTI_ENUM). Used for
                                    'font-family'. */
-   CSS_TYPE_URI,                /* <uri> */
+   CSS_TYPE_URI,                /**< <uri> */
    CSS_TYPE_BACKGROUND_POSITION,
-   CSS_TYPE_UNUSED              /* Not yet used. Will itself get unused some
+   CSS_TYPE_UNUSED              /**< Not yet used. Will itself get unused some
                                    day. */
 } CssValueType;
 
-/*
+/**
  * Lengths are represented as int in the following way:
  *
  *    | <------   integer value   ------> |
@@ -77,15 +89,15 @@ typedef int CssLength;
 typedef enum {
    CSS_LENGTH_TYPE_NONE,
    CSS_LENGTH_TYPE_PX,
-   CSS_LENGTH_TYPE_MM,         /* "cm", "in", "pt" and "pc" are converted into
+   CSS_LENGTH_TYPE_MM,         /**< "cm", "in", "pt" and "pc" are converted into
                                   millimeters. */
    CSS_LENGTH_TYPE_EM,
    CSS_LENGTH_TYPE_EX,
 /* CSS_LENGTH_TYPE_CH, */      /* not used to remain in the 3 bits space, converted to EM by cssparser */
    CSS_LENGTH_TYPE_PERCENTAGE,
-   CSS_LENGTH_TYPE_RELATIVE,   /* This does not exist in CSS but
+   CSS_LENGTH_TYPE_RELATIVE,   /**< This does not exist in CSS but
                                   is used in HTML */
-   CSS_LENGTH_TYPE_AUTO        /* This can be used as a simple value. */
+   CSS_LENGTH_TYPE_AUTO        /**< This can be used as a simple value. */
 } CssLengthType;
 
 inline CssLength CSS_CREATE_LENGTH (float v, CssLengthType t) {
@@ -251,7 +263,7 @@ typedef union {
 typedef enum {
    CSS_BORDER_WIDTH_THIN,
    CSS_BORDER_WIDTH_MEDIUM,
-   CSS_BORDER_WIDTH_THICK,
+   CSS_BORDER_WIDTH_THICK
 } CssBorderWidthExtensions;
 
 typedef enum {
@@ -259,7 +271,7 @@ typedef enum {
    CSS_FONT_WEIGHT_BOLDER,
    CSS_FONT_WEIGHT_LIGHT,
    CSS_FONT_WEIGHT_LIGHTER,
-   CSS_FONT_WEIGHT_NORMAL,
+   CSS_FONT_WEIGHT_NORMAL
 } CssFontWeightExtensions;
 
 typedef enum {
@@ -271,7 +283,7 @@ typedef enum {
    CSS_FONT_SIZE_XX_LARGE,
    CSS_FONT_SIZE_XX_SMALL,
    CSS_FONT_SIZE_X_LARGE,
-   CSS_FONT_SIZE_X_SMALL,
+   CSS_FONT_SIZE_X_SMALL
 } CssFontSizeExtensions;
 
 typedef enum {
@@ -345,14 +357,14 @@ class CssSimpleSelector {
    public:
       enum {
          ELEMENT_NONE = -1,
-         ELEMENT_ANY = -2,
+         ELEMENT_ANY = -2
       };
 
       typedef enum {
          SELECT_NONE,
          SELECT_CLASS,
          SELECT_PSEUDO_CLASS,
-         SELECT_ID,
+         SELECT_ID
       } SelectType;
 
       CssSimpleSelector ();
@@ -384,7 +396,7 @@ class CssSelector {
          COMB_NONE,
          COMB_DESCENDANT,
          COMB_CHILD,
-         COMB_ADJACENT_SIBLING,
+         COMB_ADJACENT_SIBLING
       } Combinator;
 
    private:

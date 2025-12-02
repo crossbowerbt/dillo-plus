@@ -2,11 +2,17 @@
  * Preferences parser
  *
  * Copyright (C) 2006-2009 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
+ */
+
+/**
+ * @file
+ * Preferences parser
  */
 
 #include <sys/types.h>
@@ -42,7 +48,7 @@ typedef struct {
    int count;
 } SymNode_t;
 
-/*
+/**
  * Parse a name/value pair and set preferences accordingly.
  */
 static int parseOption(char *name, char *value,
@@ -136,7 +142,7 @@ static int parseOption(char *name, char *value,
    return 0;
 }
 
-/*
+/**
  * Parses the dillorc and sets the values in the prefs structure.
  */
 void PrefsParser::parse(FILE *fp)

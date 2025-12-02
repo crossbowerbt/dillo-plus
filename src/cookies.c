@@ -3,6 +3,7 @@
  *
  * Copyright 2001 Lars Clausen   <lrclause@cs.uiuc.edu>
  *                Jörgen Viksell <jorgen.viksell@telia.com>
+ * Copyright 2025 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,13 +11,16 @@
  * (at your option) any later version.
  */
 
-/* Handling of cookies takes place here. */
+/**
+ * @file
+ * Handling of cookies takes place here.
+ */
 
 #include "msg.h"
 
 #ifdef DISABLE_COOKIES
 
-/*
+/**
  * Initialize the cookies module
  */
 void a_Cookies_init(void)
@@ -43,7 +47,7 @@ void a_Cookies_init(void)
 #include "../dpip/dpip.h"
 
 
-/* The maximum length of a line in the cookie file */
+/** The maximum length of a line in the cookie file */
 #define LINE_MAXLEN 4096
 
 typedef enum {
@@ -70,7 +74,7 @@ static CookieControlAction Cookies_control_check(const DilloUrl *url);
 static CookieControlAction Cookies_control_check_domain(const char *domain);
 static int Cookie_control_init(void);
 
-/*
+/**
  * Return a file pointer. If the file doesn't exist, try to create it,
  * with the optional 'init_str' as its content.
  */
@@ -107,7 +111,7 @@ static FILE *Cookies_fopen(const char *filename, char *init_str)
    return F_in;
 }
 
-/*
+/**
  * Initialize the cookies module
  * (The 'disabled' variable is writable only within a_Cookies_init)
  */
@@ -126,14 +130,14 @@ void a_Cookies_init(void)
    disabled = FALSE;
 }
 
-/*
+/**
  * Flush cookies to disk and free all the memory allocated.
  */
-void a_Cookies_freeall()
+void a_Cookies_freeall(void)
 {
 }
 
-/*
+/**
  * Set the value corresponding to the cookie string
  */
 void a_Cookies_set(Dlist *cookie_strings, const DilloUrl *set_url,
@@ -176,7 +180,7 @@ void a_Cookies_set(Dlist *cookie_strings, const DilloUrl *set_url,
    }
 }
 
-/*
+/**
  * Return a string containing cookie data for an HTTP query.
  */
 char *a_Cookies_get_query(const DilloUrl *query_url, const DilloUrl *requester)
@@ -228,12 +232,12 @@ char *a_Cookies_get_query(const DilloUrl *query_url, const DilloUrl *requester)
  * ------------------------------------------------------------- */
 
 
-/*
+/**
  * Get the cookie control rules (from cookiesrc).
- * Return value:
- *   0 = Parsed OK, with cookies enabled
- *   1 = Parsed OK, with cookies disabled
- *   2 = Can't open the control file
+ * @return
+ *   - 0 = Parsed OK, with cookies enabled
+ *   - 1 = Parsed OK, with cookies disabled
+ *   - 2 = Can't open the control file
  */
 static int Cookie_control_init(void)
 {
@@ -326,7 +330,7 @@ static int Cookie_control_init(void)
    return (enabled ? 0 : 1);
 }
 
-/*
+/**
  * Check the rules for an appropriate action for this domain.
  * The rules are ordered by domain length, with longest first, so the
  * first match is the most specific.
@@ -356,8 +360,8 @@ static CookieControlAction Cookies_control_check_domain(const char *domain)
    return default_action;
 }
 
-/*
- * Same as the above except it takes an URL
+/**
+ * Same as @ref Cookies_control_check_domain except it takes an URL
  */
 static CookieControlAction Cookies_control_check(const DilloUrl *url)
 {

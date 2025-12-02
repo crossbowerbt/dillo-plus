@@ -2,11 +2,17 @@
  * File: table.cc
  *
  * Copyright 2008 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
+ */
+
+/**
+ * @file
+ * Table parsing functions
  */
 
 #include "table.hh"
@@ -287,7 +293,7 @@ void Html_tag_content_th(DilloHtml *html, const char *tag, int tagsize)
  * Utilities
  */
 
-/*
+/**
  * The table border model is stored in the table's stack item
  */
 static int Html_table_get_border_model(DilloHtml *html)
@@ -302,7 +308,7 @@ static int Html_table_get_border_model(DilloHtml *html)
    return html->stack->getRef(s_idx)->table_border_mode;
 }
 
-/*
+/**
  * Set current table's border model
  */
 static void Html_table_set_border_model(DilloHtml *html,
@@ -361,7 +367,7 @@ static void Html_set_collapsing_border_model(DilloHtml *html, Widget *col_tb)
    }
 }
 
-/*
+/**
  * Adjust style for separate border model.
  * (Dw uses this model internally).
  */
@@ -457,7 +463,7 @@ static void Html_tag_content_table_cell(DilloHtml *html,
       BUG_MSG("<t%c> outside <tr>.",
               (tagsize >=3 && (D_ASCII_TOLOWER(tag[2]) == 'd')) ? 'd' : 'h');
       /* a_Dw_table_add_cell takes care that dillo does not crash. */
-      /* continues */
+      /* fallthrough */
    case DILLO_HTML_TABLE_MODE_TR:
    case DILLO_HTML_TABLE_MODE_TD:
       if ((attrbuf = a_Html_get_attr(html, tag, tagsize, "colspan"))) {

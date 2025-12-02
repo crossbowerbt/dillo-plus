@@ -2,6 +2,7 @@
  * Preferences
  *
  * Copyright (C) 2006-2009 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,13 +13,14 @@
 #include "prefs.h"
 
 #define PREFS_START_PAGE      "about:splash"
-#define PREFS_HOME            "https://dillo-browser.github.io/old/"
+#define PREFS_HOME            "https://dillo-browser.github.io/"
+#define PREFS_NEW_TAB_PAGE    "about:blank"
 #define PREFS_FONT_SERIF      "DejaVu Serif"
 #define PREFS_FONT_SANS_SERIF "DejaVu Sans"
 #define PREFS_FONT_CURSIVE    "URW Chancery L"
 #define PREFS_FONT_FANTASY    "DejaVu Sans" /* TODO: find good default */
 #define PREFS_FONT_MONOSPACE  "DejaVu Sans Mono"
-#define PREFS_SEARCH_URL      "dd http://duckduckgo.com/lite/?kp=-1&q=%s"
+#define PREFS_SEARCH_URL      "dd http://duckduckgo.com/lite/?kp=-1&kd=-1&q=%s"
 #define PREFS_NO_PROXY        "localhost 127.0.0.1"
 #define PREFS_SAVE_DIR        "/tmp/"
 #define PREFS_HTTP_REFERER    "host"
@@ -31,7 +33,7 @@
  *---------------------------------------------------------------------------*/
 DilloPrefs prefs;
 
-/*
+/**
  * Sets the default settings.
  */
 
@@ -128,8 +130,8 @@ void a_Prefs_init(void)
    prefs.stretchability_factor = 100;
 }
 
-/*
- *  memory-deallocation
+/**
+ *  memory-deallocation.
  *  (Call this one at exit time)
  */
 void a_Prefs_freeall(void)

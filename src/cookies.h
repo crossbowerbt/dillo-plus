@@ -1,3 +1,16 @@
+/*
+ * File: cookies.h
+ *
+ * Copyright 2001 Lars Clausen   <lrclause@cs.uiuc.edu>
+ *                Jörgen Viksell <jorgen.viksell@telia.com>
+ * Copyright 2025 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __COOKIES_H__
 #define __COOKIES_H__
 

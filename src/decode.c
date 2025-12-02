@@ -2,6 +2,7 @@
  * File: decode.c
  *
  * Copyright 2007-2008 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright 2025 Rodrigo Arias Mallo <rodarima@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +21,7 @@
 
 static const int bufsize = 8*1024;
 
-/*
+/**
  * Decode 'Transfer-Encoding: chunked' data
  */
 Dstr *a_Decode_transfer_process(DecodeTransfer *dc, const char *instr,
@@ -108,7 +109,7 @@ static void Decode_compression_free(Decode *dc)
  * for what it accomplished.
  */
 
-/*
+/**
  * Decode gzipped data
  */
 static Dstr *Decode_gzip(Decode *dc, const char *instr, int inlen)
@@ -144,7 +145,7 @@ static Dstr *Decode_gzip(Decode *dc, const char *instr, int inlen)
    return output;
 }
 
-/*
+/**
  * Decode (raw) deflated data
  */
 static Dstr *Decode_raw_deflate(Decode *dc, const char *instr, int inlen)
@@ -180,7 +181,7 @@ static Dstr *Decode_raw_deflate(Decode *dc, const char *instr, int inlen)
    return output;
 }
 
-/*
+/**
  * Decode deflated data, initially presuming that the required zlib wrapper
  * is there. On data error, switch to Decode_raw_deflate().
  */
@@ -232,7 +233,7 @@ static Dstr *Decode_deflate(Decode *dc, const char *instr, int inlen)
    return output;
 }
 
-/*
+/**
  * Translate to desired character set (UTF-8)
  */
 static Dstr *Decode_charset(Decode *dc, const char *instr, int inlen)
@@ -285,7 +286,7 @@ static void Decode_charset_free(Decode *dc)
    dStr_free(dc->leftover, 1);
 }
 
-/*
+/**
  * Initialize transfer decoder. Currently handles "chunked".
  */
 DecodeTransfer *a_Decode_transfer_init(const char *format)
@@ -304,7 +305,7 @@ DecodeTransfer *a_Decode_transfer_init(const char *format)
    return dc;
 }
 
-static Decode *Decode_content_init_common()
+static Decode *Decode_content_init_common(void)
 {
    z_stream *zs = dNew(z_stream, 1);
    Decode *dc = dNew(Decode, 1);
@@ -321,7 +322,7 @@ static Decode *Decode_content_init_common()
    return dc;
 }
 
-/*
+/**
  * Initialize content decoder. Currently handles 'gzip' and 'deflate'.
  */
 Decode *a_Decode_content_init(const char *format)
@@ -355,7 +356,7 @@ Decode *a_Decode_content_init(const char *format)
    return dc;
 }
 
-/*
+/**
  * Initialize decoder to translate from any character set known to iconv()
  * to UTF-8.
  *
@@ -386,7 +387,7 @@ Decode *a_Decode_charset_init(const char *format)
    return dc;
 }
 
-/*
+/**
  * Decode data.
  */
 Dstr *a_Decode_process(Decode *dc, const char *instr, int inlen)
@@ -394,7 +395,7 @@ Dstr *a_Decode_process(Decode *dc, const char *instr, int inlen)
    return dc->decode(dc, instr, inlen);
 }
 
-/*
+/**
  * Free the decoder.
  */
 void a_Decode_free(Decode *dc)

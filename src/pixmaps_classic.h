@@ -1,4 +1,4 @@
-/*
+/**
  * File: pixmaps.h
  *
  * Copyright (C) 2000, 2001 Jorge Arellano Cid <jcid@dillo.org>

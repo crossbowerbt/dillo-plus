@@ -27,6 +27,7 @@
 
 #include "prefs.h"
 #include "tipwin.hh"
+#include "dlib/dlib.h"
 
 /*
  * Forward declarations
@@ -34,7 +35,7 @@
 static void show_timeout(void*);
 static void recent_timeout(void*);
 
-/*
+/**
  * Custom tooltip window
  */
 TipWin::TipWin() : Fl_Menu_Window(1, 1)     // will autosize
@@ -125,14 +126,14 @@ static void recent_timeout(void*) {
 
 //---------------------------------------------------------------------------
 
-/*
+/**
  * A Button sharing a custom tooltip window
  */
 TipWinButton::TipWinButton(int x, int y, int w, int h, const char *l) :
     Fl_Button(x, y, w, h, l)
 {
    tipwin = my_tipwin();
-   mytooltip = strdup("empty");
+   mytooltip = dStrdup("empty");
 }
 
 TipWinButton::~TipWinButton(void)
@@ -161,13 +162,13 @@ int TipWinButton::handle(int e)
 void TipWinButton::set_tooltip(const char *s)
 {
    free(mytooltip);
-   mytooltip = strdup(s);
+   mytooltip = dStrdup(s);
 }
 
 
 //---------------------------------------------------------------------------
 
-/*
+/**
  * A Light Button sharing a custom tooltip window
  */
 CustButton::CustButton(int x, int y, int w, int h, const char *l) :
@@ -202,14 +203,14 @@ void CustButton::hl_color(Fl_Color col)
 
 //---------------------------------------------------------------------------
 
-/*
+/**
  * An Input with custom tooltip window
  */
 TipWinInput::TipWinInput (int x, int y, int w, int h, const char *l) :
    Fl_Input(x,y,w,h,l)
 {
    tipwin = my_tipwin();
-   mytooltip = strdup("empty");
+   mytooltip = dStrdup("empty");
 }
 
 TipWinInput::~TipWinInput(void)
@@ -239,6 +240,6 @@ int TipWinInput::handle(int e)
 void TipWinInput::set_tooltip(const char *s)
 {
    free(mytooltip);
-   mytooltip = strdup(s);
+   mytooltip = dStrdup(s);
 }
 

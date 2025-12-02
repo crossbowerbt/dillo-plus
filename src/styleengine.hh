@@ -1,3 +1,15 @@
+/*
+ * File: styleengine.hh
+ *
+ * Copyright 2008-2009 Johannes Hofmann <Johannes.Hofmann@gmx.de>
+ * Copyright 2024 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __STYLEENGINE_HH__
 #define __STYLEENGINE_HH__
 

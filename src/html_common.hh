@@ -1,3 +1,16 @@
+/*
+ * File: html_common.hh
+ *
+ * Copyright (C) 2008-2016 Jorge Arellano Cid <jcid@dillo.org>
+ * Copyright (C) 2008-2014 Johannes Hofmann <Johannes.Hofmann@gmx.de>
+ * Copyright (C) 2024-2025 Rodrigo Arias Mallo <rodarima@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ */
+
 #ifndef __HTML_COMMON_HH__
 #define __HTML_COMMON_HH__
 
@@ -19,16 +32,16 @@
  * Macros
  */
 
-// "html struct" to Textblock
+/** "html struct" to Textblock */
 #define HT2TB(html)  ((Textblock*)(html->dw))
-// "html struct" to "Layout"
+/** "html struct" to "Layout" */
 #define HT2LT(html)  ((Layout*)html->bw->render_layout)
-// "Image" to "Dw Widget"
+/** "Image" to "Dw Widget" */
 #define IM2DW(Image)  ((Widget*)Image->dw)
-// Top of the parsing stack
+/** Top of the parsing stack */
 #define S_TOP(html)  (html->stack->getRef(html->stack->size()-1))
 
-// Add a bug-meter message.
+/** Add a bug-meter message. */
 #define BUG_MSG(...)                               \
    D_STMT_START {                                  \
          html->bugMessage(__VA_ARGS__);            \
@@ -56,10 +69,10 @@ typedef enum {
 } DilloHtmlParseMode;
 
 typedef enum {
-   DILLO_HTML_TABLE_MODE_NONE,  /* no table at all */
-   DILLO_HTML_TABLE_MODE_TOP,   /* outside of <tr> */
-   DILLO_HTML_TABLE_MODE_TR,    /* inside of <tr>, outside of <td> */
-   DILLO_HTML_TABLE_MODE_TD     /* inside of <td> */
+   DILLO_HTML_TABLE_MODE_NONE,  /**< no table at all */
+   DILLO_HTML_TABLE_MODE_TOP,   /**< outside of <tr> */
+   DILLO_HTML_TABLE_MODE_TR,    /**< inside of <tr>, outside of <td> */
+   DILLO_HTML_TABLE_MODE_TD     /**< inside of <td> */
 } DilloHtmlTableMode;
 
 typedef enum {
@@ -90,7 +103,7 @@ typedef enum {
    IN_MEDIA       = 1 << 12,
    IN_META_HACK   = 1 << 13,
    IN_A           = 1 << 14,
-   IN_EOF         = 1 << 15,
+   IN_EOF         = 1 << 15
 } DilloHtmlProcessingState;
 
 /*
@@ -111,15 +124,15 @@ typedef struct {
    DilloHtmlListMode list_type;
    int list_number;
 
-   /* TagInfo index for the tag that's being processed */
+   /** TagInfo index for the tag that's being processed */
    int tag_idx;
 
    dw::core::Widget *textblock, *table;
 
-   /* This is used to align list items (especially in enumerated lists) */
+   /** This is used to align list items (especially in enumerated lists) */
    dw::core::Widget *ref_list_item;
 
-   /* This is used for list items etc; if it is set to TRUE, breaks
+   /** This is used for list items etc. If it is set to TRUE, breaks
       have to be "handed over" (see Html_add_indented and
       Html_eventually_pop_dw). */
    bool hand_over_break;
@@ -168,31 +181,31 @@ public:  //BUG: for now everything is public
    lout::misc::SimpleVector<DilloHtmlState> *stack;
    StyleEngine *styleEngine;
 
-   int InFlags; /* tracks which elements we are in */
+   int InFlags; /**< tracks which elements we are in */
 
    Dstr *Stash;
    bool StashSpace;
 
-   int pre_column;        /* current column, used in PRE tags with tabs */
-   bool PreFirstChar;     /* used to skip the first CR or CRLF in PRE tags */
-   bool PrevWasCR;        /* Flag to help parsing of "\r\n" in PRE tags */
-   bool PrevWasOpenTag;   /* Flag to help deferred parsing of white space */
-   bool InVisitedLink;    /* used to 'contrast_visited_colors' */
-   bool ReqTagClose;      /* Flag to close the stack's top tag */
-   bool TagSoup;          /* Flag to enable the parser's cleanup functions */
-   bool loadCssFromStash; /* current stash content should be loaded as CSS */
-   bool PrevWasBodyClose; /* set when </body> is found */
-   bool PrevWasHtmlClose; /* set when </html> is found */
+   int pre_column;        /**< current column, used in PRE tags with tabs */
+   bool PreFirstChar;     /**< used to skip the first CR or CRLF in PRE tags */
+   bool PrevWasCR;        /**< Flag to help parsing of "\r\n" in PRE tags */
+   bool PrevWasOpenTag;   /**< Flag to help deferred parsing of white space */
+   bool InVisitedLink;    /**< used to 'contrast_visited_colors' */
+   bool ReqTagClose;      /**< Flag to close the stack's top tag */
+   bool TagSoup;          /**< Flag to enable the parser's cleanup functions */
+   bool loadCssFromStash; /**< current stash content should be loaded as CSS */
+   bool PrevWasBodyClose; /**< set when </body> is found */
+   bool PrevWasHtmlClose; /**< set when </html> is found */
 
-   /* element counters: used for validation purposes.
+   /** element counters: used for validation purposes.
     * ATM they're used as three state flags {0,1,>1} */
    uchar_t Num_HTML, Num_HEAD, Num_BODY, Num_TITLE;
 
-   Dstr *attr_data;       /* Buffer for attribute value */
+   Dstr *attr_data;       /**< Buffer for attribute value */
 
-   int32_t non_css_link_color; /* as provided by link attribute in BODY */
-   int32_t non_css_visited_color; /* as provided by vlink attribute in BODY */
-   int32_t visited_color; /* as computed according to CSS */
+   int32_t non_css_link_color; /**< as provided by link attribute in BODY */
+   int32_t non_css_visited_color; /**< as provided by vlink attribute in BODY */
+   int32_t visited_color; /**< as computed according to CSS */
 
    /* -------------------------------------------------------------------*/
    /* Variables required after parsing (for page functionality)          */

@@ -9,7 +9,8 @@
  * (at your option) any later version.
  */
 
-/* Support for a navigation stack */
+/** @file
+ * Support for a navigation stack */
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -34,7 +35,7 @@ typedef struct {
 
 
 
-/*
+/**
  * Free memory used by this module
  * TODO: this may be removed or called by a_Bw_free().
   *      Currently is not called from anywhere.
@@ -48,7 +49,7 @@ void a_Nav_free(BrowserWindow *bw)
 
 /* Navigation stack methods ------------------------------------------------ */
 
-/*
+/**
  * Return current nav_stack pointer [0 based; -1 = empty]
  */
 int a_Nav_stack_ptr(BrowserWindow *bw)
@@ -56,7 +57,7 @@ int a_Nav_stack_ptr(BrowserWindow *bw)
    return bw->nav_stack_ptr;
 }
 
-/*
+/**
  * Return the url index of i-th element in the stack. [-1 = Error]
  */
 int a_Nav_get_uidx(BrowserWindow *bw, int i)
@@ -65,7 +66,7 @@ int a_Nav_get_uidx(BrowserWindow *bw, int i)
    return (nsi) ? nsi->url_idx : -1;
 }
 
-/*
+/**
  * Return the url index of the top element in the stack.
  */
 int a_Nav_get_top_uidx(BrowserWindow *bw)
@@ -76,7 +77,7 @@ int a_Nav_get_top_uidx(BrowserWindow *bw)
    return (nsi) ? nsi->url_idx : -1;
 }
 
-/*
+/**
  * Move the nav_stack pointer
  */
 static void Nav_stack_move_ptr(BrowserWindow *bw, int offset)
@@ -91,7 +92,7 @@ static void Nav_stack_move_ptr(BrowserWindow *bw, int offset)
    }
 }
 
-/*
+/**
  * Return size of nav_stack [1 based]
  */
 int a_Nav_stack_size(BrowserWindow *bw)
@@ -99,7 +100,7 @@ int a_Nav_stack_size(BrowserWindow *bw)
    return dList_length(bw->nav_stack);
 }
 
-/*
+/**
  * Truncate the navigation stack including 'pos' and upwards.
  */
 static void Nav_stack_truncate(BrowserWindow *bw, int pos)
@@ -115,7 +116,7 @@ static void Nav_stack_truncate(BrowserWindow *bw, int pos)
    }
 }
 
-/*
+/**
  * Insert a nav_stack_item into the stack at a given position.
  */
 static void Nav_stack_append(BrowserWindow *bw, int url_idx)
@@ -132,7 +133,7 @@ static void Nav_stack_append(BrowserWindow *bw, int url_idx)
    dList_append (bw->nav_stack, nsi);
 }
 
-/*
+/**
  * Get the scrolling position of the current page.
  */
 static void Nav_get_scroll_pos(BrowserWindow *bw, int *posx, int *posy)
@@ -147,7 +148,7 @@ static void Nav_get_scroll_pos(BrowserWindow *bw, int *posx, int *posy)
    }
 }
 
-/*
+/**
  * Save the scrolling position of the current page.
  */
 static void Nav_save_scroll_pos(BrowserWindow *bw, int idx, int posx, int posy)
@@ -160,7 +161,7 @@ static void Nav_save_scroll_pos(BrowserWindow *bw, int idx, int posx, int posy)
    }
 }
 
-/*
+/**
  * Remove equal adjacent URLs at the top of the stack.
  * (It may happen with redirections)
  */
@@ -183,7 +184,7 @@ static void Nav_stack_clean(BrowserWindow *bw)
 
 /* General methods --------------------------------------------------------- */
 
-/*
+/**
  * Create a DilloWeb structure for 'url' and ask the cache to send it back.
  *  - Also set a few things related to the browser window.
  * This function requests the page's root-URL; images and related stuff
@@ -239,7 +240,7 @@ static void Nav_open_url(BrowserWindow *bw, const DilloUrl *url,
    }
 }
 
-/*
+/**
  * Cancel the last expected url if present. The responsibility
  * for actually aborting the data stream remains with the caller.
  */
@@ -253,7 +254,7 @@ void a_Nav_cancel_expect(BrowserWindow *bw)
       --bw->meta_refresh_status;
 }
 
-/*
+/**
  * Cancel the expect if 'url' matches.
  */
 void a_Nav_cancel_expect_if_eq(BrowserWindow *bw, const DilloUrl *url)
@@ -262,7 +263,7 @@ void a_Nav_cancel_expect_if_eq(BrowserWindow *bw, const DilloUrl *url)
       a_Nav_cancel_expect(bw);
 }
 
-/*
+/**
  * We have an answer! Set things accordingly.
  * This function is called for root URLs only.
  * Beware: this function is much more complex than it looks
@@ -333,7 +334,7 @@ void a_Nav_expect_done(BrowserWindow *bw)
    _MSG("Nav: a_Nav_expect_done\n");
 }
 
-/*
+/**
  * Make 'url' the current browsed page (upon data arrival)
  * - Set bw to expect the URL data
  * - Ask the cache to feed back the requested URL (via Nav_open_url)
@@ -356,7 +357,7 @@ void a_Nav_push(BrowserWindow *bw, const DilloUrl *url,
    a_UIcmd_set_location_text(bw, URL_STR(url));
 }
 
-/*
+/**
  * This one does a_Nav_repush's job.
  */
 static void Nav_repush(BrowserWindow *bw)
@@ -381,7 +382,7 @@ static void Nav_repush_callback(void *data)
    a_Timeout_remove();
 }
 
-/*
+/**
  * Repush current URL: not an end-to-end reload but from cache.
  * - Currently used to switch to a charset decoder given by the META element.
  * - Delayed to let dillo finish the call flow into a known state.
@@ -396,7 +397,7 @@ void a_Nav_repush(BrowserWindow *bw)
    a_Timeout_add(0.0, Nav_repush_callback, (void*)bw);
 }
 
-/*
+/**
  * This one does a_Nav_redirection0's job.
  */
 static void Nav_redirection0_callback(void *data)
@@ -415,7 +416,7 @@ static void Nav_redirection0_callback(void *data)
    a_Timeout_remove();
 }
 
-/*
+/**
  * Handle a zero-delay URL redirection given by META
  */
 void a_Nav_redirection0(BrowserWindow *bw, const DilloUrl *new_url)
@@ -431,7 +432,7 @@ void a_Nav_redirection0(BrowserWindow *bw, const DilloUrl *new_url)
    a_Timeout_add(0.0, Nav_redirection0_callback, (void*)bw);
 }
 
-/*
+/**
  * Send the browser back to previous page
  */
 void a_Nav_back(BrowserWindow *bw)
@@ -445,7 +446,7 @@ void a_Nav_back(BrowserWindow *bw)
    }
 }
 
-/*
+/**
  * Send the browser to next page in the history list
  */
 void a_Nav_forw(BrowserWindow *bw)
@@ -459,7 +460,7 @@ void a_Nav_forw(BrowserWindow *bw)
    }
 }
 
-/*
+/**
  * Redirect the browser to the HOME page!
  */
 void a_Nav_home(BrowserWindow *bw)
@@ -467,7 +468,7 @@ void a_Nav_home(BrowserWindow *bw)
    a_Nav_push(bw, prefs.home, NULL);
 }
 
-/*
+/**
  * This one does a_Nav_reload's job!
  */
 static void Nav_reload_callback(void *data)
@@ -507,7 +508,7 @@ static void Nav_reload_callback(void *data)
    }
 }
 
-/*
+/**
  * Implement the RELOAD button functionality.
  * (Currently it only reloads the page, not its images)
  * Note: the timeout lets CCC operations end before making the request.
@@ -518,7 +519,7 @@ void a_Nav_reload(BrowserWindow *bw)
    a_Timeout_add(0.0, Nav_reload_callback, (void*)bw);
 }
 
-/*
+/**
  * Jump to a URL in the Navigation stack.
  */
 void a_Nav_jump(BrowserWindow *bw, int offset, int new_bw)
@@ -537,7 +538,7 @@ void a_Nav_jump(BrowserWindow *bw, int offset, int new_bw)
 
 /* Specific methods -------------------------------------------------------- */
 
-/*
+/**
  * Receive data from the cache and save it to a local file
  */
 static void Nav_save_cb(int Op, CacheClient_t *Client)
@@ -560,7 +561,7 @@ static void Nav_save_cb(int Op, CacheClient_t *Client)
    }
 }
 
-/*
+/**
  * Save a URL (from cache or from the net).
  */
 void a_Nav_save_url(BrowserWindow *bw,
@@ -573,7 +574,7 @@ void a_Nav_save_url(BrowserWindow *bw,
    a_Capi_open_url(Web, Nav_save_cb, Web);
 }
 
-/*
+/**
  * Wrapper for a_Capi_get_buf.
  */
 int a_Nav_get_buf(const DilloUrl *Url, char **PBuf, int *BufSize)
@@ -581,7 +582,7 @@ int a_Nav_get_buf(const DilloUrl *Url, char **PBuf, int *BufSize)
    return a_Capi_get_buf(Url, PBuf, BufSize);
 }
 
-/*
+/**
  * Wrapper for a_Capi_unref_buf().
  */
 void a_Nav_unref_buf(const DilloUrl *Url)
@@ -589,7 +590,7 @@ void a_Nav_unref_buf(const DilloUrl *Url)
    a_Capi_unref_buf(Url);
 }
 
-/*
+/**
  * Wrapper for a_Capi_get_content_type().
  */
 const char *a_Nav_get_content_type(const DilloUrl *url)
@@ -597,7 +598,7 @@ const char *a_Nav_get_content_type(const DilloUrl *url)
    return a_Capi_get_content_type(url);
 }
 
-/*
+/**
  * Wrapper for a_Capi_set_vsource_url().
  */
 void a_Nav_set_vsource_url(const DilloUrl *Url)
