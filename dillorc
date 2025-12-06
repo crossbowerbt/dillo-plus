@@ -95,9 +95,9 @@ font_cursive="DejaVu Serif"
 #adjust_min_width=YES
 
 # If this is set to YES, all CSS size specifications for tables are
-# adjusted so that all contents can be displayed. This is seperated
+# adjusted so that all contents can be displayed. This is separated
 # from "adjust_min_width" so that it is able to mimic Firefox, which
-# differenciates between tables and, say, textblocks (in some cases).
+# differentiates between tables and, say, textblocks (in some cases).
 #adjust_table_min_width=YES
 
 #-------------------------------------------------------------------------
@@ -169,7 +169,7 @@ font_cursive="DejaVu Serif"
 
 # Set the home location
 # home="file:/home/jcid/HomePage/Home.html"
-#home="https://dillo-browser.github.io/old/"
+#home="https://dillo-browser.github.io/"
 
 # Set the URLs used by the web search dialog.
 # "%s" is replaced with the search keywords separated by '+'.
@@ -177,7 +177,7 @@ font_cursive="DejaVu Serif"
 # You can enable multiple search_url strings at once and select from among
 # them at runtime, with the first being the default.
 # (the prefix serves to search from the Location Bar. e.g. "dd dillo image")
-search_url="dd DuckDuckGo https://duckduckgo.com/lite/?kp=-1&q=%s"
+search_url="dd DuckDuckGo (https) https://duckduckgo.com/lite/?kp=-1&kd=-1&q=%s"
 search_url="se SearX (searx.be) https://searx.be/search?q=%s"
 search_url="se2 SearX (searxng.ch) https://searxng.ch/search?q=%s"
 search_url="se3 SearX (searxng.ca) https://searxng.ca/search?q=%s"
@@ -193,6 +193,8 @@ search_url="ar Internet Archive https://archive.org/search.php?query=%s"
 search_url="fd Free Dictionary https://www.thefreedictionary.com/%s"
 search_url="sp Startpage https://www.startpage.com/do/search?query=%s"
 search_url="mn Marginalia https://search.marginalia.nu/search?query=%s"
+search_url="wi Wiby https://wiby.org/?q=%s"
+search_url="mj Mojeek https://www.mojeek.com/search?q=%s"
 search_url="te Teclis https://teclis.com/search?q=%s"
 search_url="gg Google https://www.google.com/search?ie=UTF-8&oe=UTF-8&q=%s"
 search_url="ge GeminiSpace gemini://geminispace.info/search?q=%s"
@@ -279,7 +281,7 @@ search_url="fb FreeBSD Man https://man.freebsd.org/cgi/man.cgi?query=%s&sektion=
 # http_user_agent="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:28.0) Gecko/20100101 Firefox/28.0"
 # http_user_agent="Wget/1.13.4 (linux-gnu)"
 #
-# If not set "Dillo/"+current_version_number is used
+# The default is "Dillo/"+current_version_number
 #
 # To prevent some browser fingerprinting and avoid some filters the default
 # string is set to a common user agent (in this case: Windows 10, Chrome 108):
