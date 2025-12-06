@@ -46,8 +46,19 @@
 #define MSG(...)  printf("[bookmarks dpi]: " __VA_ARGS__)
 
 #define DOCTYPE \
-   "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>\n"
+   "<!DOCTYPE html>\n"
 
+#define CSS_STYLE \
+   "<style type='text/css'>\n"\
+   "body { margin: 2em; background: white; font-size: 14px }\n" \
+   "ul { font-size: inherit; margin-left: 1em; margin-top: 0.5em; list-style-type: none; }\n" \
+   "ul.main { list-style-type: none; }\n" \
+   "li { min-height: 1.6em; }\n" \
+   "div.modify-menu { background-color: #f0f0f0; border: solid 1px #ccc; padding: 1em }\n" \
+   "nav ul { margin-top: 1em }\n" \
+   "nav li { display: inline; }\n" \
+   "a { color: black; }\n" \
+   "</style>\n"
 /*
  * Notes on character escaping:
  *   - Basically things are saved unescaped and escaped when in memory.
@@ -96,175 +107,99 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
-"<style>\n"
-"	h1 {\n"
-"		color: white;\n"
-"		margin-left: 1em;\n"
-"		text-align: center;\n"
-"	}\n"
-"	h4 {\n"
-"		color: #677FFF;\n"
-"		margin-left: 1em;\n"
-"		text-align: center;\n"
-"	}\n"
-"	a:visited {\n"
-"	  color: #262626;\n"
-"	}\n"
-"</style>\n"
+CSS_STYLE
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#989DA4' link='black' vlink='brown'>\n"
-"<table border='0' cellpadding='0' width='100%'>\n"
-" <tr><td>\n"
-"  <table width='100%' bgcolor='transparent;'>\n"
-"   <tr>\n"
-"    <td><h1> Bookmarks ::  </h1></td>\n"
-"    <td align='right'>\n"
-"     [<a href='dpi:/bm/modify'>modify</a>]\n"
-"    </td></tr>\n"
-"  </table></td></tr>\n"
-"</table>\n"
-"<br>\n";
+"<body id='dillo_bm'>\n"
+"\n"
+"  <h1>Bookmarks</h1>\n"
+"  <div style='float: right; padding: 1em'>\n"
+"    [<a href='dpi:/bm/modify'>Modify</a>]\n"
+"  </div>\n";
 
 static const char *modifypage_header =
 DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
-"<style>\n"
-"	h1 {\n"
-"		color: white;\n"
-"		margin-left: 1em;\n"
-"		text-align: center;\n"
-"	}\n"
-"	h4 {\n"
-"		color: #677FFF;\n"
-"		margin-left: 1em;\n"
-"		text-align: center;\n"
-"	}\n"
-"	a:visited {\n"
-"	  color: #262626;\n"
-"	}\n"
-"</style>\n"
+CSS_STYLE
 "</head>\n"
-"<body id='dillo_bm' bgcolor='#989DA4' link='black' vlink='brown'>\n"
-"<table border='0' cellpadding='0' width='100%'>\n"
-" <tr><td>\n"
-"  <table width='100%' bgcolor='transparent;'>\n"
-"   <tr>\n"
-"    <td><h1> Bookmarks :: modify</h1></td>\n"
-"    <td align='right'>\n"
-"     [<a href='dpi:/bm/'>cancel</a>]\n"
-"    </td>\n"
-"   </tr>\n"
-"  </table></td></tr>                            \n"
-"</table>                                        \n"
+"<body id='dillo_bm'>\n"
+"  <h1>Bookmarks</h1>\n"
 "\n"
 "<form action='modify'>\n"
-"<table width='100%' border='0' cellpadding='0'>\n"
-" <tr style='background-color: #D6D6D6'>\n"
-"  <td>\n"
-"   <b>Select an operation</b>\n"
-"   <select name='operation'>\n"
+"<div class='modify-menu'>\n"
+"  <div style='float: right'>\n"
+"    [<a href='dpi:/bm/'>Dismiss</a>]\n"
+"  </div>\n"
+"  <p>Select an operation\n"
+"  <select name='operation'>\n"
 "    <option value='none' selected>--\n"
 "    <option value='delete'>Delete\n"
 "    <option value='move'>Move\n"
 "    <option value='modify'>Modify\n"
 "    <option value='add_sec'>Add Section\n"
 "    <option value='add_url'>Add URL\n"
-"   </select>\n"
-"   <b>, mark its operands, and</b>\n"
-"   <input type='submit' name='submit' value='submit.'>\n"
-"  </td>\n"
-" </tr>\n"
-"</table>\n";
+"  </select>\n"
+"  , mark its operands and\n"
+"  <input type='submit' name='submit' value='Submit'>\n"
+"  <p>You can also modify the bookmarks by editing the\n"
+"  <a href='file:~/.dillo-plus/bm.txt'><code>~/.dillo-plus/bm.txt</code></a> file.\n"
+"</div>\n";
 
 static const char *mainpage_sections_header =
-"<table border='0' cellpadding='0' cellspacing='20' width='100%'>\n"
-" <tr valign='top'>\n"
-"  <td>\n"
-"   <table bgcolor='#F7F7F7' border='0' cellpadding='4' cellspacing='1'>\n"
-"    <tr><td>\n"
-"     <table bgcolor='#4F4F4F'>\n"
-"      <tr><td><b style='color: white;'>Sections:</b></td></tr></table></td></tr>\n";
+"<nav>\n"
+"  <ul>\n";
 
-static const char *modifypage_sections_header =
-"<table border='0' cellpadding='0' cellspacing='20' width='100%'>\n"
-" <tr valign='top'>\n"
-"  <td>\n"
-"   <table bgcolor='#F7F7F7' border='0'>\n"
-"    <tr><td>\n"
-"     <table width='100%' bgcolor='#4F4F4F'>\n"
-"      <tr><td><b style='color: white;'>Sections:</b></td></tr></table></td></tr>\n";
+#define modifypage_sections_header mainpage_sections_header
 
 static const char *mainpage_sections_item =
-"    <tr><td align='center'>\n"
-"      <a href='#s%d'>%s</a></td></tr>\n";
+"    <li><a href='#s%d'>%s</a></li>\n";
+
+static const char *sections_sep =
+" | \n";
 
 static const char *modifypage_sections_item =
-"    <tr><td>\n"
-"     <table width='100%%'>\n"
-"      <tr align='center'>"
-"       <td><input type='checkbox' name='s%d'></td>\n"
-"       <td width='100%%'><a href='#s%d'>%s</a></td></tr></table></td></tr>\n";
+"    <li><input type='checkbox' name='s%d'><a href='#s%d'>%s</a></li>\n";
 
 static const char *mainpage_sections_footer =
-"   </table>\n";
+"  </ul>\n"
+"</nav>\n";
 
-static const char *modifypage_sections_footer =
-"   </table>\n";
+#define modifypage_sections_footer mainpage_sections_footer
 
-static const char *mainpage_middle1 =
-"  </td>\n"
-"  <td width='100%'>\n";
+static const char *mainpage_middle1 = "\n";
 
-static const char *modifypage_middle1 =
-"  </td>\n"
-"  <td width='100%'>\n";
+static const char *modifypage_middle1 = "\n";
 
 static const char *mainpage_section_card_header =
-"   <a name='s%d'></a>\n"
-"   <table bgcolor='#F1F3FA' width='100%%' cellspacing='0'>\n"
-"    <tr>\n"
-"     <td bgcolor='#4F4F4F'><font color='white'><b>\n"
-"      &nbsp;&nbsp;&nbsp;%s&nbsp;&nbsp;&nbsp;</b></font></td>\n"
-"     <td bgcolor='#4F4F4F' width='100%%'>&nbsp;</td></tr>\n";
+"<h2 id='s%d'>%s</h2>\n"
+"<ul class='main'>\n";
 
 static const char *modifypage_section_card_header =
-"   <a name='s%d'></a>\n"
-"   <table bgcolor='#F1F3FA' width='100%%' cellspacing='0'>\n"
-"    <tr>\n"
-"     <td bgcolor='#4F4F4F'><font color='white'><b>\n"
-"      &nbsp;&nbsp;&nbsp;%s&nbsp;&nbsp;&nbsp;</b></font></td>\n"
-"     <td bgcolor='#4F4F4F' width='100%%'>&nbsp;</td></tr>\n";
+"<h2 id='s%d'>%s</h2>\n"
+"<ul class='main'>\n";
 
 static const char *mainpage_section_card_item =
-"    <tr><td colspan='2'>\n"
-"      <a href='%s'>%s</a> </td></tr>\n";
+"  <li>\n"
+"    <a href='%s'>%s</a>\n"
+"  </li>\n";
 
 static const char *modifypage_section_card_item =
-"    <tr>\n"
-"     <td colspan='2'><input type='checkbox' name='url%d'>\n"
-"      <a href='%s'>%s</a></td></tr>\n";
+"  <li>\n"
+"    <input type='checkbox' name='url%d'>\n"
+"    <a href='%s'>%s</a>\n"
+"  </li>\n";
 
 static const char *mainpage_section_card_footer =
-"   </table>\n"
-"   <hr>\n";
+"</ul>\n";
 
-static const char *modifypage_section_card_footer =
-"   </table>\n"
-"   <hr>\n";
+#define modifypage_section_card_footer mainpage_section_card_footer
 
 static const char *mainpage_footer =
-"  </td>\n"
-" </tr>\n"
-"</table>\n"
 "</body>\n"
 "</html>\n";
 
 static const char *modifypage_footer =
-"  </td>\n"
-" </tr>\n"
-"</table>\n"
 "</form>\n"
 "</body>\n"
 "</html>\n";
@@ -275,42 +210,18 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
+CSS_STYLE
 "</head>\n"
-"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
-"<table border='0' cellpadding='0' width='100%'>\n"
-" <tr><td colspan='2'>\n"
-"  <table bgcolor='#999BDE' width='100%'>\n"
-"   <tr>\n"
-"    <td bgcolor='#4F4F4F'><h1>\n"
-"     Modify bookmarks :: add section</h1>\n"
-"    </td>\n"
-"    <td align='right'>\n"
-"     [<a href='dpi:/bm/'>cancel</a>]\n"
-"    </td>\n"
-"   </tr>\n"
-"  </table></td></tr>\n"
-"</table>\n"
-"<br>\n"
+"<body id='dillo_bm'>\n"
+"<h1>Boorkmarks: New section</h1>\n"
 "<form action='modify'>\n"
-" <input type='hidden' name='operation' value='add_section'>\n"
-"<table border='0' width='100%'>\n"
-" <tr>\n"
-"  <td bgcolor='#7D9BAF'><b>New&nbsp;section:</b></td>\n"
-"  <td bgcolor='#4F4F4F' width='100%'></td></tr>\n"
-"</table>\n"
-"<table width='100%' cellpadding='10'>\n"
-"<tr><td>\n"
-" <table width='100%' bgcolor='#D6D6D6'>\n"
-"  <tr>\n"
-"   <td>Title:</td>\n"
-"   <td><input type='text' name='title' size='64'></td></tr>\n"
-" </table>\n"
-" </td></tr>\n"
-"</table>\n"
-"<table width='100%' cellpadding='4' border='0'>\n"
-"<tr><td bgcolor='#a0a0a0'>\n"
-" <input type='submit' name='submit' value='submit.'></td></tr>\n"
-"</table>\n"
+"  <input type='hidden' name='operation' value='add_section'>\n"
+"  <p>\n"
+"   New section title:\n"
+"   <input type='text' name='title' size='32'>\n"
+"   <input type='submit' name='submit' value='Submit'>\n"
+"   or <a href='dpi:/bm/'>Cancel</a>\n"
+"  </p>\n"
 "</form>\n"
 "</body>\n"
 "</html>\n"
@@ -322,64 +233,35 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
+CSS_STYLE
 "</head>\n"
-"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
-"<table border='0' cellpadding='0' width='100%'>\n"
-" <tr><td colspan='2'>\n"
-"  <table bgcolor='#999BDE' width='100%'>\n"
-"   <tr><td bgcolor='#4F4F4F'><h1> Modify bookmarks :: update</h1>\n"
-"    </td>\n"
-"    <td align='right'>\n"
-"     [<a href='dpi:/bm/'>cancel</a>]\n"
-"    </td>\n"
-"   </tr>\n"
-"  </table></td></tr>\n"
-"</table>\n"
-"<br>\n"
+"<body id='dillo_bm'>\n"
+"<h1>Bookmarks: Update</h1>\n"
 "<form action='modify'>\n"
 "<input type='hidden' name='operation' value='modify2'>\n";
 
 static const char *modifypage_update_title =
-"<table border='0' width='100%%'>\n"
-" <tr>\n"
-"  <td bgcolor='#7D9BAF'><b>%s</b></td>\n"
-"  <td bgcolor='#4F4F4F' width='100%%'></td></tr>\n"
-"</table>\n";
+"<h2>%s</h2>\n";
 
 static const char *modifypage_update_item_header =
-"<table width='100%' cellpadding='10'>\n";
+"<ul>\n";
 
 static const char *modifypage_update_item =
-"<tr><td>\n"
-" <table width='100%%' bgcolor='#D6D6D6'>\n"
-"  <tr>\n"
-"   <td>Title:</td>\n"
-"   <td><input type='text' name='title%d' size='64'\n"
-"        value='%s'></td></tr>\n"
-"  <tr>\n"
-"   <td>URL:</td>\n"
-"   <td>%s</td></tr>\n"
-" </table>\n"
-" </td></tr>\n";
+"<li style='padding: 0.5em'>\n"
+"  <input type='text' name='title%d' size='64'\n value='%s'>\n"
+"  <br>URL: <code>%s</code>\n"
+"</li>\n";
 
 static const char *modifypage_update_item2 =
-"<tr><td>\n"
-" <table width='100%%' bgcolor='#D6D6D6'>\n"
-"  <tr>\n"
-"   <td>Title:</td>\n"
-"   <td><input type='text' name='s%d' size='64'\n"
-"        value='%s'></td></tr>\n"
-" </table>\n"
-" </td></tr>\n";
+"<li style='padding: 0.5em'>\n"
+"  <input type='text' name='s%d' size='64' value='%s'>\n"
+"</li>\n";
 
 static const char *modifypage_update_item_footer =
-"</table>\n";
+"</ul>\n";
 
 static const char *modifypage_update_footer =
-"<table width='100%' cellpadding='4' border='0'>\n"
-"<tr><td bgcolor='#a0a0a0'>\n"
-" <input type='submit' name='submit' value='submit.'></td></tr>\n"
-"</table>\n"
+"<input type='submit' name='submit' value='Submit'>\n"
 "</form>\n"
 "</body>\n"
 "</html>\n";
@@ -390,43 +272,22 @@ DOCTYPE
 "<html>\n"
 "<head>\n"
 "<title>Bookmarks</title>\n"
+CSS_STYLE
 "</head>\n"
-"<body id='dillo_bm' bgcolor='transparent;' link='black' vlink='brown'>\n"
-"<table border='0' cellpadding='0' width='100%'>\n"
-" <tr><td colspan='2'>\n"
-"  <table bgcolor='#999BDE' width='100%'>\n"
-"   <tr><td bgcolor='#4F4F4F'><h1> Modify bookmarks :: add url</h1>\n"
-"    </td>\n"
-"    <td align='right'>\n"
-"     [<a href='dpi:/bm/'>cancel</a>]\n"
-"    </td>\n"
-"   </tr>\n"
-"  </table></td></tr>\n"
-"</table>\n"
-"<br>\n"
+"<body id='dillo_bm'>\n"
+"<h1>Bookmarks: Add URL</h1>\n"
 "<form action='modify'>\n"
 "<input type='hidden' name='operation' value='add_url2'>\n"
-"<table border='0' width='100%'>\n"
-" <tr>\n"
-"  <td bgcolor='#7D9BAF'><b>Add&nbsp;url:</b></td>\n"
-"  <td bgcolor='#4F4F4F' width='100%'></td></tr>\n"
-"</table>\n"
-"<table width='100%' cellpadding='10'>\n"
-"<tr><td>\n"
-" <table width='100%' bgcolor='#D6D6D6'>\n"
-"  <tr>\n"
-"   <td>Title:</td>\n"
-"   <td><input type='text' name='title' size='64'></td></tr>\n"
-"  <tr>\n"
-"   <td>URL:</td>\n"
-"   <td><input type='text' name='url' size='64'></td></tr>\n"
-" </table>\n"
-" </td></tr>\n"
-"</table>\n"
-"<table width='100%' cellpadding='4' border='0'>\n"
-"<tr><td bgcolor='#a0a0a0'>\n"
-" <input type='submit' name='submit' value='submit.'></td></tr>\n"
-"</table>\n"
+"<p>Title:\n"
+"  <input type='text' name='title' size='64'>\n"
+"</p>\n"
+"<p>URL:\n"
+"  <input type='text' name='url' size='64'>\n"
+"</p>\n"
+"<p>\n"
+"  <input type='submit' name='submit' value='Submit'>\n"
+"  or <a href='dpi:/bm/'>Cancel</a>\n"
+"</p>\n"
 "</form>\n"
 "</body>\n"
 "</html>\n";
@@ -806,7 +667,7 @@ static int Bms_load(void)
       dFree(buf);
       continue;
 
-error:
+error: 
       MSG("Syntax error in bookmarks file:\n %s", buf);
       dFree(buf);
    }
@@ -995,6 +856,11 @@ static int Bmsrv_send_modify_page(Dsh *sh)
       return 1;
    /* write sections */
    for (i = 0; (sec_node = dList_nth_data(B_secs, i)); ++i) {
+      if (i > 0) {
+         if (a_Dpip_dsh_write_str(sh, 0, sections_sep))
+            return 1;
+      }
+
       dStr_sprintf(dstr, modifypage_sections_item,
                    sec_node->section, sec_node->section, sec_node->title);
       if (a_Dpip_dsh_write_str(sh, 0, dstr->str))
@@ -1100,7 +966,7 @@ static int Bmsrv_send_modify_update(Dsh *sh, char *url)
    Bmsrv_count_urls_and_sections(url1, &n_sec, &n_url);
 
    if (n_sec) {
-      dStr_sprintf(dstr, modifypage_update_title, "Update&nbsp;sections:");
+      dStr_sprintf(dstr, modifypage_update_title, "Update sections");
       a_Dpip_dsh_write_str(sh, 0, dstr->str);
       a_Dpip_dsh_write_str(sh, 0, modifypage_update_item_header);
       /* send items here */
@@ -1120,7 +986,7 @@ static int Bmsrv_send_modify_update(Dsh *sh, char *url)
    }
 
    if (n_url) {
-      dStr_sprintf(dstr, modifypage_update_title, "Update&nbsp;titles:");
+      dStr_sprintf(dstr, modifypage_update_title, "Update titles");
       a_Dpip_dsh_write_str(sh, 0, dstr->str);
       a_Dpip_dsh_write_str(sh, 0, modifypage_update_item_header);
       /* send items here */
@@ -1392,7 +1258,7 @@ static int Bmsrv_modify_add_url(Dsh *sh, char *s_url)
    section = 0;
 
    /* TODO: we should send an "Bookmark added" message, but the
-      msg-after-HTML functionallity is still pending, not hard though. */
+      msg-after-HTML functionality is still pending, not hard though. */
 
    /* Write new bookmarks file */
    Bms_save();
@@ -1555,6 +1421,11 @@ static int send_bm_page(Dsh *sh)
       return 1;
    /* write sections */
    for (i = 0; (sec_node = dList_nth_data(B_secs, i)); ++i) {
+      if (i > 0) {
+         if (a_Dpip_dsh_write_str(sh, 0, sections_sep))
+            return 1;
+      }
+
       dStr_sprintf(dstr, mainpage_sections_item,
                    sec_node->section, sec_node->title);
       if (a_Dpip_dsh_write_str(sh, 0, dstr->str))
