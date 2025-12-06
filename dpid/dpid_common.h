@@ -37,15 +37,6 @@
 #define CKD_WRITE(fd, msg) ckd_write(fd, msg, __FILE__, __LINE__)
 #define CKD_CLOSE(fd)      ckd_close(fd, __FILE__, __LINE__)
 
-
-/*! Error codes for dpid */
-enum dpi_errno_t {
-   no_errors,
-   dpid_srs_addrinuse /* dpid service request socket address already in use */
-};
-
-extern enum dpi_errno_t dpi_errno;
-
 /*! Intended for identifying dillo plugins
  * and related files
  */

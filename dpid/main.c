@@ -34,14 +34,22 @@
 #include "../dpip/dpip.h"
 
 sigset_t mask_sigchld;
-enum dpi_errno_t dpi_errno;
+
+/* fix for gcc 10 */
+
+enum {
+   no_errors,
+   dpid_srs_addrinuse /* dpid service request socket address already in use */
+} dpi_errno;
+
+int numdpis;
+fd_set sock_set;
 struct dp *dpi_attr_list;
 Dlist *services_list;
-int numdpis;
 int numsocks;
-fd_set sock_set;
 int srs_fd;
 
+// end of fix
 
 
 /** Start a dpi filter plugin after accepting the pending connection
