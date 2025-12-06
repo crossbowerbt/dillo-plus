@@ -20,6 +20,8 @@
 #include "keys.hh"
 #include "utf8.hh"
 #include "msg.h"
+#include "cache.h"
+#include "misc.h"
 
 /*
  *  Local data types

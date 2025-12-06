@@ -48,6 +48,7 @@
 
 #include "url.h"
 #include "hsts.h"
+#include "misc.h"
 #include "msg.h"
 
 static const char *HEX = "0123456789ABCDEF";
@@ -377,7 +378,13 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
    Dstr *SolvedUrl;
    int i, n_ic, n_ic_spc;
 
-   dReturn_val_if_fail (url_str != NULL, NULL);
+   if (!url_str)
+      return NULL;
+
+   /* Empty URL without base_url is not valid.
+    * They are used for action="" in forms with base_url set. */
+   if (url_str[0] == '\0' && base_url == NULL)
+      return NULL;
 
    /* Count illegal characters (0x00-0x1F, 0x7F-0xFF and space) */
    n_ic = n_ic_spc = 0;
@@ -447,7 +454,7 @@ DilloUrl* a_Url_new(const char *url_str, const char *base_url)
             strcpy((char *)url->authority + len-2, "443");
          }
       }
-
+      
       dStr_free(url->url_string, TRUE);
       url->url_string = NULL;
    }
@@ -613,7 +620,7 @@ char *a_Url_encode_hex_str(const char *str)
    newstr = dNew(char, 6*strlen(str)+1);
 
    for (c = newstr; *str; str++)
-      if ((dIsalnum(*str) && isascii(*str)) || strchr(verbatim, *str))
+      if ((dIsalnum(*str) && d_isascii(*str)) || strchr(verbatim, *str))
          *c++ = *str;
       else if (*str == ' ')
          *c++ = '+';

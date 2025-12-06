@@ -45,6 +45,8 @@ clean:
 	@(cd dpi; make clean)
 	@echo Cleaning in test
 	@(cd test; make clean)
+	@echo Cleaning temporary files
+	find . -name '*~' -delete
 
 install: all
 	@echo Making install in lout

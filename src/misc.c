@@ -146,8 +146,8 @@ int a_Misc_get_content_type_from_data(void *Data, size_t Size, const char **PT)
        (Size - i >= 5  && !dStrnAsciiCasecmp(p+i, "<head", 5)) ||
        (Size - i >= 6  && !dStrnAsciiCasecmp(p+i, "<title", 6)) ||
        (Size - i >= 14 && !dStrnAsciiCasecmp(p+i, "<!doctype html", 14)) ||
-       /* this line is workaround for FTP through the Squid proxy */
-       (Size - i >= 17 && !dStrnAsciiCasecmp(p+i, "<!-- HTML listing", 17))) {
+       /* this line is workaround for FTP through the Squid proxy and Doxygen */
+       (Size - i >= 9 && !dStrnAsciiCasecmp(p+i, "<!-- HTML", 9))) {
 
       Type = DT_TEXT_HTML;
       st = 0;
@@ -222,13 +222,13 @@ void a_Misc_parse_content_type(const char *type, char **major, char **minor,
    if (!(str = type))
       return;
 
-   for (s = str; *s && isascii((uchar_t)*s) && !iscntrl((uchar_t)*s) &&
+   for (s = str; *s && d_isascii((uchar_t)*s) && !iscntrl((uchar_t)*s) &&
         !strchr(tspecials_space, *s); s++) ;
    if (major)
       *major = dStrndup(str, s - str);
 
    if (*s == '/') {
-      for (str = ++s; *s && isascii((uchar_t)*s) && !iscntrl((uchar_t)*s) &&
+      for (str = ++s; *s && d_isascii((uchar_t)*s) && !iscntrl((uchar_t)*s) &&
            !strchr(tspecials_space, *s); s++) ;
       if (minor)
          *minor = dStrndup(str, s - str);
