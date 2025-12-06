@@ -511,7 +511,7 @@ static int Dpi_blocking_start_dpid(void)
    /* test the dpid, and wait a bit for it to start if necessary */
    while ((cst = Dpi_check_dpid(n_tries)) == 1) {
       MSG("Dpi_blocking_start_dpid: try %d\n", ++try);
-      usleep(250000); /* 1/4 sec */
+      dUsleep(250000UL);
    }
    return cst;
 }
