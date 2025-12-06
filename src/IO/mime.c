@@ -115,10 +115,13 @@ void a_Mime_init(void)
    Mime_add_minor_type("text/gopher", a_Html_text);
    Mime_add_minor_type("text/markdown", a_Html_text);
 
+   Mime_add_minor_type("application/xml", a_Html_text);
    Mime_add_minor_type("application/rss+xml", a_Html_text);
+   Mime_add_minor_type("application/atom+xml", a_Html_text);
    Mime_add_minor_type("text/xml", a_Html_text);
 
    /* Add a major type to handle all the text stuff */
+   Mime_add_major_type("application/json", a_Plain_text);
    Mime_add_major_type("text", a_Plain_text);
 }
 
