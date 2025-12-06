@@ -394,23 +394,6 @@ public:
       this->startExtra = -1;
    }
 
-   inline NotSoSimpleVector (const NotSoSimpleVector &o)
-   {
-      this->arrayMain = NULL;
-      this->numMain = o.numMain;
-      this->numAllocMain = o.numAllocMain;
-      resizeMain ();
-      memcpy (this->arrayMain, o.arrayMain, sizeof (T) * numMain);
-
-      this->arrayExtra = NULL;
-      this->numExtra = o.numExtra;
-      this->numAllocExtra = o.numAllocExtra;
-      resizeExtra ();
-      memcpy (this->arrayExtra, o.arrayExtra, sizeof (T) * numExtra);
-
-      this->startExtra = o.startExtra;
-   }
-
    inline ~NotSoSimpleVector ()
    {
       if (this->arrayMain)
