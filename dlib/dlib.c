@@ -538,6 +538,34 @@ const char *dStr_printable(Dstr *in, int maxlen)
    return out->str;
 }
 
+/** Shorten string so it fits in n characters.
+ *
+ * Cuts the string src so that it fits in n by replacing the middle of
+ * the string with "...", but leaving both the start and the end.
+ *
+ * The length n must be at least 9. If the src string is already shorter
+ * than n, it is appended as-is.
+ *
+ * The resulting string is appended to out.
+ */
+void dStr_shorten(Dstr *dst, const char *src, int n)
+{
+   if (n < 9)
+      n = 9;
+
+   int len = strlen(src);
+   if (len > n) {
+      int m = n - 3;
+      int n1 = m / 2; /* First half */
+      int n2 = m - n1; /* Second half */
+      dStr_append_l(dst, src, n1);
+      dStr_append(dst, "...");
+      dStr_append(dst, &src[len - n2]);
+   } else {
+      dStr_append(dst, src);
+   }
+}
+
 /*
  *- dList ---------------------------------------------------------------------
  */
@@ -956,4 +984,25 @@ int dClose(int fd)
       st = close(fd);
    while (st == -1 && errno == EINTR);
    return st;
+}
+
+/**
+ * Portable usleep() function.
+ *
+ * The usleep() function is deprecated in POSIX.1-2001 and removed in
+ * POSIX.1-2008, see usleep(3).
+ */
+int dUsleep(unsigned long usec)
+{
+	struct timespec ts;
+	int res;
+
+	ts.tv_sec = usec / 1000000UL;
+	ts.tv_nsec = (usec % 1000000UL) * 1000UL;
+
+	do {
+		res = nanosleep(&ts, &ts);
+	} while (res && errno == EINTR);
+
+	return res;
 }

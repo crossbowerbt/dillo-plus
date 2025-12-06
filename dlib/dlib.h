@@ -136,6 +136,7 @@ void dStr_sprintfa (Dstr *ds, const char *format, ...);
 int  dStr_cmp(Dstr *ds1, Dstr *ds2);
 char *dStr_memmem(Dstr *haystack, Dstr *needle);
 const char *dStr_printable(Dstr *in, int maxlen);
+void dStr_shorten(Dstr *dst, const char *src, int n);
 
 /*
  *-- dList --------------------------------------------------------------------
@@ -189,6 +190,7 @@ char *dGetcwd(void);
 char *dGethomedir(void);
 char *dGetline(FILE *stream);
 int dClose(int fd);
+int dUsleep(unsigned long us);
 
 #ifdef __cplusplus
 }
