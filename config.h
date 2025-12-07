@@ -10,6 +10,9 @@
 /* Enable PNG images */
 #define ENABLE_PNG 1
 
+/* Enable WEBP images */
+#define ENABLE_WEBP 1
+
 /* Enable SSL support */
 #define ENABLE_SSL 1
 

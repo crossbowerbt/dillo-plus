@@ -109,6 +109,7 @@ static const ContentType_t MimeTypes[] = {
    { "text/plain", 10 },
    { "image/gif", 9 },
    { "image/png", 9 },
+   { "image/webp", 10 },
    { "image/jpeg", 10 },
    { NULL, 0 }
 };
@@ -120,6 +121,7 @@ typedef enum {
    DT_TEXT_PLAIN,
    DT_IMAGE_GIF,
    DT_IMAGE_PNG,
+   DT_IMAGE_WEBP,
    DT_IMAGE_JPG,
 } DetectedContentType;
 
@@ -157,6 +159,9 @@ int a_Misc_get_content_type_from_data(void *Data, size_t Size, const char **PT)
       st = 0;
    } else if (Size >= 4 && !strncmp(p, "\x89PNG", 4)) {
       Type = DT_IMAGE_PNG;
+      st = 0;
+   } else if (Size >= 4 && !strncmp(p, "RIFF", 4)) {
+      Type = DT_IMAGE_WEBP;
       st = 0;
    } else if (Size >= 2 && !strncmp(p, "\xff\xd8", 2)) {
       /* JPEG has the first 2 bytes set to 0xffd8 in BigEndian - looking

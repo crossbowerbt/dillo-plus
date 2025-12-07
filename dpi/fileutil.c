@@ -222,7 +222,7 @@ const char *FileUtil_get_content_type_from_data(void *Data, size_t Size)
    static const char *Types[] = {
       "application/octet-stream",
       "text/html", "text/plain",
-      "image/gif", "image/png", "image/jpeg",
+      "image/gif", "image/png", "image/webp", "image/jpeg",
       "application/zip"
    };
    int Type = 0;
@@ -296,6 +296,8 @@ const char *FileUtil_ext(const char *filename)
       return "image/jpeg";
    } else if (!dStrAsciiCasecmp(e, "png")) {
       return "image/png";
+   } else if (!dStrAsciiCasecmp(e, "webp")) {
+      return "image/webp";
    } else if (!dStrAsciiCasecmp(e, "html") ||
               !dStrAsciiCasecmp(e, "htm") ||
               !dStrAsciiCasecmp(e, "shtml") ||

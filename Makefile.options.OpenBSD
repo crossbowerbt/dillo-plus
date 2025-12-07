@@ -30,8 +30,9 @@ LIBFLTK_LDFLAGS = $(LDFLAGS) -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -
 HTTPS_LDFLAGS = -lcrypto -lssl
 
 LIBPNG16_CXXFLAGS = -I/usr/local/include/libpng16
+LIBWEBP_CXXFLAGS = -I/usr/local/include/webp/
 
-DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
+DILLO_LDFLAGS = -ljpeg -L/usr/local/lib -lpng -lwebp -Wl,-rpath,/usr/local/lib -L/usr/X11R6/lib -lfltk -lXcursor -lXfixes -lXext -lXft -lfontconfig -lXinerama -lpthread -lm -lX11 -lXdmcp -lXau -lz  -liconv  -lX11
 
 # == HTTPS CERTS ==
 
