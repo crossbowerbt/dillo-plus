@@ -97,7 +97,9 @@ class DLItem {
 
    pid_t mPid;
    int LogPipe[2];
-   char *esc_url, *shortname, *fullname, *useragent, *cookies_file;
+   char *shortname, *fullname;
+   char *esc_url;
+   char *cookies_path;
    char *target_dir;
    size_t log_len, log_max;
    int log_state;
@@ -300,10 +302,6 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
    p = strrchr(full_filename, '/');
    target_dir= p ? dStrndup(full_filename,p-full_filename+1) : dStrdup("??");
 
-   useragent = dStrdup(user_agent);
-
-   cookies_file = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
-
    log_len = 0;
    log_max = 0;
    log_state = ST_newline;
@@ -324,6 +322,8 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
    if (dStrnAsciiCasecmp(esc_url, "ftp:/", 5) == 0)
       Filter_smtp_hack(esc_url);
 
+   cookies_path = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
+   
    dl_argv = new char*[10];
    int i = 0;
    
@@ -347,17 +347,17 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
       if (stat(fullname, &ss) == 0)
          init_bytesize = (int)ss.st_size;
       dl_argv[i++] = (char*)DOWNLOADER_USER_AGENT_ARG;
-      dl_argv[i++] = useragent;
+      dl_argv[i++] = (char *) user_agent;
       dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
       dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
-      dl_argv[i++] = cookies_file;
+      dl_argv[i++] = cookies_path;
       dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
       dl_argv[i++] = fullname;
       dl_argv[i++] = esc_url;
       dl_argv[i++] = NULL;
 
       // Create cookies.txt if it doesn't exist (needed for some downloaders)
-      FILE *fp = fopen(cookies_file, "ab+");
+      FILE *fp = fopen(cookies_path, "ab+");
       fclose(fp);
    }
 
@@ -454,11 +454,10 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
 DLItem::~DLItem()
 {
    free(shortname);
-   dFree(esc_url);
    dFree(fullname);
-   dFree(useragent);
    dFree(target_dir);
-   dFree(cookies_file);
+   dFree(esc_url);
+   dFree(cookies_path);
    free(log_text);
 
    delete [] dl_argv;
@@ -869,7 +868,7 @@ static void read_req_cb(int req_fd, void *)
    int sock_fd;
    socklen_t csz;
    Dsh *sh = NULL;
-   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *user_agent = NULL, *dl_dest = NULL;
+   char *dpip_tag = NULL, *cmd = NULL, *url = NULL, *dl_dest = NULL, *ua = NULL;
 
    /* Initialize the value-result parameter */
    csz = sizeof(struct sockaddr_un);
@@ -915,10 +914,6 @@ static void read_req_cb(int req_fd, void *)
       MSG("unknown command: '%s'. Aborting.\n", cmd);
       goto end;
    }
-   if (!(user_agent = a_Dpip_get_attr(dpip_tag, "user_agent"))){
-      MSG("Failed to parse 'user_agent' in {%s}\n", dpip_tag);
-      goto end;
-   }
    if (!(url = a_Dpip_get_attr(dpip_tag, "url"))){
       MSG("Failed to parse 'url' in {%s}\n", dpip_tag);
       goto end;
@@ -927,12 +922,16 @@ static void read_req_cb(int req_fd, void *)
       MSG("Failed to parse 'destination' in {%s}\n", dpip_tag);
       goto end;
    }
-   dl_win->add(dl_dest, url, user_agent);
+   if (!(ua = a_Dpip_get_attr(dpip_tag, "user-agent"))){
+      MSG("Failed to parse 'user-agent' in {%s}\n", dpip_tag);
+      goto end;
+   }
+   dl_win->add(dl_dest, url, ua);
 
 end:
    dFree(cmd);
    dFree(url);
-   dFree(user_agent);
+   dFree(ua);
    dFree(dl_dest);
    dFree(dpip_tag);
    a_Dpip_dsh_free(sh);
