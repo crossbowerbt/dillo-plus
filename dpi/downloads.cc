@@ -97,7 +97,7 @@ class DLItem {
 
    pid_t mPid;
    int LogPipe[2];
-   char *shortname, *fullname, *useragent;
+   char *esc_url, *shortname, *fullname, *useragent, *cookies_file;
    char *target_dir;
    size_t log_len, log_max;
    int log_state;
@@ -285,7 +285,6 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
 {
    struct stat ss;
    const char *p;
-   char *esc_url;
 
    if (pipe(LogPipe) < 0) {
       MSG("pipe, %s\n", dStrerror(errno));
@@ -302,6 +301,8 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
    target_dir= p ? dStrndup(full_filename,p-full_filename+1) : dStrdup("??");
 
    useragent = dStrdup(user_agent);
+
+   cookies_file = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
 
    log_len = 0;
    log_max = 0;
@@ -349,14 +350,14 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
       dl_argv[i++] = useragent;
       dl_argv[i++] = (char*)DOWNLOADER_CONTINUE_ARG;
       dl_argv[i++] = (char*)DOWNLOADER_LOAD_COOKIES_ARG;
-      dl_argv[i++] = dStrconcat(dGethomedir(), "/." BINNAME "/cookies.txt", NULL);
+      dl_argv[i++] = cookies_file;
       dl_argv[i++] = (char*)DOWNLOADER_OUTPUT_FILENAME_ARG;
       dl_argv[i++] = fullname;
       dl_argv[i++] = esc_url;
       dl_argv[i++] = NULL;
 
       // Create cookies.txt if it doesn't exist (needed for some downloaders)
-      FILE *fp = fopen(dl_argv[5], "ab+");
+      FILE *fp = fopen(cookies_file, "ab+");
       fclose(fp);
    }
 
@@ -453,13 +454,13 @@ DLItem::DLItem(const char *full_filename, const char *url, const char *user_agen
 DLItem::~DLItem()
 {
    free(shortname);
+   dFree(esc_url);
    dFree(fullname);
    dFree(useragent);
    dFree(target_dir);
+   dFree(cookies_file);
    free(log_text);
-   int idx = (strcmp(dl_argv[1], "-c")) ? 2 : 3;
-   dFree(dl_argv[idx]);
-   dFree(dl_argv[idx+3]);
+
    delete [] dl_argv;
 
    delete(group);
