@@ -381,11 +381,11 @@ public:
       resizeMain ();
       memcpy (this->arrayMain, o.arrayMain, sizeof (T) * numMain);
 
-      this->arrayExtra = NULL;
+      this->arrayExtra1 = NULL;
       this->numExtra = o.numExtra;
       this->numAllocExtra = o.numAllocExtra;
       resizeExtra ();
-      memcpy (this->arrayExtra, o.arrayExtra, sizeof (T) * numExtra);
+      memcpy (this->arrayExtra1, o.arrayExtra1, sizeof (T) * numExtra);
 
       this->startExtra = o.startExtra;
    }
